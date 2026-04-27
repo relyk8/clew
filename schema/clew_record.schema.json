@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://clew.local/schemas/clew_record-0.1.0.json",
+  "title": "Clew Record",
+  "description": "Per-sample candidate extraction record produced by Clew v0.1.x. See docs/schema.md for the human-readable specification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sample_sha256",
+    "sample_path",
+    "clew_version",
+    "capa_techniques",
+    "tier_classification",
+    "total_iterations",
+    "candidates"
+  ],
+  "properties": {
+    "sample_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the analyzed binary, 64 lowercase hex chars."
+    },
+    "sample_path": {
+      "type": ["string", "null"],
+      "description": "Path to the binary at analysis time; nullable for redacted corpora."
+    },
+    "clew_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the producing Clew tool."
+    },
+    "capa_techniques": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "capa rule names matched by Channel 0; empty array if capa not run or no matches."
+    },
+    "tier_classification": {
+      "oneOf": [
+        { "$ref": "#/$defs/Tier" },
+        { "type": "null" }
+      ],
+      "description": "Sample-level tier; null if classification skipped."
+    },
+    "total_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Always 1 in v1."
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Candidate" },
+      "description": "Empty array is valid and means no extractable env checks were found."
+    }
+  },
+
+  "$defs": {
+    "VA": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]+$",
+      "description": "Virtual address as hex string with 0x prefix."
+    },
+
+    "Tier": {
+      "type": "string",
+      "enum": ["tier_1", "tier_2", "tier_3", "tier_4"]
+    },
+
+    "Channel": {
+      "type": "string",
+      "enum": ["capa", "floss", "bn_xref", "drio", "cape_config"]
+    },
+
+    "ApiResolution": {
+      "type": "string",
+      "enum": ["import", "getprocaddress", "ordinal", "hashed"]
+    },
+
+    "ComparisonOperator": {
+      "type": "string",
+      "enum": [
+        "equality",
+        "inequality",
+        "greater_than",
+        "less_than",
+        "greater_equal",
+        "less_equal",
+        "bitwise_and",
+        "bitwise_or",
+        "contains",
+        "unknown"
+      ]
+    },
+
+    "Represents": {
+      "type": "string",
+      "enum": [
+        "sandbox_detected",
+        "vm_detected",
+        "debugger_detected",
+        "analysis_tool_detected",
+        "clean_environment",
+        "threshold_value",
+        "unknown"
+      ]
+    },
+
+    "StringSource": {
+      "type": "string",
+      "enum": ["static", "stackstring", "tightstring", "decoded"]
+    },
+
+    "ScalarValue": {
+      "type": ["string", "number", "boolean", "null"],
+      "description": "A value that can be a string, number, boolean, or null. Used for parameter values and retarget targets."
+    },
+
+    "ChannelArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/Channel" }
+    },
+
+    "CandidateValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "represents", "retarget_to", "confidence", "source_channels"],
+      "properties": {
+        "value": { "$ref": "#/$defs/ScalarValue" },
+        "represents": { "$ref": "#/$defs/Represents" },
+        "retarget_to": { "$ref": "#/$defs/ScalarValue" },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "source_channels": { "$ref": "#/$defs/ChannelArray" }
+      }
+    },
+
+    "CoordinationConstraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_group_id", "description"],
+      "properties": {
+        "gate_group_id": { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] }
+      }
+    },
+
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "channels",
+        "string_source",
+        "string_va",
+        "string_function_va",
+        "dataflow_path",
+        "cmp_operand_a",
+        "cmp_operand_b"
+      ],
+      "properties": {
+        "channels": { "$ref": "#/$defs/ChannelArray" },
+        "string_source": {
+          "oneOf": [
+            { "$ref": "#/$defs/StringSource" },
+            { "type": "null" }
+          ]
+        },
+        "string_va": {
+          "oneOf": [
+            { "$ref": "#/$defs/VA" },
+            { "type": "null" }
+          ]
+        },
+        "string_function_va": {
+          "oneOf": [
+            { "$ref": "#/$defs/VA" },
+            { "type": "null" }
+          ]
+        },
+        "dataflow_path": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/VA" }
+        },
+        "cmp_operand_a": { "type": ["string", "null"] },
+        "cmp_operand_b": { "type": ["string", "null"] }
+      }
+    },
+
+    "Candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "call_site_va",
+        "function_va",
+        "api_name",
+        "api_resolution",
+        "parameter_index",
+        "comparison_operator",
+        "evasion_tier",
+        "iteration_number",
+        "candidate_values",
+        "coordination_constraint",
+        "evidence"
+      ],
+      "properties": {
+        "call_site_va": { "$ref": "#/$defs/VA" },
+        "function_va": { "$ref": "#/$defs/VA" },
+        "api_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "api_resolution": { "$ref": "#/$defs/ApiResolution" },
+        "parameter_index": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "-1 means the check is on the return value; >= 0 is a parameter index."
+        },
+        "comparison_operator": { "$ref": "#/$defs/ComparisonOperator" },
+        "evasion_tier": { "$ref": "#/$defs/Tier" },
+        "iteration_number": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_values": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/CandidateValue" }
+        },
+        "coordination_constraint": { "$ref": "#/$defs/CoordinationConstraint" },
+        "evidence": { "$ref": "#/$defs/Evidence" }
+      }
+    }
+  }
+}
