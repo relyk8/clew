@@ -1,0 +1,42 @@
+{
+  "sample_sha256": "TBD_AFTER_BUILD",
+  "sample_path": "tests/fixtures/al-khaser_x86.exe",
+  "clew_version": "0.1.0",
+  "capa_techniques": ["check for debugger via API"],
+  "tier_classification": "tier_1",
+  "total_iterations": 1,
+  "candidates": [
+    {
+      "call_site_va": "0xTBD_FROM_BN",
+      "function_va": "0xTBD_FROM_BN",
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "parameter_index": -1,
+      "comparison_operator": "equality",
+      "evasion_tier": "tier_1",
+      "iteration_number": 0,
+      "candidate_values": [
+        {
+          "value": true,
+          "represents": "debugger_detected",
+          "retarget_to": false,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        }
+      ],
+      "coordination_constraint": {
+        "gate_group_id": null,
+        "description": null
+      },
+      "evidence": {
+        "channels": ["capa", "bn_xref"],
+        "string_source": null,
+        "string_va": null,
+        "string_function_va": null,
+        "dataflow_path": ["0xTBD_FROM_BN", "0xTBD_FROM_BN"],
+        "cmp_operand_a": null,
+        "cmp_operand_b": null
+      }
+    }
+  ]
+}

@@ -101,6 +101,8 @@ The semantic operator of the environment check — how the API's effective outpu
 
 A single call site that performs multiple comparisons of the same parameter should be split into multiple candidate records, one per operator.
 
+When the API has no parameters and the check is on the return value (parameter_index == -1), the comparison_operator describes how a consumer should interpret the return: equality means "consider the check fired when the return matches value." The physical test/cmp/jz instruction implementing this comparison may live in the caller of the API-wrapping function rather than at call_site_va itself.
+
 ### `evasion_tier` (required, string enum)
 
 The tier classification for this specific candidate. Same enumeration as `tier_classification`. The sample-level `tier_classification` is the worst tier among its candidates.
