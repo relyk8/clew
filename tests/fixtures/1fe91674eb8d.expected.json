@@ -1,5 +1,5 @@
 {
-  "sample_sha256": "TBD_AFTER_BUILD",
+  "sample_sha256": "1fe91674eb8daacd14ab42926a303fd16b6b21dfaed2c65b2862dcb41197d119",
   "sample_path": "tests/fixtures/al-khaser_x86.exe",
   "clew_version": "0.1.0",
   "capa_techniques": ["check for debugger via API"],
@@ -7,8 +7,8 @@
   "total_iterations": 1,
   "candidates": [
     {
-      "call_site_va": "0xTBD_FROM_BN",
-      "function_va": "0xTBD_FROM_BN",
+      "call_site_va": "0x00434d4a",
+      "function_va": "0x00434d20",
       "api_name": "IsDebuggerPresent",
       "api_resolution": "import",
       "parameter_index": -1,
@@ -33,7 +33,7 @@
         "string_source": null,
         "string_va": null,
         "string_function_va": null,
-        "dataflow_path": ["0xTBD_FROM_BN", "0xTBD_FROM_BN"],
+        "dataflow_path": ["0x00434d20", "0x00434d4a"],
         "cmp_operand_a": null,
         "cmp_operand_b": null
       }
