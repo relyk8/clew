@@ -139,6 +139,8 @@ Without ground truth, no channel pilot can be evaluated as pass or fail. These t
 
 These hand-built records are the gradeable target for every pilot that follows. If FLOSS on Day 6 recovers the string `SbieDll.dll` and the hand-built record lists `SbieDll.dll` as a candidate value, the pilot passes for that sample.
 
+Updated 2026-04-29: completed 2 al-khaser-derived fixtures (1fe91674eb8d_01.expected.json for IsDebuggerPresentAPI, 1fe91674eb8d_02.expected.json for the 12-DLL loaded_dlls loop) covering the structural shapes the schema needs to validate. Real-malware fixtures (originally planned for Pfuzzer-corpus samples) deferred to Channel 2 evaluation phase — initial sourcing attempts revealed that hand-built ground-truth oracles aren't tractable for samples with helper-router patterns (Delphi RTL, Pony stealer's dispatch), and the schema itself doesn't need real malware to be exercised. See git log of tests/fixtures/SOURCES.md for samples evaluated and rejected.
+
 ### Open items to close during Days 1–4
 
 Don't let these drift past Day 4:

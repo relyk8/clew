@@ -1,0 +1,119 @@
+{
+  "sample_sha256": "1fe91674eb8daacd14ab42926a303fd16b6b21dfaed2c65b2862dcb41197d119",
+  "sample_path": "tests/fixtures/al-khaser_x86.exe",
+  "clew_version": "0.1.0",
+  "capa_techniques": ["check for sandbox files via API"],
+  "tier_classification": "tier_1",
+  "total_iterations": 1,
+  "candidates": [
+    {
+      "call_site_va": "0x004595fc",
+      "function_va": "0x00459500",
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "parameter_index": 0,
+      "comparison_operator": "inequality",
+      "evasion_tier": "tier_1",
+      "iteration_number": 0,
+      "candidate_values": [
+        {
+          "value": "avghookx.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "avghooka.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "snxhk.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "sbiedll.dll",
+          "represents": "sandbox_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "dbghelp.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "api_log.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "dir_watch.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "pstorec.dll",
+          "represents": "sandbox_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "vmcheck.dll",
+          "represents": "vm_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "wpespy.dll",
+          "represents": "analysis_tool_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "cmdvrt64.dll",
+          "represents": "sandbox_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        },
+        {
+          "value": "cmdvrt32.dll",
+          "represents": "sandbox_detected",
+          "retarget_to": null,
+          "confidence": 0.9,
+          "source_channels": ["capa", "bn_xref"]
+        }
+      ],
+      "coordination_constraint": {
+        "gate_group_id": null,
+        "description": null
+      },
+      "evidence": {
+        "channels": ["capa", "bn_xref"],
+        "string_source": "static",
+        "string_va": null,
+        "string_function_va": null,
+        "dataflow_path": ["0x00459500", "0x004595fc"],
+        "cmp_operand_a": null,
+        "cmp_operand_b": null
+      }
+    }
+  ]
+}
