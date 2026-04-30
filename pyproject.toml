@@ -2,6 +2,12 @@
 name = "clew"
 version = "0.1.0"
 requires-python = ">=3.10"
+dependencies = [
+    "flare-capa>=9.4.0,<10",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "jsonschema>=4"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
