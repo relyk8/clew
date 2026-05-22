@@ -1,0 +1,78 @@
+==============================================================
+DEF CON 34 (2026) Demo Labs — Submission
+Project: Clew
+==============================================================
+
+(Note: Personal contact fields — phone numbers, personal-social URLs — redacted from
+the version checked into this public repo. The unredacted file lives in the
+authors' personal notes.)
+
+==============================================================
+PRESENTER 1
+==============================================================
+  First/Given Name:    Kyler
+  Last/Family Name:    McElroy
+  Pseudonym/Handle:    None
+  Display Name As:     Name
+  Pronouns:            He/him
+  Position/Title:      Graduate Student
+  Affiliation:         Air Force Institute of Technology (AFIT)
+  Biography:
+    Kyler McElroy, a second lieutenant and developmental engineer in the United States Air Force, is pursuing a master's in computer science with an AI focus at the Air Force Institute of Technology.  His research focuses on using machine learning and automated analysis to uncover hidden behaviors in evasive malware.  He is an alumnus of the ACE Cyber Leadership Development program, where he authored S.A.N.D (Synthetic Adversarial and Natural Data Generation) under the Air Force Research Laboratory.
+  Portfolio:
+  LinkedIn:
+  Social Media:
+  Country:             United States
+  Email:               kyler.mcelroy@afit.edu
+  Phone:               [redacted]
+  ADA:                 None
+
+==============================================================
+PRESENTER 2
+==============================================================
+  First/Given Name:    Anita
+  Last/Family Name:    Ding
+  Pseudonym/Handle:    None
+  Display Name As:     Name
+  Pronouns:            She/Her
+  Position/Title:      Graduate Student
+  Affiliation:         Air Force Institute of Technology (AFIT)
+  Biography:
+    Anita Ding is a second lieutenant and cyber operations officer in the United States Air Force, is pursuing a master's in cyber operations with an AI focus at the Air Force Institute of Technology. Her research focuses on LLM-orchestrated red team automation and graph neural networks for attack-path scoring in Active Directory environments. She earned a B.A. in Computer Science from UC Berkeley, where she conducted research at the Berkeley AI Research Lab and the Berkeley Risk and Security Lab. She is also an alumna of the ACE Cyber Leadership Development program, where she designed a CTF challenge for the British Army's Defence Cyber Marvel exercise.
+  Portfolio:           [redacted]
+  LinkedIn:            [redacted]
+  Social Media:        [redacted]
+  Country:             United States
+  Email:               [redacted]
+  Phone:               [redacted]
+  ADA:                 None
+
+==============================================================
+SUBMISSION
+==============================================================
+
+SUBMISSION TYPE: 45 Minutes (30 Minute Demo Lab + 15 Minute Q&A)
+NEW TOOL RELEASE: Yes
+LICENSING MODEL: Open Source
+PRESENTED PRIOR: No
+SUBMISSION TITLE  (≤100 chars): Clew: Per-Sample Seed Corpora for Environmental Malware Fuzzing
+SUBMISSION ABSTRACT  (≤1337 chars):
+    Clew is an automated fuzzing-candidate extraction pipeline for environment-sensitive malware analysis.  Evasive malware routinely queries its execution environment via Windows API calls to hide functionality until specific environmental conditions are met.  By hooking these API calls, a fuzzer can reveal such execution paths that are typically hidden during standard analysis.  No seed corpus of environmental fuzzing candidates currently exists for this application.  As a result, current API-hooking fuzzers rely on hand-written, sample-agnostic starting values and blind mutations that cannot scale to the diverse evasion techniques seen in sophisticated samples.  Clew addresses this by analyzing each PE32 binary and producing a per-sample seed corpus of candidate API return values that downstream environmental fuzzers use to systematically uncover hidden execution paths.
+
+SUBMISSION DETAILED OUTLINE  (uploaded to OpenConf as TXT or PDF):
+    Modern malware analysis pipelines miss a large fraction of the actual behavior of evasive samples. Sophisticated samples gate functionality on environmental conditions like username, hostname, registry keys, hardware fingerprints, domain-joined status, and the presence of analysis tools, and they silently exit or run cover behavior when those conditions are not met. The state of the art for forcing samples down these gated paths is environmental fuzzing: hook the API calls a sample uses to query its environment, then return values that satisfy the checks. The problem is that current API-hooking fuzzers are seeded with hand-written, sample-agnostic value lists ("Administrator", "C:\Windows", a fixed pool of common machine names) and then blind-mutate from there. That works for samples checking against generic values, but it does not scale to samples checking against specific hardcoded strings, hashes, or per-campaign markers, where the fuzzer would have to randomly mutate its way to the exact value the sample expects. No public per-sample seed corpus exists for this application, so analysts either accept the coverage gap or hand-curate retarget lists per sample. That hand curation does not scale to the volume of malware teams actually see.
+
+    Clew is a per-sample preprocessing pipeline. It runs once against a PE32 binary and emits a structured seed corpus of candidate API return values keyed to their call sites. Three components cooperate to produce that corpus. The first is a static analyzer that parses the PE32, locates calls to environment-querying Windows APIs (GetUserNameA, GetComputerNameA, RegQueryValueEx, GetVolumeInformation, IsDebuggerPresent, and similar), and walks back through the disassembly to harvest the strings, constants, and embedded blobs those return values are compared against. Its output is a set of (call site, candidate value) pairs grounded in the binary's own data. The second is a dynamic instrumentation layer that hooks the same API surface and runs the sample in a controlled harness, capturing the operand values that flow into comparison instructions immediately downstream of each hooked call. This stage covers what the static analyzer cannot reach: comparisons against hashed, encrypted, or runtime-derived values where the candidate never appears in the binary in plaintext. A consolidation step then merges static and dynamic candidates, deduplicates them, and emits a structured corpus keyed by call site, ready for any downstream environmental fuzzer to ingest without manual curation.
+
+    The user-facing workflow is a single command. The user hands Clew a PE32 sample and receives a per-sample seed corpus file. The dynamic stage runs the sample for a bounded duration in a controlled harness, capturing comparison values without requiring the sample to actually reach its hidden behavior. The resulting corpus tells a downstream fuzzer two things at every environment-check call site: the set of high-probability candidate values to try first, and the call site itself so the fuzzer can inject the right value at the right hook. Instead of blindly mutating across a sample-agnostic dictionary, the fuzzer can now inject targeted values pulled from the binary itself, which dramatically reduces the iterations needed to reach gated paths.
+
+    The briefing covers evasive malware behavior, the environmental-fuzzing approach, the seed-corpus gap that Clew fills, and Clew's three-stage architecture. For the demo, we will analyze an evasive sample chosen from a small curated set. We will show Clew's static stage, extracting the hardcoded comparison values and call sites. As an illustration, a sample that calls GetUserNameA and compares the result against a hardcoded string will appear in the corpus as that exact (GetUserNameA, "<username>") pair, linked to the call-site offset in the binary. We will then show the dynamic stage, capturing values that the static stage could not reach, with a hashed-username check as a natural example. Finally, we will plug Clew's output into a representative API-hooking fuzzer and show a sample taking a previously unreached execution path on the first or second iteration, contrasted with a blind-mutation run that fails to find the path within the same time budget. We will close with a deliberate failure case, such as a sample whose expected value depends on a network state that Clew cannot observe statically or in the harness window, to show the corpus's current limits.
+
+    The static stage coverage depends on how cleanly the comparison logic can be recovered from the disassembly. Heavily obfuscated samples and samples that derive comparison values at runtime from external state (network responses, time, attached USB metadata) will produce sparser candidate sets. The dynamic stage helps with some of these cases, but is bounded by what can be observed in the harness window. Planned work includes broader API surface coverage, smarter call-site clustering for samples with hundreds of environmental checks, and integration with public sandbox runs so that Clew can ingest captured comparisons from existing analysis infrastructure. The intended impact is to remove the per-sample manual curation step that today gates serious environmental-fuzzing work, making multi-path analysis of evasive malware practical at the volumes defenders, threat-intel teams, and incident responders actually face.
+
+AUDIENCE TYPE: Defense/Blue Team, Malware
+AUDIENCE KNOWLEDGE: Intermediate
+PROJECT LINK / TOOL REPOSITORY: Not yet public
+ACKNOWLEDGEMENTS:
+BASECAMP CONSENT: Agree
+DEF CON AGREEMENTS: Agree
