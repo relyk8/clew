@@ -1,7 +1,7 @@
 # Plan: rename `tier_classification` → `derivation_status`
 
 **Date:** 2026-05-23
-**Status:** Implemented in this commit; awaiting work-laptop test run.
+**Status:** Implemented, committed, and force-pushed. Migration applied to existing JSONLs (no capa re-execution). New numbers landed in `docs/channel0_at_scale.md`: 202 (42.4%) `fully_derivable`, 274 (57.6%) `no_mapped_signal`, 0 `partially_derivable` (structural), 183 (38.4%) carrying unmapped-rule backlog. Work-laptop smoke test outstanding; resync command: `git fetch origin && git reset --hard origin/main`.
 
 ## Context
 
