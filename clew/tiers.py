@@ -38,6 +38,17 @@ from typing import Iterable
 # A/E/ExA/ExW variants as one" — the literal symbol list is naturally
 # larger when variants are split out.
 #
+# Coverage note: this set has 55 base APIs (counting variants as one)
+# vs. the paper's claimed 68. The 13-API gap is unrecoverable from
+# public Pfuzzer materials — the implementation source isn't in the
+# public repo and the paper sources the 68 from prior work
+# ([6] BluePill / D'Elia 2020, [7] Enviral / Gorter 2023) without
+# enumerating the list inline. The dataset can only surface APIs that
+# at least one sample actually called; APIs hooked but never triggered
+# in the 1,078 samples won't appear here. Closing the gap is deferred
+# work — see BluePill / Enviral papers or PFuzzer's gated implementation
+# repo if needed for a future v2 expansion.
+#
 # Notes:
 # - CPUID and RDTSC are instructions, not APIs. Pfuzzer instruments them
 #   via DBI but they don't belong in an API-name set.
