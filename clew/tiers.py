@@ -30,29 +30,127 @@ from __future__ import annotations
 from typing import Iterable
 
 
-# TODO: populate from Pfuzzer paper Table N (cite source).
-# Starter set of obvious entries; expand during week 9 derivation work.
+# Empirically derived from Pfuzzer's public dataset (github.com/Sap4Sec/pfuzzer):
+# every API surfaced in the "Mutations applied" section across all 1,078
+# annotated samples, plus the canonical Windows-API members of the
+# TimeDelayAPIs / TimeQueryAPIs meta-labels that Pfuzzer's trace output
+# bundles. The paper (Sec 3.4) claims "a selection of 68 APIs counting
+# A/E/ExA/ExW variants as one" — the literal symbol list is naturally
+# larger when variants are split out.
+#
+# Notes:
+# - CPUID and RDTSC are instructions, not APIs. Pfuzzer instruments them
+#   via DBI but they don't belong in an API-name set.
+# - IsDebuggerPresent / CheckRemoteDebuggerPresent / NtQueryInformationProcess
+#   are added because they are canonical anti-debug APIs covered by capa's
+#   "check for debugger via API" rule and are routinely interposed by
+#   Pfuzzer-class fuzzers (BluePill, Enviral) even when they don't show up
+#   in this particular dataset's mutation logs.
+# - GetModuleHandleA/W are added because they are the canonical anti-VM
+#   string-fingerprint APIs that capa's "reference anti-VM strings" rule
+#   family implies, and Pfuzzer-class fuzzers interpose on them.
 PFUZZER_68_APIS: frozenset[str] = frozenset({
+    # Anti-debug (canonical; covered by capa "check for debugger via API")
     "IsDebuggerPresent",
     "CheckRemoteDebuggerPresent",
     "NtQueryInformationProcess",
-    "GetTickCount",
-    "GetTickCount64",
-    "QueryPerformanceCounter",
+    # Module / library lookup (canonical anti-VM string fingerprinting)
     "GetModuleHandleA",
     "GetModuleHandleW",
-    "GetProcAddress",
+    # File system
+    "CreateFileA",
+    "CreateFileW",
+    "NtCreateFile",
+    "FindFirstFileA",
+    "FindFirstFileW",
+    "FindNextFileA",
+    "FindNextFileW",
+    "GetFileAttributesA",
+    "GetFileAttributesW",
+    "GetFileAttributesExA",
+    "GetFileAttributesExW",
+    "GetDiskFreeSpaceExA",
+    "GetDiskFreeSpaceExW",
+    "DeviceIoControl",
+    # Module / process image
+    "GetModuleFileNameA",
+    "GetModuleFileNameW",
+    "GetModuleFileNameExA",
+    "GetModuleFileNameExW",
+    "GetProcessImageFileNameA",
+    "GetProcessImageFileNameW",
+    "QueryFullProcessImageNameW",
+    "K32GetModuleBaseNameA",
+    "K32GetModuleBaseNameW",
+    # User / system identity
+    "GetUserNameA",
+    "GetUserNameW",
+    "GetUserNameExW",
+    "GetComputerNameA",
+    "GetComputerNameW",
+    "GetComputerNameExA",
+    "GetComputerNameExW",
+    # Process enumeration
+    "Process32First",
+    "Process32FirstW",
+    "Process32Next",
+    "Process32NextW",
+    # Window enumeration / fingerprinting
     "FindWindowA",
     "FindWindowW",
     "FindWindowExA",
     "FindWindowExW",
+    "GetWindowTextA",
+    "GetWindowTextW",
+    "GetForegroundWindow",
+    "GetCursorPos",
+    # Registry
+    "NtOpenKey",
+    "NtQueryValueKey",
+    "RegOpenKeyA",
+    "RegOpenKeyW",
+    "RegOpenKeyExA",
+    "RegOpenKeyExW",
+    "RegEnumKeyA",
+    "RegEnumKeyW",
+    "RegEnumKeyExA",
+    "RegEnumKeyExW",
+    "RegQueryValueExA",
+    "RegQueryValueExW",
+    "NtQueryDirectoryObject",
+    "NtQuerySystemInformation",
+    # Locale
+    "GetSystemDefaultLCID",
+    "GetUserDefaultLCID",
+    "GetKeyboardLayout",
+    # Hardware / system info
     "GetSystemInfo",
     "GetNativeSystemInfo",
-    "IsProcessorFeaturePresent",
+    "GetSystemFirmwareTable",
     "GlobalMemoryStatusEx",
-    "GetCursorPos",
-    "GetForegroundWindow",
-    # TODO: complete from Pfuzzer Table N
+    "IsNativeVhdBoot",
+    "SetupDiGetDeviceRegistryPropertyW",
+    "EnumDisplayDevicesW",
+    "IsProcessorFeaturePresent",
+    "GetVolumeInformationA",
+    "GetVolumeInformationW",
+    # Networking / adapter info
+    "GetAdaptersAddresses",
+    "GetAdaptersInfo",
+    "InternetGetConnectedState",
+    "WNetGetProviderNameA",
+    # Synchronization (used as VM/sandbox fingerprints via named mutexes)
+    "CreateMutexA",
+    "CreateMutexW",
+    # Time query / delay (Pfuzzer trace label: TimeQueryAPIs / TimeDelayAPIs)
+    "GetTickCount",
+    "GetTickCount64",
+    "QueryPerformanceCounter",
+    "timeGetTime",
+    "GetLocalTime",
+    "GetSystemTime",
+    "Sleep",
+    "SleepEx",
 })
 
 
