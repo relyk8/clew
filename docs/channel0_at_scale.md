@@ -87,7 +87,9 @@ These are the most frequent anti-analysis rules Channel 0 matched across the cor
 
 ## 5. Specificity floor (benign control)
 
-Rate of anti-analysis rules firing on a known-benign control set vs the malware corpus. This is descriptive specificity — not formal accuracy, but it tells us whether capa's anti-analysis rules discriminate between populations.
+**Important framing first.** The benign control set is intentionally a *tools in your sandbox* set, not a random benign baseline. The 11 binaries are pulled from `~/CAPEv2/analyzer/windows/` — Microsoft-signed utilities **and CAPE's own analysis tools**. CAPE analyzer tools *are* analysis tools, so capa's `reference analysis tools strings` and related anti-analysis rules firing on them is correct behavior, not a false-positive signal against the rules. The table below is therefore not a true specificity floor — it characterizes the worst-case adversarial benign population: binaries that look like analysis tooling. A proper specificity floor would require a random benign baseline (signed third-party utilities, OS components excluded), which this run does not have.
+
+With that caveat: the table reports the rate of anti-analysis rules firing on each population. Higher rates on the benign control are *expected* given the construction above, and do **not** indicate that capa's anti-analysis rules are broken.
 
 | population | N (ok) | % with >=1 evasion rule | mean evasion count |
 |---|---:|---:|---:|
@@ -126,7 +128,7 @@ Rate of anti-analysis rules firing on a known-benign control set vs the malware 
 - **202 samples (42.4% of `ok`) are `fully_derivable` today** — every mapped capa rule has derivation logic and every implied API is in `PFUZZER_68_APIS`. This is the honest "Clew handles these now" number.
 - **274 samples (57.6% of `ok`) have `no_mapped_signal`** — either zero capa hits or only-unmapped hits. These are the FLOSS/BN/DRIO frontier; Channel 0 alone has nothing actionable on them.
 - **`partially_derivable` is structurally empty under the current rule map** because every entry in `CAPA_RULE_TO_APIS` produces APIs inside `PFUZZER_68_APIS`. The bucket is reachable in principle; it'll populate once the rule map adds entries with outside-target APIs (or once `PFUZZER_68_APIS` shrinks).
-- **Timeout rate: 4.6% (23 samples)** hit the 120s ceiling. These are capa's edge cases — likely heavy packers, large overlays, or pathological control flow. They are themselves a Clew finding: samples too expensive for static-only analysis are precisely where dynamic Channel 4 (DRIO) has to take over.
+- **Timeout rate: 4.6% (23 samples)** hit the 120s ceiling. These are capa-pathological samples — likely heavy packers, large overlays, or control-flow obfuscation that defeats capa's analysis budget. **Not automatically Channel 4 territory:** DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. Treat these as scope-limit findings, not as a queue handed to another channel.
 
 ## 8. Honest limitations
 
