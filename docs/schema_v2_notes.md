@@ -56,16 +56,27 @@ The schema separates two distinct ideas that had collided in earlier
 drafts under the single name "tier":
 
 - Sample-level `derivation_status` (`fully_derivable` /
-  `partially_derivable` / `no_mapped_signal` / `not_capa_detectable`)
-  describes where Clew's derivation pipeline stands for the sample —
-  whether the matched capa rules are mapped in `CAPA_RULE_TO_APIS` and
-  whether their implied APIs are in `PFUZZER_68_APIS`. It is computed
-  by `clew/tiers.py:classify()` from the capa output, independent of
-  `candidates[]`.
+  `partially_derivable` / `not_derivable` / `no_capa_signal`) is a
+  rollup of per-rule actionability. A rule is actionable iff it's in
+  `CAPA_RULE_TO_APIS` AND all its implied APIs are in
+  `PFUZZER_68_APIS`. Sample-level: all actionable → fully_derivable;
+  mix → partially_derivable; none → not_derivable; no rules at all →
+  no_capa_signal.
 - Per-candidate `evasion_tier` (`tier_1`..`tier_4`) is the
   *defeatability tier* of the evasion technique the candidate
   addresses, drawn from the taxonomy in
   `docs/context/evasion-taxonomy.md`.
+
+`no_capa_signal` is also assigned to samples where capa didn't
+successfully complete (timeouts, capa errors). Operationally same as
+"capa returned no anti-analysis rules": no usable signal from capa.
+Run health (timeout rate, error rate) is tracked in the `status` field
+alongside the categorical.
+
+Schema v0.3.0 dropped `not_capa_detectable` (never populated, no real
+operational path) and renamed `unmapped_only` → `not_derivable` (the
+broader category covers both unmapped rules and mapped-but-outside-
+target rules).
 
 Open v2 question: when a check is identifiable from capa but
 unreachable by the candidate-extraction layer, should `candidates[]`
@@ -76,18 +87,12 @@ question independent of how many candidates landed. v2 may revisit
 this if downstream consumers want a per-technique audit trail
 regardless of extractability.
 
-Earlier note: the v1 short-circuit on unmapped rules (where any one
-unmapped rule forced the sample-level field to `tier_3`) was removed
-in the rename. `derivation_status` is now a function of the mapped
-portion of rules only; the unmapped list is reported alongside as
-derivation backlog and does not override the categorical.
-
-`partially_derivable` is reachable in principle but structurally empty
-under the current `CAPA_RULE_TO_APIS` because every rule mapped today
-produces APIs that are all inside `PFUZZER_68_APIS`. The bucket
-populates once the rule map adds entries with APIs outside the target
-list, or once `PFUZZER_68_APIS` shrinks. Until then the empty bucket
-is a property of the map alignment, not the malware.
+`partially_derivable` and `not_derivable` are both reachable in
+principle. Under the current `CAPA_RULE_TO_APIS`, every entry produces
+APIs that are all inside `PFUZZER_68_APIS`, so non-actionable rules in
+practice all come from the "unmapped" failure mode rather than the
+"outside-target" failure mode. The categories cover both failure
+modes; the data is currently all-one-flavor.
 
 ## 4. capa attribution rule for `source_channels`
 

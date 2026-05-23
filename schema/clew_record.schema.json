@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://clew.local/schemas/clew_record-0.2.0.json",
+  "$id": "https://clew.local/schemas/clew_record-0.3.0.json",
   "title": "Clew Record",
-  "description": "Per-sample candidate extraction record produced by Clew v0.2.x. See docs/schema.md for the human-readable specification.",
+  "description": "Per-sample candidate extraction record produced by Clew v0.3.x. See docs/schema.md for the human-readable specification.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -68,8 +68,8 @@
 
     "DerivationStatus": {
       "type": "string",
-      "enum": ["fully_derivable", "partially_derivable", "no_mapped_signal", "not_capa_detectable"],
-      "description": "Sample-level derivation-pipeline status. fully_derivable: all matched capa rules map to APIs and all implied APIs are in PFUZZER_68_APIS. partially_derivable: at least one mapped rule whose implied APIs include some outside PFUZZER_68_APIS. no_mapped_signal: no matched capa rule is in CAPA_RULE_TO_APIS. not_capa_detectable: handled outside this module."
+      "enum": ["fully_derivable", "partially_derivable", "not_derivable", "no_capa_signal"],
+      "description": "Sample-level derivation-pipeline status, rolled up from per-rule actionability. fully_derivable: every matched capa rule is actionable (mapped in CAPA_RULE_TO_APIS AND all implied APIs in PFUZZER_68_APIS). partially_derivable: at least one matched rule is actionable AND at least one is not. not_derivable: no matched rules are actionable (all unmapped, all-outside-target, or mix of those failure modes). no_capa_signal: no matched anti-analysis rules at all (also assigned to samples where capa didn't successfully complete — timeouts, capa errors)."
     },
 
     "Channel": {

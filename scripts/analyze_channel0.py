@@ -28,8 +28,8 @@ from clew.tiers import classify  # noqa: E402
 DERIVATION_STATUS_ORDER = [
     "fully_derivable",
     "partially_derivable",
-    "no_mapped_signal",
-    "not_capa_detectable",
+    "not_derivable",
+    "no_capa_signal",
 ]
 
 
@@ -123,14 +123,19 @@ def compute_stats(records: list[dict]) -> Stats:
             derivation_counts[ds] += 1
             unmapped = r.get("unmapped_rules") or []
             unmapped_rule_counts.append(len(unmapped))
-        elif status == "timeout":
-            n_timeout += 1
-        elif status == "capa_error":
-            n_capa_error += 1
-        elif status == "parse_error":
-            n_parse_error += 1
         else:
-            n_other_error += 1
+            # Non-ok runs (timeout, capa_error, etc.) fold into no_capa_signal
+            # in the categorical — capa returned no usable signal. The status
+            # tallies below still track run-health separately.
+            derivation_counts["no_capa_signal"] += 1
+            if status == "timeout":
+                n_timeout += 1
+            elif status == "capa_error":
+                n_capa_error += 1
+            elif status == "parse_error":
+                n_parse_error += 1
+            else:
+                n_other_error += 1
 
     return Stats(
         n_total=len(records),
@@ -187,8 +192,13 @@ def render_evasion_histogram(stats: Stats, out: Path) -> None:
 def render_derivation_distribution(stats: Stats, out: Path) -> None:
     labels = DERIVATION_STATUS_ORDER
     counts = [stats.derivation_counts.get(s, 0) for s in labels]
-    plt.figure(figsize=(9, 5))
-    colors = ["#2a9d8f", "#e9c46a", "#aaaaaa", "#e76f51"]
+    plt.figure(figsize=(10, 5))
+    # Color scheme:
+    # green:   fully_derivable     (Clew acts today, no caveats)
+    # yellow:  partially_derivable (Clew acts on the actionable portion)
+    # orange:  not_derivable       (signal exists, can't act today)
+    # blue-gray: no_capa_signal    (capa silent or didn't complete)
+    colors = ["#2a9d8f", "#e9c46a", "#f4a261", "#577590"]
     bars = plt.bar(labels, counts, color=colors)
     max_c = max(counts) if counts else 1
     for bar, c in zip(bars, counts):
@@ -196,7 +206,7 @@ def render_derivation_distribution(stats: Stats, out: Path) -> None:
                  str(c), ha="center", va="bottom", fontsize=9)
     plt.xlabel("derivation_status (sample-level, Channel 0)")
     plt.ylabel("Samples")
-    plt.title(f"Derivation-status distribution across malware corpus (N={stats.n_ok})")
+    plt.title(f"Derivation-status distribution across malware corpus (N={stats.n_total})")
     plt.xticks(rotation=15, ha="right")
     plt.tight_layout()
     plt.savefig(out, dpi=120)
@@ -342,6 +352,7 @@ def write_csv(stats: Stats, out: Path) -> None:
         rows.append({"metric": "runtime_min_sec", "value": round(min(stats.runtimes_ok), 2)})
     for ds in DERIVATION_STATUS_ORDER:
         rows.append({"metric": f"derivation_{ds}_count", "value": stats.derivation_counts.get(ds, 0)})
+    rows.append({"metric": "derivation_partition_total", "value": sum(stats.derivation_counts.values())})
     if stats.unmapped_rule_counts:
         rows.append({
             "metric": "samples_with_unmapped_rules",
@@ -420,17 +431,17 @@ def write_report(
 
     w("Derivation-status mix (sample-level field `derivation_status` from `clew/tiers.py`; "
       "this is **not** the defeatability tier from the evasion taxonomy):\n")
-    w("| derivation_status | count | % of ok | meaning |")
+    w("| derivation_status | count | % of N | meaning |")
     w("|---|---:|---:|---|")
     meanings = {
-        "fully_derivable": "≥1 mapped capa rule AND all implied APIs in PFUZZER_68_APIS",
-        "partially_derivable": "≥1 mapped capa rule AND ≥1 implied API outside PFUZZER_68_APIS",
-        "no_mapped_signal": "no matched capa rule is in CAPA_RULE_TO_APIS (either zero rules, or all unmapped)",
-        "not_capa_detectable": "decided outside this module — never produced by Channel 0",
+        "fully_derivable": "every matched rule is actionable — Clew acts on this sample today, no caveats",
+        "partially_derivable": "mix — at least one matched rule is actionable, at least one is not",
+        "not_derivable": "no matched rules are actionable (all unmapped, or all outside-target, or any mix of those failure modes)",
+        "no_capa_signal": "no matched anti-analysis rules at all — includes capa-silent samples AND non-ok runs (timeouts, errors)",
     }
     for ds in DERIVATION_STATUS_ORDER:
         cnt = malware.derivation_counts.get(ds, 0)
-        pct = (100.0 * cnt / malware.n_ok) if malware.n_ok else 0.0
+        pct = (100.0 * cnt / malware.n_total) if malware.n_total else 0.0
         w(f"| `{ds}` | {cnt} | {pct:.1f}% | {meanings[ds]} |")
     w("")
     n_with_unmapped = sum(1 for n in malware.unmapped_rule_counts if n > 0)
@@ -559,28 +570,28 @@ def write_report(
           f"precision and concrete candidate values), which is exactly what Channels 1, 2, and 4 "
           f"add. FLOSS expands the candidate-string pool; BN connects strings to call sites; "
           f"DRIO captures runtime cmp/test operands.")
-    n_with_unmapped = sum(1 for n in malware.unmapped_rule_counts if n > 0)
-    if n_with_unmapped > 0:
-        w(f"- **{n_with_unmapped} samples ({100.0*n_with_unmapped/malware.n_ok:.1f}% of `ok`) "
-          f"carry at least one unmapped capa rule.** These don't lower the sample's "
-          f"`derivation_status`; they sit alongside as derivation backlog. The unique-unmapped-rule "
-          f"set across the corpus is the concrete scope estimate for week-9 derivation work.")
+    n_total = malware.n_total or 1
     n_fully = malware.derivation_counts.get("fully_derivable", 0)
     if n_fully > 0:
-        w(f"- **{n_fully} samples ({100.0*n_fully/malware.n_ok:.1f}% of `ok`) are `fully_derivable` "
-          f"today** — every mapped capa rule has derivation logic and every implied API is in "
-          f"`PFUZZER_68_APIS`. This is the honest \"Clew handles these now\" number.")
-    n_no_signal = malware.derivation_counts.get("no_mapped_signal", 0)
-    if n_no_signal > 0:
-        w(f"- **{n_no_signal} samples ({100.0*n_no_signal/malware.n_ok:.1f}% of `ok`) have "
-          f"`no_mapped_signal`** — either zero capa hits or only-unmapped hits. These are the "
-          f"FLOSS/BN/DRIO frontier; Channel 0 alone has nothing actionable on them.")
+        w(f"- **{n_fully} samples ({100.0*n_fully/n_total:.1f}%) are `fully_derivable`** — every "
+          f"matched capa rule is actionable. This is the honest \"Clew handles these today\" "
+          f"number.")
     n_partial = malware.derivation_counts.get("partially_derivable", 0)
-    if n_partial == 0:
-        w(f"- **`partially_derivable` is structurally empty under the current rule map** because "
-          f"every entry in `CAPA_RULE_TO_APIS` produces APIs inside `PFUZZER_68_APIS`. The bucket "
-          f"is reachable in principle; it'll populate once the rule map adds entries with outside-"
-          f"target APIs (or once `PFUZZER_68_APIS` shrinks).")
+    if n_partial > 0:
+        w(f"- **{n_partial} samples ({100.0*n_partial/n_total:.1f}%) are `partially_derivable`** — "
+          f"some matched rules are actionable, others are not (unmapped or APIs outside target). "
+          f"Clew acts on the actionable portion; the rest is derivation backlog.")
+    n_not_derivable = malware.derivation_counts.get("not_derivable", 0)
+    if n_not_derivable > 0:
+        w(f"- **{n_not_derivable} samples ({100.0*n_not_derivable/n_total:.1f}%) are "
+          f"`not_derivable`** — capa surfaced anti-analysis rules but none are actionable yet. "
+          f"Sized derivation work in this module: extend `CAPA_RULE_TO_APIS` and these flip to "
+          f"`fully_derivable` or `partially_derivable`.")
+    n_no_signal = malware.derivation_counts.get("no_capa_signal", 0)
+    if n_no_signal > 0:
+        w(f"- **{n_no_signal} samples ({100.0*n_no_signal/n_total:.1f}%) are `no_capa_signal`** — "
+          f"capa returned no anti-analysis rules (truly silent, or didn't successfully complete). "
+          f"Channel 0 has nothing on these; FLOSS / BN / DRIO must surface what capa missed.")
     n_timeouts = malware.n_timeout
     if n_timeouts > 0:
         pct_to = 100.0 * n_timeouts / malware.n_total

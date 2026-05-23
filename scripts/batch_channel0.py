@@ -94,7 +94,10 @@ def process_one(
         "total_rules": 0,
         "evasion_rules": [],
         "num_evasion_rules": 0,
-        "derivation_status": None,
+        # Default: assume capa won't successfully complete; ok-path overwrites.
+        # Non-ok runs (timeout, capa_error, etc.) leave this as "no_capa_signal"
+        # because the operational outcome — no usable capa signal — is the same.
+        "derivation_status": "no_capa_signal",
         "unmapped_rules": [],
         "started_at": None,
         "ended_at": None,

@@ -6,24 +6,27 @@ property of an evasion technique) is the taxonomy concept used in
 `docs/context/evasion-taxonomy.md` and surfaces per-candidate via the
 schema's `evasion_tier` field.
 
-Values:
-- `fully_derivable`     at least one matched capa rule is in
-                        CAPA_RULE_TO_APIS, AND every implied API is in
-                        PFUZZER_68_APIS.
-- `partially_derivable` at least one matched capa rule is mapped, AND at
-                        least one implied API is outside PFUZZER_68_APIS.
-                        Structurally empty under the current rule map.
-- `no_mapped_signal`    no matched capa rule is in CAPA_RULE_TO_APIS
-                        (covers both zero capa rules and only-unmapped
-                        rules — both states mean Clew has no actionable
-                        signal at this layer).
-- `not_capa_detectable` decided outside this module (sample uses
-                        techniques capa cannot detect). Never returned
-                        by classify().
+Rollup model: per-rule actionability decides the sample's categorical.
+A rule is "actionable" iff it is in CAPA_RULE_TO_APIS AND all its implied
+APIs are in PFUZZER_68_APIS. Sample-level rollup:
 
-`classify()` no longer short-circuits on unmapped rules. The list of
-unmapped rules is returned alongside the categorical so callers can act
-on derivation backlog independently of the sample's classification.
+- `fully_derivable`     ≥1 matched rule, every matched rule is actionable
+- `partially_derivable` ≥1 matched rule is actionable AND ≥1 is not
+- `not_derivable`       ≥1 matched rule, no matched rules are actionable
+                        (covers all-unmapped, all-outside-target, or mix
+                        of those two failure modes)
+- `no_capa_signal`      no matched rules at all (zero anti-analysis rules
+                        fired). Also assigned outside this module to
+                        samples where capa didn't successfully complete
+                        (timeouts, capa errors) — same operational
+                        outcome: no usable capa signal.
+
+Every sample lands in exactly one bucket. The four values partition the
+sample space cleanly with no overlap.
+
+`classify()` does not short-circuit. The list of unmapped rules is
+returned alongside the categorical so callers can size derivation
+backlog independently of the sample's classification.
 """
 from __future__ import annotations
 
@@ -195,33 +198,39 @@ CAPA_RULE_TO_APIS: dict[str, frozenset[str]] = {
 }
 
 
+def _rule_is_actionable(rule: str) -> bool:
+    """True iff the rule is mapped AND all its implied APIs are in target list."""
+    if rule not in CAPA_RULE_TO_APIS:
+        return False
+    implied = CAPA_RULE_TO_APIS[rule]
+    return not (implied - PFUZZER_68_APIS)
+
+
 def classify(rule_names: Iterable[str]) -> tuple[str, list[str]]:
     """Return (derivation_status, sorted list of unmapped rule names).
 
-    Behavior:
-    - Splits `rule_names` into mapped vs unmapped against CAPA_RULE_TO_APIS.
-    - If no rule is mapped, returns ("no_mapped_signal", unmapped). This
-      covers both empty input and inputs that consist entirely of unmapped
-      rules — in both cases Clew has no actionable signal at this layer.
-    - Otherwise, unions the implied APIs of the mapped rules. If any API
-      falls outside PFUZZER_68_APIS, returns "partially_derivable";
-      otherwise "fully_derivable".
-    - In all cases, the second return value is the sorted list of
-      unmapped rule names — actionable derivation backlog, independent of
-      the categorical.
+    Per-rule actionability rollup:
+    - Every matched rule is actionable → "fully_derivable"
+    - Mix of actionable and not-actionable rules → "partially_derivable"
+    - No matched rules are actionable → "not_derivable"
+    - No matched rules at all (empty input) → "no_capa_signal"
+
+    The unmapped-rule list is returned alongside the categorical for
+    sizing derivation backlog. Note: a rule can be not-actionable for two
+    reasons (unmapped, or mapped with APIs outside PFUZZER_68_APIS); only
+    the unmapped subset is reported here.
     """
     rule_names = list(rule_names)
     unmapped = sorted(r for r in rule_names if r not in CAPA_RULE_TO_APIS)
-    mapped = [r for r in rule_names if r in CAPA_RULE_TO_APIS]
 
-    if not mapped:
-        return ("no_mapped_signal", unmapped)
+    if not rule_names:
+        return ("no_capa_signal", [])
 
-    all_apis: set[str] = set()
-    for r in mapped:
-        all_apis |= CAPA_RULE_TO_APIS[r]
+    actionable_count = sum(1 for r in rule_names if _rule_is_actionable(r))
+    total = len(rule_names)
 
-    outside = all_apis - PFUZZER_68_APIS
-    if outside:
-        return ("partially_derivable", unmapped)
-    return ("fully_derivable", unmapped)
+    if actionable_count == 0:
+        return ("not_derivable", unmapped)
+    if actionable_count == total:
+        return ("fully_derivable", unmapped)
+    return ("partially_derivable", unmapped)

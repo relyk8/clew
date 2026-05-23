@@ -50,12 +50,12 @@ Evasion-rule-count distribution across `ok` samples:
 
 Derivation-status mix (sample-level field `derivation_status` from `clew/tiers.py`; this is **not** the defeatability tier from the evasion taxonomy):
 
-| derivation_status | count | % of ok | meaning |
+| derivation_status | count | % of N | meaning |
 |---|---:|---:|---|
-| `fully_derivable` | 202 | 42.4% | ≥1 mapped capa rule AND all implied APIs in PFUZZER_68_APIS |
-| `partially_derivable` | 0 | 0.0% | ≥1 mapped capa rule AND ≥1 implied API outside PFUZZER_68_APIS |
-| `no_mapped_signal` | 274 | 57.6% | no matched capa rule is in CAPA_RULE_TO_APIS (either zero rules, or all unmapped) |
-| `not_capa_detectable` | 0 | 0.0% | decided outside this module — never produced by Channel 0 |
+| `fully_derivable` | 98 | 19.6% | every matched rule is actionable — Clew acts on this sample today, no caveats |
+| `partially_derivable` | 104 | 20.8% | mix — at least one matched rule is actionable, at least one is not |
+| `not_derivable` | 79 | 15.8% | no matched rules are actionable (all unmapped, or all outside-target, or any mix of those failure modes) |
+| `no_capa_signal` | 219 | 43.8% | no matched anti-analysis rules at all — includes capa-silent samples AND non-ok runs (timeouts, errors) |
 
 **Unmapped-rule backlog (orthogonal to `derivation_status`):** 183 samples (38.4% of `ok`) had at least one matched capa rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queue work for week-9 derivation and do *not* lower the sample's `derivation_status` — a sample can be `fully_derivable` on its mapped portion while still carrying unmapped rules.
 
@@ -106,7 +106,7 @@ With that caveat: the table reports the rate of anti-analysis rules firing on ea
 - **Archive**: `2017-10-20`
 - **Total capa rules matched**: 57
 - **Anti-analysis rules** (8): `acquire debug privileges`, `contain obfuscated stackstrings`, `find graphical window`, `reference analysis tools strings`, `reference anti-VM strings targeting Parallels`, `reference anti-VM strings targeting VMWare`, `reference anti-VM strings targeting VirtualBox`, `timestomp file`
-- **derivation_status**: `fully_derivable`
+- **derivation_status**: `partially_derivable`
 - **Unmapped rules (backlog)** (3): `acquire debug privileges`, `contain obfuscated stackstrings`, `timestomp file`
 - **Runtime**: 8.82s
 
@@ -116,7 +116,7 @@ With that caveat: the table reports the rate of anti-analysis rules firing on ea
 - **Archive**: `2017-10-20`
 - **Total capa rules matched**: 22
 - **Anti-analysis rules**: 0 (capa found no evasion signal)
-- **derivation_status**: `no_mapped_signal`
+- **derivation_status**: `no_capa_signal`
 - **Runtime**: 9.22s
 - **Interpretation note**: VT metadata absent; we can't characterize this sample beyond what capa returned.
 
@@ -124,10 +124,10 @@ With that caveat: the table reports the rate of anti-analysis rules firing on ea
 
 - **Capa's most-frequent anti-analysis hits** (`reference analysis tools strings`, `packed with UPX`, `packed with generic packer`, `contain obfuscated stackstrings`, `reference anti-VM strings targeting Xen`) are the high-volume techniques in this corpus. Channel 1 (FLOSS) and Channel 2 (BN) should treat these as priority targets for per-call-site enrichment, since these are where the downstream fuzzer will see the most call sites.
 - **41.0% of `ok` samples (195 samples) matched zero anti-analysis rules.** These are the candidates for Channel 1 to surface evasion that's expressed via decoded/stackstring data capa can't decode statically — the breadth-gap for FLOSS.
-- **183 samples (38.4% of `ok`) carry at least one unmapped capa rule.** These don't lower the sample's `derivation_status`; they sit alongside as derivation backlog. The unique-unmapped-rule set across the corpus is the concrete scope estimate for week-9 derivation work.
-- **202 samples (42.4% of `ok`) are `fully_derivable` today** — every mapped capa rule has derivation logic and every implied API is in `PFUZZER_68_APIS`. This is the honest "Clew handles these now" number.
-- **274 samples (57.6% of `ok`) have `no_mapped_signal`** — either zero capa hits or only-unmapped hits. These are the FLOSS/BN/DRIO frontier; Channel 0 alone has nothing actionable on them.
-- **`partially_derivable` is structurally empty under the current rule map** because every entry in `CAPA_RULE_TO_APIS` produces APIs inside `PFUZZER_68_APIS`. The bucket is reachable in principle; it'll populate once the rule map adds entries with outside-target APIs (or once `PFUZZER_68_APIS` shrinks).
+- **98 samples (19.6%) are `fully_derivable`** — every matched capa rule is actionable. This is the honest "Clew handles these today" number.
+- **104 samples (20.8%) are `partially_derivable`** — some matched rules are actionable, others are not (unmapped or APIs outside target). Clew acts on the actionable portion; the rest is derivation backlog.
+- **79 samples (15.8%) are `not_derivable`** — capa surfaced anti-analysis rules but none are actionable yet. Sized derivation work in this module: extend `CAPA_RULE_TO_APIS` and these flip to `fully_derivable` or `partially_derivable`.
+- **219 samples (43.8%) are `no_capa_signal`** — capa returned no anti-analysis rules (truly silent, or didn't successfully complete). Channel 0 has nothing on these; FLOSS / BN / DRIO must surface what capa missed.
 - **Timeout rate: 4.6% (23 samples)** hit the 120s ceiling. These are capa-pathological samples — likely heavy packers, large overlays, or control-flow obfuscation that defeats capa's analysis budget. **Not automatically Channel 4 territory:** DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. Treat these as scope-limit findings, not as a queue handed to another channel.
 
 ## 8. Honest limitations

@@ -38,12 +38,16 @@ This field exists primarily to support tier classification and to give analysts 
 
 ### `derivation_status` (required, string enum or null)
 
-Clew's derivation-pipeline status for the sample, computed from `capa_techniques` against `CAPA_RULE_TO_APIS` and `PFUZZER_68_APIS` in `clew/tiers.py`. One of:
+Clew's derivation-pipeline status for the sample, computed by rolling up per-rule actionability. A rule is **actionable** iff it is mapped in `CAPA_RULE_TO_APIS` AND all its implied APIs are in `PFUZZER_68_APIS`. Sample-level rollup:
 
-- `fully_derivable` — at least one matched capa rule is in `CAPA_RULE_TO_APIS`, AND every implied API is in `PFUZZER_68_APIS`. Clew can fully target everything this sample's mapped rules surface.
-- `partially_derivable` — at least one matched capa rule is mapped, AND at least one implied API is outside `PFUZZER_68_APIS`. Clew can derive *some* of what this sample uses; the remainder is outside the current target list.
-- `no_mapped_signal` — no matched capa rule is in `CAPA_RULE_TO_APIS`. Subsumes both "zero capa rules matched" and "only unmapped rules matched"; either way Clew has no actionable signal at this layer.
-- `not_capa_detectable` — sample uses techniques capa cannot detect. Decided outside this module.
+- `fully_derivable` — every matched rule is actionable. Clew can act on the sample today with no caveats.
+- `partially_derivable` — mix: at least one matched rule is actionable, at least one is not. Clew can act on the actionable portion; the rest is either unmapped or its implied APIs sit outside the target list.
+- `not_derivable` — no matched rules are actionable. All matched rules are either unmapped or their implied APIs are outside the target list (or some combination). Clew has signal it can't act on.
+- `no_capa_signal` — no matched anti-analysis rules at all. Either the sample is non-evasive from capa's perspective, or capa didn't successfully complete (timeout / capa error). Same operational outcome: no usable capa signal.
+
+The four values partition the sample space — every sample lands in exactly one bucket.
+
+Note: `not_capa_detectable` was a reserved value in earlier schema versions but was never populated. Removed in v0.3.0.
 
 Null if classification was skipped (e.g. capa was disabled).
 
@@ -221,7 +225,7 @@ For quick reference:
 
 | Field | Values |
 |---|---|
-| `derivation_status` | `fully_derivable`, `partially_derivable`, `no_mapped_signal`, `not_capa_detectable` |
+| `derivation_status` | `fully_derivable`, `partially_derivable`, `not_derivable`, `no_capa_signal` |
 | `evasion_tier` | `tier_1`, `tier_2`, `tier_3`, `tier_4` (defeatability) |
 | `api_resolution` | `import`, `getprocaddress`, `ordinal`, `hashed` (reserved) |
 | `comparison_operator` | `equality`, `inequality`, `greater_than`, `less_than`, `greater_equal`, `less_equal`, `bitwise_and`, `bitwise_or`, `contains`, `unknown` |
