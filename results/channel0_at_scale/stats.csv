@@ -11,8 +11,9 @@ runtime_p95_sec,43.16
 runtime_mean_sec,15.71
 runtime_max_sec,118.79
 runtime_min_sec,0.61
-tier_tier_1_count,293.0
-tier_tier_2_count,0.0
-tier_tier_3_count,183.0
-tier_tier_4_count,0.0
-tier_unclassified_count,0.0
+derivation_fully_derivable_count,202.0
+derivation_partially_derivable_count,0.0
+derivation_no_mapped_signal_count,274.0
+derivation_not_capa_detectable_count,0.0
+samples_with_unmapped_rules,183.0
+total_unmapped_rule_hits,275.0

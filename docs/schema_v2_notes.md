@@ -50,24 +50,44 @@ Anyone reviewing the schema and asking "why bother with the other
 channels if capa already detects this?" should be pointed at this 8/12
 ratio.
 
-## 3. `tier_classification` derivation in v1
+## 3. `derivation_status` and per-candidate `evasion_tier` are different concepts
 
-`docs/schema.md` says the sample-level `tier_classification` is the
-worst tier among its candidates. That works as a definition for hand-
-authored fixtures, but creates ambiguity once derivation logic exists:
-a check that capa identifies but that the candidate-extraction layer
-can't reach — for example, an inline anti-debug instruction with no
-extractable comparison — might either emit a tier_3 placeholder
-candidate (so it shows up in `candidates[]`) or be skipped entirely
-(so it doesn't). Those two choices give different `tier_classification`
-values for the same sample under the "worst tier among candidates"
-rule.
+The schema separates two distinct ideas that had collided in earlier
+drafts under the single name "tier":
 
-v1 sidesteps the ambiguity by deriving `tier_classification` from
-capa's rule output (sample-level signal → sample-level field),
-independent of `candidates[]`. v2 must reconcile this: either redefine
-the field to be capa-derived, or define a stable rule for whether
-unreachable checks get placeholder candidates.
+- Sample-level `derivation_status` (`fully_derivable` /
+  `partially_derivable` / `no_mapped_signal` / `not_capa_detectable`)
+  describes where Clew's derivation pipeline stands for the sample —
+  whether the matched capa rules are mapped in `CAPA_RULE_TO_APIS` and
+  whether their implied APIs are in `PFUZZER_68_APIS`. It is computed
+  by `clew/tiers.py:classify()` from the capa output, independent of
+  `candidates[]`.
+- Per-candidate `evasion_tier` (`tier_1`..`tier_4`) is the
+  *defeatability tier* of the evasion technique the candidate
+  addresses, drawn from the taxonomy in
+  `docs/context/evasion-taxonomy.md`.
+
+Open v2 question: when a check is identifiable from capa but
+unreachable by the candidate-extraction layer, should `candidates[]`
+contain a placeholder record? The current v1 rule is: no — only
+extractable checks become candidate records, and `derivation_status`
+captures the sample-level "how much of this can we currently do"
+question independent of how many candidates landed. v2 may revisit
+this if downstream consumers want a per-technique audit trail
+regardless of extractability.
+
+Earlier note: the v1 short-circuit on unmapped rules (where any one
+unmapped rule forced the sample-level field to `tier_3`) was removed
+in the rename. `derivation_status` is now a function of the mapped
+portion of rules only; the unmapped list is reported alongside as
+derivation backlog and does not override the categorical.
+
+`partially_derivable` is reachable in principle but structurally empty
+under the current `CAPA_RULE_TO_APIS` because every rule mapped today
+produces APIs that are all inside `PFUZZER_68_APIS`. The bucket
+populates once the rule map adds entries with APIs outside the target
+list, or once `PFUZZER_68_APIS` shrinks. Until then the empty bucket
+is a property of the map alignment, not the malware.
 
 ## 4. capa attribution rule for `source_channels`
 

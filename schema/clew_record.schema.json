@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://clew.local/schemas/clew_record-0.1.0.json",
+  "$id": "https://clew.local/schemas/clew_record-0.2.0.json",
   "title": "Clew Record",
-  "description": "Per-sample candidate extraction record produced by Clew v0.1.x. See docs/schema.md for the human-readable specification.",
+  "description": "Per-sample candidate extraction record produced by Clew v0.2.x. See docs/schema.md for the human-readable specification.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
     "sample_path",
     "clew_version",
     "capa_techniques",
-    "tier_classification",
+    "derivation_status",
     "total_iterations",
     "candidates"
   ],
@@ -34,12 +34,12 @@
       "items": { "type": "string" },
       "description": "capa rule names matched by Channel 0; empty array if capa not run or no matches."
     },
-    "tier_classification": {
+    "derivation_status": {
       "oneOf": [
-        { "$ref": "#/$defs/Tier" },
+        { "$ref": "#/$defs/DerivationStatus" },
         { "type": "null" }
       ],
-      "description": "Sample-level tier; null if classification skipped."
+      "description": "Sample-level derivation-pipeline status. Distinct from the per-candidate `evasion_tier` (defeatability tier). Null if classification was skipped."
     },
     "total_iterations": {
       "type": "integer",
@@ -62,7 +62,14 @@
 
     "Tier": {
       "type": "string",
-      "enum": ["tier_1", "tier_2", "tier_3", "tier_4"]
+      "enum": ["tier_1", "tier_2", "tier_3", "tier_4"],
+      "description": "Defeatability tier of an evasion technique. tier_1: single-call defeatable; tier_2: multi-call coordination; tier_3-4: crypto/timing/infeasible. Source: docs/context/evasion-taxonomy.md. Used per-candidate as `evasion_tier`."
+    },
+
+    "DerivationStatus": {
+      "type": "string",
+      "enum": ["fully_derivable", "partially_derivable", "no_mapped_signal", "not_capa_detectable"],
+      "description": "Sample-level derivation-pipeline status. fully_derivable: all matched capa rules map to APIs and all implied APIs are in PFUZZER_68_APIS. partially_derivable: at least one mapped rule whose implied APIs include some outside PFUZZER_68_APIS. no_mapped_signal: no matched capa rule is in CAPA_RULE_TO_APIS. not_capa_detectable: handled outside this module."
     },
 
     "Channel": {

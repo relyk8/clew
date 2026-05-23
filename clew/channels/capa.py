@@ -5,8 +5,10 @@ sample-level / feature-level signal, not a per-call-site signal. See
 docs/schema_v2_notes.md for the full architectural note.
 
 Version pinning: this module assumes a coordinated set of (flare-capa,
-capa-rules tag, capa sigs commit). Mismatches will silently change which
-rules fire. Pin all three together when integrating.
+capa-rules tag, capa sigs commit) — `CAPA_PINS` below records the
+currently-validated set. Mismatches will silently change which rules
+fire; bump all three together when integrating. Reports generated under
+a given pin should cite it (see scripts/analyze_channel0.py).
 """
 from __future__ import annotations
 
@@ -15,6 +17,15 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+
+
+# Validated pin set from the 500-sample scale test (docs/channel0_at_scale.md).
+# Bump all three together when re-validating.
+CAPA_PINS: dict[str, str] = {
+    "flare_capa": "9.4.0",
+    "capa_rules_tag": "be59710a",
+    "capa_sigs_commit": "46188228",
+}
 
 
 class CapaError(Exception):

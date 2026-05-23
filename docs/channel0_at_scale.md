@@ -48,17 +48,18 @@ Evasion-rule-count distribution across `ok` samples:
 
 ![evasion count histogram](../results/channel0_at_scale/evasion_count_histogram.png)
 
-Tier mix:
+Derivation-status mix (sample-level field `derivation_status` from `clew/tiers.py`; this is **not** the defeatability tier from the evasion taxonomy):
 
-| tier | count | % of ok |
-|---|---:|---:|
-| tier_1 | 293 | 61.6% |
-| tier_2 | 0 | 0.0% |
-| tier_3 | 183 | 38.4% |
-| tier_4 | 0 | 0.0% |
-| unclassified | 0 | 0.0% |
+| derivation_status | count | % of ok | meaning |
+|---|---:|---:|---|
+| `fully_derivable` | 202 | 42.4% | ≥1 mapped capa rule AND all implied APIs in PFUZZER_68_APIS |
+| `partially_derivable` | 0 | 0.0% | ≥1 mapped capa rule AND ≥1 implied API outside PFUZZER_68_APIS |
+| `no_mapped_signal` | 274 | 57.6% | no matched capa rule is in CAPA_RULE_TO_APIS (either zero rules, or all unmapped) |
+| `not_capa_detectable` | 0 | 0.0% | decided outside this module — never produced by Channel 0 |
 
-![tier distribution](../results/channel0_at_scale/tier_distribution.png)
+**Unmapped-rule backlog (orthogonal to `derivation_status`):** 183 samples (38.4% of `ok`) had at least one matched capa rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queue work for week-9 derivation and do *not* lower the sample's `derivation_status` — a sample can be `fully_derivable` on its mapped portion while still carrying unmapped rules.
+
+![derivation status distribution](../results/channel0_at_scale/derivation_status_distribution.png)
 
 ## 4. Top techniques surfaced
 
@@ -103,9 +104,9 @@ Rate of anti-analysis rules firing on a known-benign control set vs the malware 
 - **Archive**: `2017-10-20`
 - **Total capa rules matched**: 57
 - **Anti-analysis rules** (8): `acquire debug privileges`, `contain obfuscated stackstrings`, `find graphical window`, `reference analysis tools strings`, `reference anti-VM strings targeting Parallels`, `reference anti-VM strings targeting VMWare`, `reference anti-VM strings targeting VirtualBox`, `timestomp file`
-- **Tier**: `tier_3`
+- **derivation_status**: `fully_derivable`
+- **Unmapped rules (backlog)** (3): `acquire debug privileges`, `contain obfuscated stackstrings`, `timestomp file`
 - **Runtime**: 8.82s
-- **VT descriptive tags**: `ALYac: Gen:Variant.Zusy.Elzob.8654`, `CAT-QuickHeal: Trojan.Beaugrit.S16628`, `MicroWorld-eScan: Gen:Variant.Zusy.Elzob.8654`, `VIPRE: Trojan.Win32.Generic!BT`, `peexe`, `suspicious-dns`
 
 ### B — capa-empty sample
 
@@ -113,16 +114,18 @@ Rate of anti-analysis rules firing on a known-benign control set vs the malware 
 - **Archive**: `2017-10-20`
 - **Total capa rules matched**: 22
 - **Anti-analysis rules**: 0 (capa found no evasion signal)
-- **Tier**: `tier_1`
+- **derivation_status**: `no_mapped_signal`
 - **Runtime**: 9.22s
-- **VT descriptive tags**: `Malwarebytes: Trojan.Agent.ALTV`, `McAfee: Packed-DG!B7EA40518B0C`, `MicroWorld-eScan: Gen:Variant.Zusy.138181`, `VIPRE: Trojan.Win32.Carberp.i (v)`, `overlay`, `peexe`
-- **Interpretation note**: AV engines (above) report on this sample independently of capa. If the descriptive tags suggest evasion-flavored behavior but Channel 0 caught nothing, this sample is a candidate for Channels 1 (FLOSS) and 2 (BN) to fill in. AV labels are noisy and used here only for context, not as ground truth.
+- **Interpretation note**: VT metadata absent; we can't characterize this sample beyond what capa returned.
 
 ## 7. Implications for Channel 1 (FLOSS) and beyond
 
 - **Capa's most-frequent anti-analysis hits** (`reference analysis tools strings`, `packed with UPX`, `packed with generic packer`, `contain obfuscated stackstrings`, `reference anti-VM strings targeting Xen`) are the high-volume techniques in this corpus. Channel 1 (FLOSS) and Channel 2 (BN) should treat these as priority targets for per-call-site enrichment, since these are where the downstream fuzzer will see the most call sites.
 - **41.0% of `ok` samples (195 samples) matched zero anti-analysis rules.** These are the candidates for Channel 1 to surface evasion that's expressed via decoded/stackstring data capa can't decode statically — the breadth-gap for FLOSS.
-- **Tier-3 samples (183, 38.4%)** have at least one capa anti-analysis rule that isn't yet in `CAPA_RULE_TO_APIS`. Each unmapped rule is a small piece of week-9 derivation work — the size of that unmapped-rule set across the corpus is a concrete scope estimate for that future task.
+- **183 samples (38.4% of `ok`) carry at least one unmapped capa rule.** These don't lower the sample's `derivation_status`; they sit alongside as derivation backlog. The unique-unmapped-rule set across the corpus is the concrete scope estimate for week-9 derivation work.
+- **202 samples (42.4% of `ok`) are `fully_derivable` today** — every mapped capa rule has derivation logic and every implied API is in `PFUZZER_68_APIS`. This is the honest "Clew handles these now" number.
+- **274 samples (57.6% of `ok`) have `no_mapped_signal`** — either zero capa hits or only-unmapped hits. These are the FLOSS/BN/DRIO frontier; Channel 0 alone has nothing actionable on them.
+- **`partially_derivable` is structurally empty under the current rule map** because every entry in `CAPA_RULE_TO_APIS` produces APIs inside `PFUZZER_68_APIS`. The bucket is reachable in principle; it'll populate once the rule map adds entries with outside-target APIs (or once `PFUZZER_68_APIS` shrinks).
 - **Timeout rate: 4.6% (23 samples)** hit the 120s ceiling. These are capa's edge cases — likely heavy packers, large overlays, or pathological control flow. They are themselves a Clew finding: samples too expensive for static-only analysis are precisely where dynamic Channel 4 (DRIO) has to take over.
 
 ## 8. Honest limitations

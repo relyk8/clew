@@ -94,7 +94,7 @@ def process_one(
         "total_rules": 0,
         "evasion_rules": [],
         "num_evasion_rules": 0,
-        "tier": None,
+        "derivation_status": None,
         "unmapped_rules": [],
         "started_at": None,
         "ended_at": None,
@@ -112,11 +112,11 @@ def process_one(
         )
         rules_meta = result.raw.get("rules", {})
         evasion = filter_evasion_techniques(result.rule_names, rules_meta)
-        tier, unmapped = classify(evasion)
+        derivation_status, unmapped = classify(evasion)
         rec["total_rules"] = len(result.rule_names)
         rec["evasion_rules"] = sorted(evasion)
         rec["num_evasion_rules"] = len(evasion)
-        rec["tier"] = tier
+        rec["derivation_status"] = derivation_status
         rec["unmapped_rules"] = sorted(unmapped)
     except CapaNotFoundError as e:
         rec["status"] = "capa_not_found"

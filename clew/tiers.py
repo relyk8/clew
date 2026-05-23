@@ -1,10 +1,29 @@
-"""Tier classification from capa rule output.
+"""Derivation-status classification from capa rule output.
 
-Tier semantics (per docs/schema.md):
-- tier_1: all implied APIs covered by Pfuzzer's 68
-- tier_2: some inside, some outside
-- tier_3: rule fired but no derivation logic (default for unmapped)
-- tier_4: not capa-detectable (out of scope for this module)
+`derivation_status` answers: where is Clew's derivation pipeline with this
+sample today? It is **not** a defeatability tier. The defeatability tier (a
+property of an evasion technique) is the taxonomy concept used in
+`docs/context/evasion-taxonomy.md` and surfaces per-candidate via the
+schema's `evasion_tier` field.
+
+Values:
+- `fully_derivable`     at least one matched capa rule is in
+                        CAPA_RULE_TO_APIS, AND every implied API is in
+                        PFUZZER_68_APIS.
+- `partially_derivable` at least one matched capa rule is mapped, AND at
+                        least one implied API is outside PFUZZER_68_APIS.
+                        Structurally empty under the current rule map.
+- `no_mapped_signal`    no matched capa rule is in CAPA_RULE_TO_APIS
+                        (covers both zero capa rules and only-unmapped
+                        rules — both states mean Clew has no actionable
+                        signal at this layer).
+- `not_capa_detectable` decided outside this module (sample uses
+                        techniques capa cannot detect). Never returned
+                        by classify().
+
+`classify()` no longer short-circuits on unmapped rules. The list of
+unmapped rules is returned alongside the categorical so callers can act
+on derivation backlog independently of the sample's classification.
 """
 from __future__ import annotations
 
@@ -61,34 +80,39 @@ CAPA_RULE_TO_APIS: dict[str, frozenset[str]] = {
     "reference anti-VM strings targeting Parallels": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
     "reference anti-VM strings targeting Xen": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
     "reference anti-VM strings targeting VirtualPC": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
-    # TODO: map remaining rules from canonical list. For now, unmapped
-    # rules trigger tier_3 via the default branch in classify().
+    # TODO: map remaining rules from canonical list. Unmapped rules surface
+    # via the second return value of classify(); they no longer override the
+    # categorical.
 }
 
 
 def classify(rule_names: Iterable[str]) -> tuple[str, list[str]]:
-    """Return (tier_classification, sorted list of unmapped rule names).
+    """Return (derivation_status, sorted list of unmapped rule names).
 
-    Rules not in CAPA_RULE_TO_APIS are unmapped and force tier_3.
-    Empty input: returns ("tier_1", []) — no evidence of evasion isn't
-    a tier degradation signal at this layer; tier_4 is decided elsewhere.
+    Behavior:
+    - Splits `rule_names` into mapped vs unmapped against CAPA_RULE_TO_APIS.
+    - If no rule is mapped, returns ("no_mapped_signal", unmapped). This
+      covers both empty input and inputs that consist entirely of unmapped
+      rules — in both cases Clew has no actionable signal at this layer.
+    - Otherwise, unions the implied APIs of the mapped rules. If any API
+      falls outside PFUZZER_68_APIS, returns "partially_derivable";
+      otherwise "fully_derivable".
+    - In all cases, the second return value is the sorted list of
+      unmapped rule names — actionable derivation backlog, independent of
+      the categorical.
     """
     rule_names = list(rule_names)
     unmapped = sorted(r for r in rule_names if r not in CAPA_RULE_TO_APIS)
-    if unmapped:
-        return ("tier_3", unmapped)
+    mapped = [r for r in rule_names if r in CAPA_RULE_TO_APIS]
 
-    if not rule_names:
-        return ("tier_1", [])
+    if not mapped:
+        return ("no_mapped_signal", unmapped)
 
     all_apis: set[str] = set()
-    for r in rule_names:
+    for r in mapped:
         all_apis |= CAPA_RULE_TO_APIS[r]
 
-    inside = all_apis & PFUZZER_68_APIS
     outside = all_apis - PFUZZER_68_APIS
-    if outside and inside:
-        return ("tier_2", [])
-    if outside and not inside:
-        return ("tier_2", [])
-    return ("tier_1", [])
+    if outside:
+        return ("partially_derivable", unmapped)
+    return ("fully_derivable", unmapped)

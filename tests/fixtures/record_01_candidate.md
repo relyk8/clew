@@ -72,8 +72,9 @@ semantically equivalent to `if (IsDebuggerPresent() != 0)`.
 6. **Self-contained** — function is one line. No al-khaser helpers, no globals,
    no preprocessor branching, no platform-specific assembly.
 7. **Recognizable evasion type** — debugger detection, mapping cleanly to
-   `represents: debugger_detected` and `tier_classification: tier_1`
-   (`IsDebuggerPresent` is one of Pfuzzer's 68 covered APIs).
+   `represents: debugger_detected`, `derivation_status: fully_derivable`,
+   and `evasion_tier: tier_1` (`IsDebuggerPresent` is one of Pfuzzer's 68
+   covered APIs and is single-call defeatable under the taxonomy).
 
 ## Schema-field → source-line mapping
 

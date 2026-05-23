@@ -22,6 +22,16 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from clew.tiers import classify  # noqa: E402
+
+
+DERIVATION_STATUS_ORDER = [
+    "fully_derivable",
+    "partially_derivable",
+    "no_mapped_signal",
+    "not_capa_detectable",
+]
+
 
 @dataclass
 class Stats:
@@ -34,7 +44,8 @@ class Stats:
     runtimes_ok: list[float]
     evasion_counts: list[int]
     rule_freq: collections.Counter
-    tier_counts: collections.Counter
+    derivation_counts: collections.Counter
+    unmapped_rule_counts: list[int]
     archive_counts: collections.Counter
 
     @property
@@ -73,12 +84,27 @@ def load_records(path: Path) -> list[dict]:
     return records
 
 
+def derivation_status_for(rec: dict) -> str:
+    """Read derivation_status from record, or recompute from evasion_rules.
+
+    Records produced by the pre-rename batch_channel0.py have a `tier` field
+    with values tier_1..tier_4. Records produced by the post-rename batch
+    have a `derivation_status` field with the new values. Either way, the
+    canonical source of truth is `evasion_rules` — we recompute from that to
+    avoid trusting the cached classification.
+    """
+    evasion = rec.get("evasion_rules") or []
+    status, _unmapped = classify(evasion)
+    return status
+
+
 def compute_stats(records: list[dict]) -> Stats:
     rule_freq: collections.Counter = collections.Counter()
-    tier_counts: collections.Counter = collections.Counter()
+    derivation_counts: collections.Counter = collections.Counter()
     archive_counts: collections.Counter = collections.Counter()
     runtimes_ok: list[float] = []
     evasion_counts: list[int] = []
+    unmapped_rule_counts: list[int] = []
     n_ok = n_timeout = n_capa_error = n_parse_error = n_other_error = 0
 
     for r in records:
@@ -93,8 +119,10 @@ def compute_stats(records: list[dict]) -> Stats:
             evasion_counts.append(len(evasion))
             for rule in evasion:
                 rule_freq[rule] += 1
-            tier = r.get("tier") or "unclassified"
-            tier_counts[tier] += 1
+            ds = derivation_status_for(r)
+            derivation_counts[ds] += 1
+            unmapped = r.get("unmapped_rules") or []
+            unmapped_rule_counts.append(len(unmapped))
         elif status == "timeout":
             n_timeout += 1
         elif status == "capa_error":
@@ -114,7 +142,8 @@ def compute_stats(records: list[dict]) -> Stats:
         runtimes_ok=runtimes_ok,
         evasion_counts=evasion_counts,
         rule_freq=rule_freq,
-        tier_counts=tier_counts,
+        derivation_counts=derivation_counts,
+        unmapped_rule_counts=unmapped_rule_counts,
         archive_counts=archive_counts,
     )
 
@@ -155,18 +184,20 @@ def render_evasion_histogram(stats: Stats, out: Path) -> None:
     plt.close()
 
 
-def render_tier_distribution(stats: Stats, out: Path) -> None:
-    tiers = ["tier_1", "tier_2", "tier_3", "tier_4", "unclassified"]
-    counts = [stats.tier_counts.get(t, 0) for t in tiers]
-    plt.figure(figsize=(8, 5))
-    colors = ["#2a9d8f", "#e9c46a", "#f4a261", "#e76f51", "#aaaaaa"]
-    bars = plt.bar(tiers, counts, color=colors)
+def render_derivation_distribution(stats: Stats, out: Path) -> None:
+    labels = DERIVATION_STATUS_ORDER
+    counts = [stats.derivation_counts.get(s, 0) for s in labels]
+    plt.figure(figsize=(9, 5))
+    colors = ["#2a9d8f", "#e9c46a", "#aaaaaa", "#e76f51"]
+    bars = plt.bar(labels, counts, color=colors)
+    max_c = max(counts) if counts else 1
     for bar, c in zip(bars, counts):
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(counts) * 0.01,
+        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max_c * 0.01,
                  str(c), ha="center", va="bottom", fontsize=9)
-    plt.xlabel("Tier classification (Channel 0)")
+    plt.xlabel("derivation_status (sample-level, Channel 0)")
     plt.ylabel("Samples")
-    plt.title(f"Tier distribution across malware corpus (N={stats.n_ok})")
+    plt.title(f"Derivation-status distribution across malware corpus (N={stats.n_ok})")
+    plt.xticks(rotation=15, ha="right")
     plt.tight_layout()
     plt.savefig(out, dpi=120)
     plt.close()
@@ -309,8 +340,17 @@ def write_csv(stats: Stats, out: Path) -> None:
     if stats.runtimes_ok:
         rows.append({"metric": "runtime_max_sec", "value": round(max(stats.runtimes_ok), 2)})
         rows.append({"metric": "runtime_min_sec", "value": round(min(stats.runtimes_ok), 2)})
-    for tier in ["tier_1", "tier_2", "tier_3", "tier_4", "unclassified"]:
-        rows.append({"metric": f"tier_{tier}_count", "value": stats.tier_counts.get(tier, 0)})
+    for ds in DERIVATION_STATUS_ORDER:
+        rows.append({"metric": f"derivation_{ds}_count", "value": stats.derivation_counts.get(ds, 0)})
+    if stats.unmapped_rule_counts:
+        rows.append({
+            "metric": "samples_with_unmapped_rules",
+            "value": sum(1 for n in stats.unmapped_rule_counts if n > 0),
+        })
+        rows.append({
+            "metric": "total_unmapped_rule_hits",
+            "value": sum(stats.unmapped_rule_counts),
+        })
     pd.DataFrame(rows).to_csv(out, index=False)
 
 
@@ -378,15 +418,29 @@ def write_report(
     w("")
     w(f"![evasion count histogram]({chart_dir_rel}/evasion_count_histogram.png)\n")
 
-    w("Tier mix:\n")
-    w("| tier | count | % of ok |")
-    w("|---|---:|---:|")
-    for t in ["tier_1", "tier_2", "tier_3", "tier_4", "unclassified"]:
-        cnt = malware.tier_counts.get(t, 0)
+    w("Derivation-status mix (sample-level field `derivation_status` from `clew/tiers.py`; "
+      "this is **not** the defeatability tier from the evasion taxonomy):\n")
+    w("| derivation_status | count | % of ok | meaning |")
+    w("|---|---:|---:|---|")
+    meanings = {
+        "fully_derivable": "≥1 mapped capa rule AND all implied APIs in PFUZZER_68_APIS",
+        "partially_derivable": "≥1 mapped capa rule AND ≥1 implied API outside PFUZZER_68_APIS",
+        "no_mapped_signal": "no matched capa rule is in CAPA_RULE_TO_APIS (either zero rules, or all unmapped)",
+        "not_capa_detectable": "decided outside this module — never produced by Channel 0",
+    }
+    for ds in DERIVATION_STATUS_ORDER:
+        cnt = malware.derivation_counts.get(ds, 0)
         pct = (100.0 * cnt / malware.n_ok) if malware.n_ok else 0.0
-        w(f"| {t} | {cnt} | {pct:.1f}% |")
+        w(f"| `{ds}` | {cnt} | {pct:.1f}% | {meanings[ds]} |")
     w("")
-    w(f"![tier distribution]({chart_dir_rel}/tier_distribution.png)\n")
+    n_with_unmapped = sum(1 for n in malware.unmapped_rule_counts if n > 0)
+    pct_with_unmapped = (100.0 * n_with_unmapped / malware.n_ok) if malware.n_ok else 0.0
+    w(f"**Unmapped-rule backlog (orthogonal to `derivation_status`):** "
+      f"{n_with_unmapped} samples ({pct_with_unmapped:.1f}% of `ok`) had at least one matched capa "
+      f"rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queue work for week-9 derivation "
+      f"and do *not* lower the sample's `derivation_status` — a sample can be `fully_derivable` "
+      f"on its mapped portion while still carrying unmapped rules.\n")
+    w(f"![derivation status distribution]({chart_dir_rel}/derivation_status_distribution.png)\n")
 
     w("## 4. Top techniques surfaced\n")
     w("These are the most frequent anti-analysis rules Channel 0 matched across the corpus. "
@@ -428,7 +482,11 @@ def write_report(
         w(f"- **Total capa rules matched**: {rich_sample.get('total_rules')}")
         w(f"- **Anti-analysis rules** ({len(rich_sample.get('evasion_rules') or [])}): "
           + ", ".join(f"`{r}`" for r in (rich_sample.get('evasion_rules') or [])))
-        w(f"- **Tier**: `{rich_sample.get('tier')}`")
+        w(f"- **derivation_status**: `{derivation_status_for(rich_sample)}`")
+        unmapped = rich_sample.get("unmapped_rules") or []
+        if unmapped:
+            w(f"- **Unmapped rules (backlog)** ({len(unmapped)}): "
+              + ", ".join(f"`{r}`" for r in unmapped))
         w(f"- **Runtime**: {rich_sample.get('runtime_sec'):.2f}s")
         vt_tags = load_vt_tags(Path(rich_sample.get("sample_path", "")))
         if vt_tags:
@@ -448,7 +506,11 @@ def write_report(
             evasion_list = empty_sample.get("evasion_rules") or []
             w(f"- **Anti-analysis rules** ({empty_count}): " + ", ".join(f"`{r}`" for r in evasion_list))
             w(f"- _Note: no truly capa-empty sample existed in this run; this is the lowest-coverage `ok` sample available._")
-        w(f"- **Tier**: `{empty_sample.get('tier')}`")
+        w(f"- **derivation_status**: `{derivation_status_for(empty_sample)}`")
+        unmapped = empty_sample.get("unmapped_rules") or []
+        if unmapped:
+            w(f"- **Unmapped rules (backlog)** ({len(unmapped)}): "
+              + ", ".join(f"`{r}`" for r in unmapped))
         w(f"- **Runtime**: {empty_sample.get('runtime_sec'):.2f}s")
         vt_tags = load_vt_tags(Path(empty_sample.get("sample_path", "")))
         if vt_tags:
@@ -487,12 +549,28 @@ def write_report(
           f"precision and concrete candidate values), which is exactly what Channels 1, 2, and 4 "
           f"add. FLOSS expands the candidate-string pool; BN connects strings to call sites; "
           f"DRIO captures runtime cmp/test operands.")
-    n_tier3 = malware.tier_counts.get("tier_3", 0)
-    if n_tier3 > 0:
-        w(f"- **Tier-3 samples ({n_tier3}, {100.0*n_tier3/malware.n_ok:.1f}%)** have at least one "
-          f"capa anti-analysis rule that isn't yet in `CAPA_RULE_TO_APIS`. Each unmapped rule is "
-          f"a small piece of week-9 derivation work — the size of that unmapped-rule set across "
-          f"the corpus is a concrete scope estimate for that future task.")
+    n_with_unmapped = sum(1 for n in malware.unmapped_rule_counts if n > 0)
+    if n_with_unmapped > 0:
+        w(f"- **{n_with_unmapped} samples ({100.0*n_with_unmapped/malware.n_ok:.1f}% of `ok`) "
+          f"carry at least one unmapped capa rule.** These don't lower the sample's "
+          f"`derivation_status`; they sit alongside as derivation backlog. The unique-unmapped-rule "
+          f"set across the corpus is the concrete scope estimate for week-9 derivation work.")
+    n_fully = malware.derivation_counts.get("fully_derivable", 0)
+    if n_fully > 0:
+        w(f"- **{n_fully} samples ({100.0*n_fully/malware.n_ok:.1f}% of `ok`) are `fully_derivable` "
+          f"today** — every mapped capa rule has derivation logic and every implied API is in "
+          f"`PFUZZER_68_APIS`. This is the honest \"Clew handles these now\" number.")
+    n_no_signal = malware.derivation_counts.get("no_mapped_signal", 0)
+    if n_no_signal > 0:
+        w(f"- **{n_no_signal} samples ({100.0*n_no_signal/malware.n_ok:.1f}% of `ok`) have "
+          f"`no_mapped_signal`** — either zero capa hits or only-unmapped hits. These are the "
+          f"FLOSS/BN/DRIO frontier; Channel 0 alone has nothing actionable on them.")
+    n_partial = malware.derivation_counts.get("partially_derivable", 0)
+    if n_partial == 0:
+        w(f"- **`partially_derivable` is structurally empty under the current rule map** because "
+          f"every entry in `CAPA_RULE_TO_APIS` produces APIs inside `PFUZZER_68_APIS`. The bucket "
+          f"is reachable in principle; it'll populate once the rule map adds entries with outside-"
+          f"target APIs (or once `PFUZZER_68_APIS` shrinks).")
     n_timeouts = malware.n_timeout
     if n_timeouts > 0:
         pct_to = 100.0 * n_timeouts / malware.n_total
@@ -545,7 +623,7 @@ def main() -> int:
           f"{benign_stats.n_capa_error + benign_stats.n_parse_error + benign_stats.n_other_error}")
 
     render_evasion_histogram(malware_stats, args.results_dir / "evasion_count_histogram.png")
-    render_tier_distribution(malware_stats, args.results_dir / "tier_distribution.png")
+    render_derivation_distribution(malware_stats, args.results_dir / "derivation_status_distribution.png")
     render_rule_frequency(malware_stats, args.results_dir / "rule_frequency.png")
     render_runtime_distribution(malware_stats, args.results_dir / "runtime_distribution.png")
     render_benign_vs_malware(malware_stats, benign_stats, args.results_dir / "benign_vs_malware.png")

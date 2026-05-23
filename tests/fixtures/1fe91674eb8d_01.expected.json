@@ -29,7 +29,7 @@
     "reference anti-VM strings targeting VMWare",
     "reference anti-VM strings targeting Xen"
   ],
-  "tier_classification": "tier_1",
+  "derivation_status": "fully_derivable",
   "total_iterations": 1,
   "candidates": [
     {

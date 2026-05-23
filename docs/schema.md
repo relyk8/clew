@@ -36,16 +36,20 @@ The list of capa rule matches relevant to evasion that fired on this sample, as 
 
 This field exists primarily to support tier classification and to give analysts a quick at-a-glance summary of what kind of evasion the sample uses.
 
-### `tier_classification` (required, string enum or null)
+### `derivation_status` (required, string enum or null)
 
-Clew's tier classification for the sample, derived from `capa_techniques` and other heuristics. One of:
+Clew's derivation-pipeline status for the sample, computed from `capa_techniques` against `CAPA_RULE_TO_APIS` and `PFUZZER_68_APIS` in `clew/tiers.py`. One of:
 
-- `tier_1` — full-coverage scope; Pfuzzer's 68 APIs cover the sample's checks
-- `tier_2` — partial coverage; some checks fall outside the API list
-- `tier_3` — triage-only; sample uses techniques Clew can identify but not extract candidates for
-- `tier_4` — triage-only; sample uses techniques Clew cannot identify
+- `fully_derivable` — at least one matched capa rule is in `CAPA_RULE_TO_APIS`, AND every implied API is in `PFUZZER_68_APIS`. Clew can fully target everything this sample's mapped rules surface.
+- `partially_derivable` — at least one matched capa rule is mapped, AND at least one implied API is outside `PFUZZER_68_APIS`. Clew can derive *some* of what this sample uses; the remainder is outside the current target list.
+- `no_mapped_signal` — no matched capa rule is in `CAPA_RULE_TO_APIS`. Subsumes both "zero capa rules matched" and "only unmapped rules matched"; either way Clew has no actionable signal at this layer.
+- `not_capa_detectable` — sample uses techniques capa cannot detect. Decided outside this module.
 
 Null if classification was skipped (e.g. capa was disabled).
+
+**This field is *not* a defeatability tier.** It describes the state of Clew's derivation pipeline for the sample, not the structural difficulty of the techniques. The defeatability tier of each candidate's underlying technique lives in the per-candidate `evasion_tier` field below, drawn from the taxonomy in `docs/context/evasion-taxonomy.md`.
+
+A sample with `derivation_status == fully_derivable` may still carry a non-empty backlog of unmapped capa rules — those don't change the categorical, but they do represent future derivation work and surface separately in producer outputs (e.g. `scripts/batch_channel0.py` emits an `unmapped_rules` field per record).
 
 ### `total_iterations` (required, integer)
 
@@ -105,7 +109,14 @@ When the API has no parameters and the check is on the return value (parameter_i
 
 ### `evasion_tier` (required, string enum)
 
-The tier classification for this specific candidate. Same enumeration as `tier_classification`. The sample-level `tier_classification` is the worst tier among its candidates.
+The **defeatability tier** of the evasion technique this candidate addresses, drawn from the taxonomy in `docs/context/evasion-taxonomy.md`. One of:
+
+- `tier_1` — single-call defeatable; hooking one API and returning a crafted value bypasses the check (e.g. `IsDebuggerPresent` returning FALSE)
+- `tier_2` — multi-call coordination; 2–5 calls with consistent state required to bypass (e.g. querying several VM-related registry keys and proceeding only if all are absent)
+- `tier_3` — crypto/timing techniques requiring infrastructure beyond simple return-value control
+- `tier_4` — infeasible to defeat from API interposition alone
+
+This is a **per-technique** property, not a Clew-pipeline property. It is unrelated to the sample-level `derivation_status` (which describes where Clew's derivation pipeline stands for this sample).
 
 ### `iteration_number` (required, integer, ≥ 0)
 
@@ -210,7 +221,8 @@ For quick reference:
 
 | Field | Values |
 |---|---|
-| `tier_classification`, `evasion_tier` | `tier_1`, `tier_2`, `tier_3`, `tier_4` |
+| `derivation_status` | `fully_derivable`, `partially_derivable`, `no_mapped_signal`, `not_capa_detectable` |
+| `evasion_tier` | `tier_1`, `tier_2`, `tier_3`, `tier_4` (defeatability) |
 | `api_resolution` | `import`, `getprocaddress`, `ordinal`, `hashed` (reserved) |
 | `comparison_operator` | `equality`, `inequality`, `greater_than`, `less_than`, `greater_equal`, `less_equal`, `bitwise_and`, `bitwise_or`, `contains`, `unknown` |
 | `represents` | `sandbox_detected`, `vm_detected`, `debugger_detected`, `analysis_tool_detected`, `clean_environment`, `threshold_value`, `unknown` |
@@ -231,7 +243,7 @@ A standard Sandboxie detection: the sample calls `GetModuleHandleW` with `"SbieD
   "sample_path": "tests/fixtures/sandboxie_check.exe",
   "clew_version": "0.1.0",
   "capa_techniques": ["check for sandbox files via API", "reference sandbox artifacts"],
-  "tier_classification": "tier_1",
+  "derivation_status": "fully_derivable",
   "total_iterations": 1,
   "candidates": [
     {
@@ -282,7 +294,7 @@ A more sophisticated sample resolves `IsDebuggerPresent` at runtime by passing a
   "sample_path": "tests/fixtures/dynamic_isdebugger.exe",
   "clew_version": "0.1.0",
   "capa_techniques": ["resolve API by name", "check for debugger via API"],
-  "tier_classification": "tier_1",
+  "derivation_status": "fully_derivable",
   "total_iterations": 1,
   "candidates": [
     {

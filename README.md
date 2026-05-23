@@ -77,7 +77,7 @@ Reproduced for convenience. Refine during the two days; this is not what you sub
   "sample_path": "...",
   "clew_version": "0.1.0",
   "capa_techniques": ["anti-vm", "anti-debug", "check-for-sandbox"],
-  "tier_classification": "tier_1",
+  "derivation_status": "fully_derivable",
   "total_iterations": 1,
   "candidates": [
     {
