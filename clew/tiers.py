@@ -199,10 +199,17 @@ CAPA_RULE_TO_APIS: dict[str, frozenset[str]] = {
 
 
 def _rule_is_actionable(rule: str) -> bool:
-    """True iff the rule is mapped AND all its implied APIs are in target list."""
+    """True iff the rule is mapped to ≥1 API AND all implied APIs are in target list.
+
+    An empty mapping (e.g. ``reference analysis tools strings``) means the
+    rule fires on static features with no specific API to fuzz — Clew has
+    nothing to emit for AriadneX, so the rule is not actionable.
+    """
     if rule not in CAPA_RULE_TO_APIS:
         return False
     implied = CAPA_RULE_TO_APIS[rule]
+    if not implied:
+        return False
     return not (implied - PFUZZER_68_APIS)
 
 
