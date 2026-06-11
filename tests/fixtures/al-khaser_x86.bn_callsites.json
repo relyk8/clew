@@ -1,0 +1,6195 @@
+{
+  "bn_core_version": "4.2.6455 Ultimate",
+  "call_sites": [
+    {
+      "api_name": "LookupPrivilegeValueW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e425",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e3e0"
+    },
+    {
+      "api_name": "LookupPrivilegeValueW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e2b9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e200"
+    },
+    {
+      "api_name": "AdjustTokenPrivileges",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e480",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e3e0"
+    },
+    {
+      "api_name": "AdjustTokenPrivileges",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e522",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e3e0"
+    },
+    {
+      "api_name": "AdjustTokenPrivileges",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e2dc",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e200"
+    },
+    {
+      "api_name": "OpenProcessToken",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d3c8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d370"
+    },
+    {
+      "api_name": "OpenProcessToken",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e266",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e200"
+    },
+    {
+      "api_name": "OpenSCManagerW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045e7bf",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045e720"
+    },
+    {
+      "api_name": "EnumServicesStatusExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045eabd",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ea10"
+    },
+    {
+      "api_name": "EnumServicesStatusExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045eb63",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ea10"
+    },
+    {
+      "api_name": "CloseServiceHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0045e8ad",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045e720"
+    },
+    {
+      "api_name": "CloseServiceHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0045e8d3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045e720"
+    },
+    {
+      "api_name": "RegQueryValueExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e0cb",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e030"
+    },
+    {
+      "api_name": "RegQueryValueExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ba9d",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b9d0"
+    },
+    {
+      "api_name": "RegQueryInfoKeyW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b6b1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "RegOpenKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b67b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "RegOpenKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e09e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e030"
+    },
+    {
+      "api_name": "RegOpenKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ba75",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b9d0"
+    },
+    {
+      "api_name": "RegOpenKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046db72",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "RegOpenKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dc94",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "RegEnumKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b783",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "RegEnumKeyExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dd55",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b6c8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b718",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b819",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e100",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e030"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e11a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e030"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0045bab4",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b9d0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0045bacf",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b9d0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0046db89",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "import",
+      "call_site_va": "0x0046de14",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "GetUserNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00458296",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458220"
+    },
+    {
+      "api_name": "GetTokenInformation",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d3f2",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d370"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x0043695c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436900"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453f08",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453f58",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453f9f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453fbe",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453fd4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453ffb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00454011",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453c8f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453c60"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453d42",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453d89",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453da8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453dbe",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453de5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453dfb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437c16",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437c5b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437c75",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437cab",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437cd3",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437cf9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437d19",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437d32",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437dde",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437e19",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437e33",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437e69",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453b9f",
+      "calling_convention": "stdcall",
+      "function_va": "0x00453b20"
+    },
+    {
+      "api_name": "OutputDebugStringW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453bd8",
+      "calling_convention": "stdcall",
+      "function_va": "0x00453b20"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454e81",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454ee6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454f59",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0043696b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436900"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c17c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c284",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c297",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e48f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e3e0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e531",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e3e0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454821",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454886",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x004548ee",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0044ccf8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044cca0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0044cdaa",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044cca0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454ac1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454b26",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454c72",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00468264",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x004741bb",
+      "calling_convention": "regparm",
+      "function_va": "0x004740a7"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00477ef9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x004780d4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0045eae2",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ea10"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00454378",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x004543dd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x004545d2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00471aa9",
+      "calling_convention": "cdecl",
+      "function_va": "0x004719d0"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00477dbb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477d20"
+    },
+    {
+      "api_name": "GetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00477df5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477d20"
+    },
+    {
+      "api_name": "SetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00436948",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436900"
+    },
+    {
+      "api_name": "SetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00464af9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "SetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x00464b0f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "SetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x0046588f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "SetLastError",
+      "api_resolution": "import",
+      "call_site_va": "0x004658a5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "VirtualQuery",
+      "api_resolution": "import",
+      "call_site_va": "0x0043812f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00438040"
+    },
+    {
+      "api_name": "VirtualQuery",
+      "api_resolution": "import",
+      "call_site_va": "0x004782d5",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "VirtualQuery",
+      "api_resolution": "import",
+      "call_site_va": "0x004724fb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00472400"
+    },
+    {
+      "api_name": "VirtualQuery",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c28c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c110"
+    },
+    {
+      "api_name": "VirtualQuery",
+      "api_resolution": "import",
+      "call_site_va": "0x00437c38",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "VirtualQuery",
+      "api_resolution": "import",
+      "call_site_va": "0x00437dfa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "GetModuleHandleExW",
+      "api_resolution": "import",
+      "call_site_va": "0x004380af",
+      "calling_convention": "cdecl",
+      "function_va": "0x00438040"
+    },
+    {
+      "api_name": "GetModuleHandleExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c2be",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c110"
+    },
+    {
+      "api_name": "GetModuleHandleExW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437b5f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "GetModuleHandleExW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c7b8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c660"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044632d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004408ed",
+      "calling_convention": "cdecl",
+      "function_va": "0x00440880"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cc4a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046cb80"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004647b5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0046509e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00463b3a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00453667",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453630"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004655ae",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "OpenProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00471a30",
+      "calling_convention": "cdecl",
+      "function_va": "0x004719d0"
+    },
+    {
+      "api_name": "GetWindowsDirectoryW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d27f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045d1a0"
+    },
+    {
+      "api_name": "GetWindowsDirectoryW",
+      "api_resolution": "import",
+      "call_site_va": "0x004626f4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462600"
+    },
+    {
+      "api_name": "GetWindowsDirectoryW",
+      "api_resolution": "import",
+      "call_site_va": "0x00440934",
+      "calling_convention": "cdecl",
+      "function_va": "0x00440880"
+    },
+    {
+      "api_name": "GetWindowsDirectoryW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fff0",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045fee0"
+    },
+    {
+      "api_name": "GetCurrentProcessId",
+      "api_resolution": "import",
+      "call_site_va": "0x00446300",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "GetCurrentProcessId",
+      "api_resolution": "import",
+      "call_site_va": "0x0044ccd8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044cca0"
+    },
+    {
+      "api_name": "GetCurrentProcessId",
+      "api_resolution": "import",
+      "call_site_va": "0x00464f5d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "GetCurrentProcessId",
+      "api_resolution": "import",
+      "call_site_va": "0x00477a03",
+      "calling_convention": "cdecl",
+      "function_va": "0x004779d0"
+    },
+    {
+      "api_name": "GetCurrentProcessId",
+      "api_resolution": "import",
+      "call_site_va": "0x00471a19",
+      "calling_convention": "cdecl",
+      "function_va": "0x004719d0"
+    },
+    {
+      "api_name": "QueryInformationJobObject",
+      "api_resolution": "import",
+      "call_site_va": "0x004462b5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "GetEnvironmentVariableW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a2e0",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "GetEnvironmentVariableW",
+      "api_resolution": "import",
+      "call_site_va": "0x00454446",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "QueryDosDeviceW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a30a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "QueryDosDeviceW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044aa21",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a8d0"
+    },
+    {
+      "api_name": "GetSystemDirectoryW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a217",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "GetModuleFileNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c2f9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c110"
+    },
+    {
+      "api_name": "SetHandleInformation",
+      "api_resolution": "import",
+      "call_site_va": "0x004537ed",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453770"
+    },
+    {
+      "api_name": "CreateMutexW",
+      "api_resolution": "import",
+      "call_site_va": "0x004537cd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453770"
+    },
+    {
+      "api_name": "SetEvent",
+      "api_resolution": "import",
+      "call_site_va": "0x00473a32",
+      "calling_convention": "stdcall",
+      "function_va": "0x004739f0"
+    },
+    {
+      "api_name": "SetEvent",
+      "api_resolution": "import",
+      "call_site_va": "0x00453bbe",
+      "calling_convention": "stdcall",
+      "function_va": "0x00453b20"
+    },
+    {
+      "api_name": "SetEvent",
+      "api_resolution": "import",
+      "call_site_va": "0x00453bf7",
+      "calling_convention": "stdcall",
+      "function_va": "0x00453b20"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x00453f7c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x00464b43",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x00474776",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474710"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x00463d34",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x00473e82",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473db0"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x0047402b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473f80"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x00453d66",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "WaitForSingleObject",
+      "api_resolution": "import",
+      "call_site_va": "0x004658d9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "CreateEventW",
+      "api_resolution": "import",
+      "call_site_va": "0x00474624",
+      "calling_convention": "cdecl",
+      "function_va": "0x004745d0"
+    },
+    {
+      "api_name": "CreateEventW",
+      "api_resolution": "import",
+      "call_site_va": "0x00474742",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474710"
+    },
+    {
+      "api_name": "CreateEventW",
+      "api_resolution": "import",
+      "call_site_va": "0x00473dfa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473db0"
+    },
+    {
+      "api_name": "CreateEventW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453b64",
+      "calling_convention": "stdcall",
+      "function_va": "0x00453b20"
+    },
+    {
+      "api_name": "CreateEventW",
+      "api_resolution": "import",
+      "call_site_va": "0x00453b80",
+      "calling_convention": "stdcall",
+      "function_va": "0x00453b20"
+    },
+    {
+      "api_name": "SwitchToThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00453f39",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "SwitchToThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00453d23",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453cd0"
+    },
+    {
+      "api_name": "CreateThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00453ef0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453eb0"
+    },
+    {
+      "api_name": "RaiseException",
+      "api_resolution": "import",
+      "call_site_va": "0x004542ac",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454260"
+    },
+    {
+      "api_name": "RaiseException",
+      "api_resolution": "import",
+      "call_site_va": "0x00476f66",
+      "calling_convention": "cdecl",
+      "function_va": "0x00476f20"
+    },
+    {
+      "api_name": "SetUnhandledExceptionFilter",
+      "api_resolution": "import",
+      "call_site_va": "0x0045428f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454260"
+    },
+    {
+      "api_name": "SetUnhandledExceptionFilter",
+      "api_resolution": "import",
+      "call_site_va": "0x004776c6",
+      "calling_convention": "cdecl",
+      "function_va": "0x004775c0"
+    },
+    {
+      "api_name": "SetUnhandledExceptionFilter",
+      "api_resolution": "import",
+      "call_site_va": "0x00475cf5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00475cf0"
+    },
+    {
+      "api_name": "SetUnhandledExceptionFilter",
+      "api_resolution": "import",
+      "call_site_va": "0x00477878",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477870"
+    },
+    {
+      "api_name": "HeapQueryInformation",
+      "api_resolution": "import",
+      "call_site_va": "0x004544ba",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "ReadProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00464073",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "ReadProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00471958",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471910"
+    },
+    {
+      "api_name": "ReadProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x004544fa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetWriteWatch",
+      "api_resolution": "import",
+      "call_site_va": "0x00454f46",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "GetWriteWatch",
+      "api_resolution": "import",
+      "call_site_va": "0x004548db",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "GetWriteWatch",
+      "api_resolution": "import",
+      "call_site_va": "0x00454c5f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "GetWriteWatch",
+      "api_resolution": "import",
+      "call_site_va": "0x0045456d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetWriteWatch",
+      "api_resolution": "import",
+      "call_site_va": "0x004545bf",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "ResetWriteWatch",
+      "api_resolution": "import",
+      "call_site_va": "0x00454c0e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "GetBinaryTypeW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045447d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GlobalGetAtomNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045440a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x004595fc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459500"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046349f",
+      "calling_convention": "regparm",
+      "function_va": "0x00463407"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x004777c8",
+      "calling_convention": "cdecl",
+      "function_va": "0x004777c0"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x004647e9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046481d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x00464feb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x004555aa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455560"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x00463b6e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x004655df",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "GetModuleHandleW",
+      "api_resolution": "import",
+      "call_site_va": "0x00465631",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "CreateFileW",
+      "api_resolution": "import",
+      "call_site_va": "0x004622a4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462220"
+    },
+    {
+      "api_name": "CreateFileW",
+      "api_resolution": "import",
+      "call_site_va": "0x00464098",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "CreateFileW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f599",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f500"
+    },
+    {
+      "api_name": "CreateFileW",
+      "api_resolution": "import",
+      "call_site_va": "0x00457410",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "CreateFileW",
+      "api_resolution": "import",
+      "call_site_va": "0x00457555",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "CreateFileW",
+      "api_resolution": "import",
+      "call_site_va": "0x00457632",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "GetDiskFreeSpaceExW",
+      "api_resolution": "import",
+      "call_site_va": "0x00456e0c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456db0"
+    },
+    {
+      "api_name": "DeviceIoControl",
+      "api_resolution": "import",
+      "call_site_va": "0x004574a2",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "DeviceIoControl",
+      "api_resolution": "import",
+      "call_site_va": "0x00457586",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "DeviceIoControl",
+      "api_resolution": "import",
+      "call_site_va": "0x00457663",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "GlobalMemoryStatusEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00459cbd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459c60"
+    },
+    {
+      "api_name": "GetTickCount",
+      "api_resolution": "import",
+      "call_site_va": "0x004559b6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455970"
+    },
+    {
+      "api_name": "GetTickCount",
+      "api_resolution": "import",
+      "call_site_va": "0x004559db",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455970"
+    },
+    {
+      "api_name": "GetTickCount",
+      "api_resolution": "import",
+      "call_site_va": "0x004592fc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459270"
+    },
+    {
+      "api_name": "GetSystemWindowsDirectoryW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045736b",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "GetComputerNameExW",
+      "api_resolution": "import",
+      "call_site_va": "0x00457fe3",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457fa0"
+    },
+    {
+      "api_name": "GetComputerNameExW",
+      "api_resolution": "import",
+      "call_site_va": "0x00458032",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457fa0"
+    },
+    {
+      "api_name": "LocalAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c1b1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "LocalAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045744f",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "LocalAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004682d7",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "LocalFree",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c19a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "LocalFree",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c262",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "LocalFree",
+      "api_resolution": "import",
+      "call_site_va": "0x004575f1",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "LocalFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00468332",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "LocalFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00468345",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "GetComputerNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00458166",
+      "calling_convention": "cdecl",
+      "function_va": "0x004580f0"
+    },
+    {
+      "api_name": "ExpandEnvironmentStringsW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d05d",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cf90"
+    },
+    {
+      "api_name": "ExpandEnvironmentStringsW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045db32",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045da50"
+    },
+    {
+      "api_name": "ExpandEnvironmentStringsW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f78b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f6f0"
+    },
+    {
+      "api_name": "ExpandEnvironmentStringsW",
+      "api_resolution": "import",
+      "call_site_va": "0x004624b5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462400"
+    },
+    {
+      "api_name": "Wow64DisableWow64FsRedirection",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d29e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045d1a0"
+    },
+    {
+      "api_name": "Wow64DisableWow64FsRedirection",
+      "api_resolution": "import",
+      "call_site_va": "0x00462713",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462600"
+    },
+    {
+      "api_name": "Wow64DisableWow64FsRedirection",
+      "api_resolution": "import",
+      "call_site_va": "0x0046000f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045fee0"
+    },
+    {
+      "api_name": "Wow64RevertWow64FsRedirection",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d38f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045d1a0"
+    },
+    {
+      "api_name": "Wow64RevertWow64FsRedirection",
+      "api_resolution": "import",
+      "call_site_va": "0x00462804",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462600"
+    },
+    {
+      "api_name": "Wow64RevertWow64FsRedirection",
+      "api_resolution": "import",
+      "call_site_va": "0x00460100",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045fee0"
+    },
+    {
+      "api_name": "VerifyVersionInfoW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d7a4",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d6a0"
+    },
+    {
+      "api_name": "VerifyVersionInfoW",
+      "api_resolution": "import",
+      "call_site_va": "0x004367c8",
+      "calling_convention": "cdecl",
+      "function_va": "0x004366d0"
+    },
+    {
+      "api_name": "VerifyVersionInfoW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d94a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d850"
+    },
+    {
+      "api_name": "VerifyVersionInfoW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d5ea",
+      "calling_convention": "regparm",
+      "function_va": "0x0046d477"
+    },
+    {
+      "api_name": "VerifyVersionInfoW",
+      "api_resolution": "import",
+      "call_site_va": "0x0043603d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435f30"
+    },
+    {
+      "api_name": "CreateRemoteThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00463cfa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "VirtualAllocEx",
+      "api_resolution": "import",
+      "call_site_va": "0x0046423e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "VirtualAllocEx",
+      "api_resolution": "import",
+      "call_site_va": "0x004649a8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "VirtualAllocEx",
+      "api_resolution": "import",
+      "call_site_va": "0x0046514a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "VirtualAllocEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00463c6a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "VirtualAllocEx",
+      "api_resolution": "import",
+      "call_site_va": "0x0046579e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00464294",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00464326",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x0046435f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00464a0c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x004651ac",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00463cc2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "WriteProcessMemory",
+      "api_resolution": "import",
+      "call_site_va": "0x00465802",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "VirtualFreeEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00464b8d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "VirtualFreeEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00465328",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "VirtualFreeEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00463d75",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "VirtualFreeEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00465923",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "GetFileSize",
+      "api_resolution": "import",
+      "call_site_va": "0x004640d1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "ReadFile",
+      "api_resolution": "import",
+      "call_site_va": "0x00464168",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "HeapAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004640ff",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "HeapAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00478587",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "HeapAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00471d99",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "HeapAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00471e17",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "HeapAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00472029",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "HeapAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004720a7",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "HeapFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00464406",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "HeapFree",
+      "api_resolution": "import",
+      "call_site_va": "0x0047850d",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "HeapFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00471df2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "HeapFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00471ee2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "HeapFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00472082",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "HeapFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00472172",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "ResumeThread",
+      "api_resolution": "import",
+      "call_site_va": "0x004643ad",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "CreateProcessW",
+      "api_resolution": "import",
+      "call_site_va": "0x00463fa5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "SetThreadContext",
+      "api_resolution": "import",
+      "call_site_va": "0x00464397",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "GetModuleHandleA",
+      "api_resolution": "import",
+      "call_site_va": "0x004641dc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "QueueUserAPC",
+      "api_resolution": "import",
+      "call_site_va": "0x00465266",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "OpenThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00465233",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "OpenThread",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bd5b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bce0"
+    },
+    {
+      "api_name": "LoadLibraryA",
+      "api_resolution": "import",
+      "call_site_va": "0x00466bbe",
+      "calling_convention": "cdecl",
+      "function_va": "0x00466b30"
+    },
+    {
+      "api_name": "GetStdHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00468436",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468400"
+    },
+    {
+      "api_name": "GetStdHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00467fc6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467f90"
+    },
+    {
+      "api_name": "GetStdHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00468116",
+      "calling_convention": "cdecl",
+      "function_va": "0x004680e0"
+    },
+    {
+      "api_name": "LocalSize",
+      "api_resolution": "import",
+      "call_site_va": "0x00468304",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "FormatMessageW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046828e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "lstrlenW",
+      "api_resolution": "import",
+      "call_site_va": "0x004682aa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "lstrlenW",
+      "api_resolution": "import",
+      "call_site_va": "0x004682bf",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468230"
+    },
+    {
+      "api_name": "lstrlenW",
+      "api_resolution": "import",
+      "call_site_va": "0x0047290f",
+      "calling_convention": "cdecl",
+      "function_va": "0x004728a0"
+    },
+    {
+      "api_name": "MultiByteToWideChar",
+      "api_resolution": "import",
+      "call_site_va": "0x00467d78",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467d40"
+    },
+    {
+      "api_name": "MultiByteToWideChar",
+      "api_resolution": "import",
+      "call_site_va": "0x00467dd5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467d40"
+    },
+    {
+      "api_name": "MultiByteToWideChar",
+      "api_resolution": "import",
+      "call_site_va": "0x00476d01",
+      "calling_convention": "cdecl",
+      "function_va": "0x00476ca0"
+    },
+    {
+      "api_name": "MultiByteToWideChar",
+      "api_resolution": "import",
+      "call_site_va": "0x00476d20",
+      "calling_convention": "cdecl",
+      "function_va": "0x00476ca0"
+    },
+    {
+      "api_name": "GetConsoleScreenBufferInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x0046845e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468400"
+    },
+    {
+      "api_name": "GetConsoleScreenBufferInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x00467fee",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467f90"
+    },
+    {
+      "api_name": "GetConsoleScreenBufferInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x0046813e",
+      "calling_convention": "cdecl",
+      "function_va": "0x004680e0"
+    },
+    {
+      "api_name": "SetConsoleTextAttribute",
+      "api_resolution": "import",
+      "call_site_va": "0x0046847b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468400"
+    },
+    {
+      "api_name": "SetConsoleTextAttribute",
+      "api_resolution": "import",
+      "call_site_va": "0x004684a0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468400"
+    },
+    {
+      "api_name": "SetConsoleTextAttribute",
+      "api_resolution": "import",
+      "call_site_va": "0x0046800b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467f90"
+    },
+    {
+      "api_name": "SetConsoleTextAttribute",
+      "api_resolution": "import",
+      "call_site_va": "0x00468034",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467f90"
+    },
+    {
+      "api_name": "SetConsoleTextAttribute",
+      "api_resolution": "import",
+      "call_site_va": "0x0046815b",
+      "calling_convention": "cdecl",
+      "function_va": "0x004680e0"
+    },
+    {
+      "api_name": "SetConsoleTextAttribute",
+      "api_resolution": "import",
+      "call_site_va": "0x00468180",
+      "calling_convention": "cdecl",
+      "function_va": "0x004680e0"
+    },
+    {
+      "api_name": "SetConsoleTitleW",
+      "api_resolution": "import",
+      "call_site_va": "0x004686ef",
+      "calling_convention": "cdecl",
+      "function_va": "0x004686c0"
+    },
+    {
+      "api_name": "GetConsoleWindow",
+      "api_resolution": "import",
+      "call_site_va": "0x004686fe",
+      "calling_convention": "cdecl",
+      "function_va": "0x004686c0"
+    },
+    {
+      "api_name": "GetFileAttributesW",
+      "api_resolution": "import",
+      "call_site_va": "0x004731fe",
+      "calling_convention": "cdecl",
+      "function_va": "0x004731d0"
+    },
+    {
+      "api_name": "GetFileAttributesW",
+      "api_resolution": "import",
+      "call_site_va": "0x0047315e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473130"
+    },
+    {
+      "api_name": "SetWaitableTimer",
+      "api_resolution": "import",
+      "call_site_va": "0x00474009",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473f80"
+    },
+    {
+      "api_name": "CancelWaitableTimer",
+      "api_resolution": "import",
+      "call_site_va": "0x00474049",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473f80"
+    },
+    {
+      "api_name": "WaitForMultipleObjects",
+      "api_resolution": "import",
+      "call_site_va": "0x00474666",
+      "calling_convention": "cdecl",
+      "function_va": "0x004745d0"
+    },
+    {
+      "api_name": "CreateWaitableTimerW",
+      "api_resolution": "import",
+      "call_site_va": "0x00473fda",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473f80"
+    },
+    {
+      "api_name": "CreateTimerQueue",
+      "api_resolution": "import",
+      "call_site_va": "0x00473e1e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473db0"
+    },
+    {
+      "api_name": "CreateTimerQueueTimer",
+      "api_resolution": "import",
+      "call_site_va": "0x00473e5a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473db0"
+    },
+    {
+      "api_name": "DeleteTimerQueueEx",
+      "api_resolution": "import",
+      "call_site_va": "0x00473ea2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473db0"
+    },
+    {
+      "api_name": "InitializeSListHead",
+      "api_resolution": "import",
+      "call_site_va": "0x00477b58",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477b50"
+    },
+    {
+      "api_name": "GetSystemTimeAsFileTime",
+      "api_resolution": "import",
+      "call_site_va": "0x004779e2",
+      "calling_convention": "cdecl",
+      "function_va": "0x004779d0"
+    },
+    {
+      "api_name": "QueryPerformanceCounter",
+      "api_resolution": "import",
+      "call_site_va": "0x00477a13",
+      "calling_convention": "cdecl",
+      "function_va": "0x004779d0"
+    },
+    {
+      "api_name": "GetStartupInfoW",
+      "api_resolution": "import",
+      "call_site_va": "0x0047776a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477750"
+    },
+    {
+      "api_name": "WideCharToMultiByte",
+      "api_resolution": "import",
+      "call_site_va": "0x00476e13",
+      "calling_convention": "regparm",
+      "function_va": "0x00476d3f"
+    },
+    {
+      "api_name": "WideCharToMultiByte",
+      "api_resolution": "import",
+      "call_site_va": "0x00476e48",
+      "calling_convention": "regparm",
+      "function_va": "0x00476d3f"
+    },
+    {
+      "api_name": "TerminateProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00475d11",
+      "calling_convention": "cdecl",
+      "function_va": "0x00475cf0"
+    },
+    {
+      "api_name": "UnhandledExceptionFilter",
+      "api_resolution": "import",
+      "call_site_va": "0x004776d0",
+      "calling_convention": "cdecl",
+      "function_va": "0x004775c0"
+    },
+    {
+      "api_name": "UnhandledExceptionFilter",
+      "api_resolution": "import",
+      "call_site_va": "0x00475cff",
+      "calling_convention": "cdecl",
+      "function_va": "0x00475cf0"
+    },
+    {
+      "api_name": "GetCurrentThreadId",
+      "api_resolution": "import",
+      "call_site_va": "0x004779f7",
+      "calling_convention": "cdecl",
+      "function_va": "0x004779d0"
+    },
+    {
+      "api_name": "GetCurrentThreadId",
+      "api_resolution": "import",
+      "call_site_va": "0x00475272",
+      "calling_convention": "fastcall",
+      "function_va": "0x00475250"
+    },
+    {
+      "api_name": "Sleep",
+      "api_resolution": "import",
+      "call_site_va": "0x004559cc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455970"
+    },
+    {
+      "api_name": "Sleep",
+      "api_resolution": "import",
+      "call_site_va": "0x00436648",
+      "calling_convention": "cdecl",
+      "function_va": "0x004365f0"
+    },
+    {
+      "api_name": "Sleep",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a27c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a220"
+    },
+    {
+      "api_name": "Sleep",
+      "api_resolution": "import",
+      "call_site_va": "0x004592d6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459270"
+    },
+    {
+      "api_name": "Sleep",
+      "api_resolution": "import",
+      "call_site_va": "0x00474818",
+      "calling_convention": "cdecl",
+      "function_va": "0x004747c0"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d73f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d6a0"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d772",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d6a0"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0043676b",
+      "calling_convention": "cdecl",
+      "function_va": "0x004366d0"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0043677a",
+      "calling_convention": "cdecl",
+      "function_va": "0x004366d0"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d8e5",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d850"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d918",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d850"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d585",
+      "calling_convention": "regparm",
+      "function_va": "0x0046d477"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d5b8",
+      "calling_convention": "regparm",
+      "function_va": "0x0046d477"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x00435fd1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435f30"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x00435fe0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435f30"
+    },
+    {
+      "api_name": "VerSetConditionMask",
+      "api_resolution": "import",
+      "call_site_va": "0x00435fef",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435f30"
+    },
+    {
+      "api_name": "LoadLibraryW",
+      "api_resolution": "import",
+      "call_site_va": "0x00465bef",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465b00"
+    },
+    {
+      "api_name": "LoadLibraryW",
+      "api_resolution": "import",
+      "call_site_va": "0x00435134",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435100"
+    },
+    {
+      "api_name": "LoadLibraryW",
+      "api_resolution": "import",
+      "call_site_va": "0x0043515d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435100"
+    },
+    {
+      "api_name": "LoadLibraryW",
+      "api_resolution": "import",
+      "call_site_va": "0x00435186",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435100"
+    },
+    {
+      "api_name": "VirtualProtect",
+      "api_resolution": "import",
+      "call_site_va": "0x00434f3c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434e50"
+    },
+    {
+      "api_name": "VirtualProtect",
+      "api_resolution": "import",
+      "call_site_va": "0x004555cb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455560"
+    },
+    {
+      "api_name": "FreeLibrary",
+      "api_resolution": "import",
+      "call_site_va": "0x00477f77",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "FreeLibrary",
+      "api_resolution": "import",
+      "call_site_va": "0x00477fdf",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x004352ef",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435240"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00465c3a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465b00"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x004641ea",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x004634d1",
+      "calling_convention": "regparm",
+      "function_va": "0x00463407"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x0046485b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00464886",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x004648e8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00465036",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x0047839f",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00466bf9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00466b30"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00463bb3",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00465617",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x0046567c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x004656de",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00477f1f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00477f31",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "GetProcAddress",
+      "api_resolution": "import",
+      "call_site_va": "0x00477f43",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "GetSystemInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x00438078",
+      "calling_convention": "cdecl",
+      "function_va": "0x00438040"
+    },
+    {
+      "api_name": "GetSystemInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x00434edd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434e50"
+    },
+    {
+      "api_name": "GetSystemInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bf67",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046be80"
+    },
+    {
+      "api_name": "GetSystemInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x00437b28",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x004640f1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x004643f8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00434db1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434d80"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00473b81",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473b30"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00478506",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00478580",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00471d8b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00471de4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00471e09",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00471ed4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x0047201b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00472074",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00472099",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "GetProcessHeap",
+      "api_resolution": "import",
+      "call_site_va": "0x00472164",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471fd0"
+    },
+    {
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "call_site_va": "0x00454f0b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "call_site_va": "0x0047769a",
+      "calling_convention": "cdecl",
+      "function_va": "0x004775c0"
+    },
+    {
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "call_site_va": "0x00476d7f",
+      "calling_convention": "regparm",
+      "function_va": "0x00476d3f"
+    },
+    {
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "call_site_va": "0x00454b49",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "call_site_va": "0x00434d4a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434d20"
+    },
+    {
+      "api_name": "RemoveVectoredExceptionHandler",
+      "api_resolution": "import",
+      "call_site_va": "0x00454136",
+      "calling_convention": "cdecl",
+      "function_va": "0x004540d0"
+    },
+    {
+      "api_name": "AddVectoredExceptionHandler",
+      "api_resolution": "import",
+      "call_site_va": "0x00434af1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434ac0"
+    },
+    {
+      "api_name": "AddVectoredExceptionHandler",
+      "api_resolution": "import",
+      "call_site_va": "0x00434c11",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434be0"
+    },
+    {
+      "api_name": "AddVectoredExceptionHandler",
+      "api_resolution": "import",
+      "call_site_va": "0x00454101",
+      "calling_convention": "cdecl",
+      "function_va": "0x004540d0"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454ed7",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454fdc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454ff6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x004349d2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434900"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00434ff0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434fdc"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00435a16",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435950"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00435a9a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435950"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00435abd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435950"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00435b16",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435950"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00464472",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454877",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454944",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x0045495e",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454b17",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454cc8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454ce2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x004543ce",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454637",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "VirtualFree",
+      "api_resolution": "import",
+      "call_site_va": "0x00454651",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454e69",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454eb4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454e20"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0043493f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434900"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004359c9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435950"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00463fe2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454809",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454854",
+      "calling_convention": "cdecl",
+      "function_va": "0x004547c0"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00434ef9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434e50"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454aa9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454af4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454a60"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00454360",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "VirtualAlloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004543ab",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetThreadContext",
+      "api_resolution": "import",
+      "call_site_va": "0x00434989",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434900"
+    },
+    {
+      "api_name": "GetThreadContext",
+      "api_resolution": "import",
+      "call_site_va": "0x0046402c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "GetThreadContext",
+      "api_resolution": "import",
+      "call_site_va": "0x0045452e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00454310"
+    },
+    {
+      "api_name": "GetCurrentThread",
+      "api_resolution": "import",
+      "call_site_va": "0x0043497b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434900"
+    },
+    {
+      "api_name": "GetCurrentThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00436203",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436180"
+    },
+    {
+      "api_name": "GetCurrentThread",
+      "api_resolution": "import",
+      "call_site_va": "0x00436262",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436180"
+    },
+    {
+      "api_name": "GetCurrentThread",
+      "api_resolution": "import",
+      "call_site_va": "0x004362a1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436180"
+    },
+    {
+      "api_name": "GetCurrentThread",
+      "api_resolution": "import",
+      "call_site_va": "0x004362eb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436180"
+    },
+    {
+      "api_name": "GetCurrentThread",
+      "api_resolution": "import",
+      "call_site_va": "0x0043636a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00436180"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00434750",
+      "calling_convention": "cdecl",
+      "function_va": "0x004346f0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00446451",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00462304",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462220"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046442d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046444c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00464491",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463ef0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0044094f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00440880"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00440a15",
+      "calling_convention": "cdecl",
+      "function_va": "0x00440880"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00473b9a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473b30"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00464e6c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464dc0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046ccaa",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046cb80"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00453807",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453770"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0044cdcb",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044cca0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00464b59",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00464ba6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x004652a1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x004652fb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046533e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f5f9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f500"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cf03",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ce50"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cf3e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ce50"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cf91",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ce50"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cfb1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ce50"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x004575be",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00457607",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00457686",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d415",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d370"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e314",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e200"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bd86",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bce0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bd99",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bce0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bdc2",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bce0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00463d47",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00463d8e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00473eb7",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473db0"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x0047405c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00473f80"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00453683",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453630"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x004658ef",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00465936",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00435cf4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435c00"
+    },
+    {
+      "api_name": "CloseHandle",
+      "api_resolution": "import",
+      "call_site_va": "0x00471a76",
+      "calling_convention": "cdecl",
+      "function_va": "0x004719d0"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00434651",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434610"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b4d4",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b400"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b543",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b400"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b5c3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b400"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0043527e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435240"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0047194a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471910"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004407c9",
+      "calling_convention": "regparm",
+      "function_va": "0x0044071b"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004355ab",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435550"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004356db",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435670"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00435725",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435670"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a288",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cac6",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ca50"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00472743",
+      "calling_convention": "cdecl",
+      "function_va": "0x004725e0"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x004380d0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00438040"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00435884",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435820"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00475d0a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00475cf0"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d3ba",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d370"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e258",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e200"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b80c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b790"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0046da5f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046da00"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c36c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c110"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x00437b80",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c8db",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c660"
+    },
+    {
+      "api_name": "GetCurrentProcess",
+      "api_resolution": "import",
+      "call_site_va": "0x0044c982",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044c660"
+    },
+    {
+      "api_name": "GetFullPathNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00465bc5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465b00"
+    },
+    {
+      "api_name": "GetFullPathNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00464943",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "GetFullPathNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x004650e2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "GetFullPathNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00463c05",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "GetFullPathNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00465739",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "CheckRemoteDebuggerPresent",
+      "api_resolution": "import",
+      "call_site_va": "0x0043465f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434610"
+    },
+    {
+      "api_name": "?_W_Getmonths@_Locinfo@std@@QBEPBGXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465e54",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465dd0"
+    },
+    {
+      "api_name": "?_W_Getmonths@_Locinfo@std@@QBEPBGXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465fe4",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465f60"
+    },
+    {
+      "api_name": "?_W_Getdays@_Locinfo@std@@QBEPBGXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465e33",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465dd0"
+    },
+    {
+      "api_name": "?_W_Getdays@_Locinfo@std@@QBEPBGXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465fc3",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465f60"
+    },
+    {
+      "api_name": "?_Getmonths@_Locinfo@std@@QBEPBDXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465ebd",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465dd0"
+    },
+    {
+      "api_name": "?_Getmonths@_Locinfo@std@@QBEPBDXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0046604d",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465f60"
+    },
+    {
+      "api_name": "?_Getdays@_Locinfo@std@@QBEPBDXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465e93",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465dd0"
+    },
+    {
+      "api_name": "?_Getdays@_Locinfo@std@@QBEPBDXZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00466023",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465f60"
+    },
+    {
+      "api_name": "?_Getcvt@_Locinfo@std@@QBE?AU_Cvtvec@@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465e09",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465dd0"
+    },
+    {
+      "api_name": "?_Getcvt@_Locinfo@std@@QBE?AU_Cvtvec@@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00465f99",
+      "calling_convention": "thiscall",
+      "function_va": "0x00465f60"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047f005",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047f000"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x004427f6",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442750"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047f055",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047f050"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00470d25",
+      "calling_convention": "stdcall",
+      "function_va": "0x00470c50"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00439475",
+      "calling_convention": "stdcall",
+      "function_va": "0x004393a0"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00451255",
+      "calling_convention": "stdcall",
+      "function_va": "0x00451180"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047de65",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047de60"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047df05",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047df00"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x004513e5",
+      "calling_convention": "stdcall",
+      "function_va": "0x00451310"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047efb5",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047efb0"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047deb5",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047deb0"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00440c06",
+      "calling_convention": "thiscall",
+      "function_va": "0x00440b90"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00440c65",
+      "calling_convention": "thiscall",
+      "function_va": "0x00440b90"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00471045",
+      "calling_convention": "stdcall",
+      "function_va": "0x00470f70"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0047b375",
+      "calling_convention": "cdecl",
+      "function_va": "0x0047b370"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0043ea60",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043e9f0"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00431dfb",
+      "calling_convention": "fastcall",
+      "function_va": "0x00431d50"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x004510c5",
+      "calling_convention": "stdcall",
+      "function_va": "0x00450ff0"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f084",
+      "calling_convention": "thiscall",
+      "function_va": "0x0043f000"
+    },
+    {
+      "api_name": "??1_Lockit@std@@QAE@XZ",
+      "api_resolution": "import",
+      "call_site_va": "0x00470eb5",
+      "calling_convention": "stdcall",
+      "function_va": "0x00470de0"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x004427a6",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442750"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00470ca6",
+      "calling_convention": "stdcall",
+      "function_va": "0x00470c50"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x004393f6",
+      "calling_convention": "stdcall",
+      "function_va": "0x004393a0"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x004511d6",
+      "calling_convention": "stdcall",
+      "function_va": "0x00451180"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00451366",
+      "calling_convention": "stdcall",
+      "function_va": "0x00451310"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00440bec",
+      "calling_convention": "thiscall",
+      "function_va": "0x00440b90"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00440c2e",
+      "calling_convention": "thiscall",
+      "function_va": "0x00440b90"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00470fc6",
+      "calling_convention": "stdcall",
+      "function_va": "0x00470f70"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x0043ea46",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043e9f0"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00431dae",
+      "calling_convention": "fastcall",
+      "function_va": "0x00431d50"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00451046",
+      "calling_convention": "stdcall",
+      "function_va": "0x00450ff0"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f06a",
+      "calling_convention": "thiscall",
+      "function_va": "0x0043f000"
+    },
+    {
+      "api_name": "??0_Lockit@std@@QAE@H@Z",
+      "api_resolution": "import",
+      "call_site_va": "0x00470e36",
+      "calling_convention": "stdcall",
+      "function_va": "0x00470de0"
+    },
+    {
+      "api_name": "VariantInit",
+      "api_resolution": "import",
+      "call_site_va": "0x00460c5d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460b40"
+    },
+    {
+      "api_name": "VariantInit",
+      "api_resolution": "import",
+      "call_site_va": "0x00461399",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "VariantInit",
+      "api_resolution": "import",
+      "call_site_va": "0x00461423",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "VariantInit",
+      "api_resolution": "import",
+      "call_site_va": "0x004614ad",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "VariantInit",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ad64",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ac70"
+    },
+    {
+      "api_name": "SysFreeString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d1dc",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "SysFreeString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d22d",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "SysFreeString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bc49",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bb40"
+    },
+    {
+      "api_name": "SysFreeString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bc62",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bb40"
+    },
+    {
+      "api_name": "SysAllocString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d181",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "SysAllocString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bb6f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bb40"
+    },
+    {
+      "api_name": "SysAllocString",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bb85",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bb40"
+    },
+    {
+      "api_name": "SafeArrayGetElement",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fb5c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "SafeArrayUnaccessData",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fbd9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "SafeArrayAccessData",
+      "api_resolution": "import",
+      "call_site_va": "0x0045faa5",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "SafeArrayGetLBound",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fad7",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "SafeArrayGetUBound",
+      "api_resolution": "import",
+      "call_site_va": "0x0045faf6",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00459a3c",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00459a6f",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b235",
+      "calling_convention": "regparm",
+      "function_va": "0x0045b0c7"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ee07",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ecb0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045eeb5",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ecb0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00455c30",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455ad0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00455c63",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455ad0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x004610b0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460f70"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00456bb2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456a80"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00456bde",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456a80"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00460809",
+      "calling_convention": "cdecl",
+      "function_va": "0x004606c0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a59e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a470"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f292",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f0c0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045be6b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045be9e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fa50",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fbef",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x004570ba",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456ed0"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00460d46",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460b40"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00455ef0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455e50"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a000",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459e80"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a033",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459e80"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00461406",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x00461490",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0046151a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "VariantClear",
+      "api_resolution": "import",
+      "call_site_va": "0x0045adb7",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ac70"
+    },
+    {
+      "api_name": "SetupDiGetDeviceRegistryPropertyW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c169",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "SetupDiGetClassDevsW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c0e6",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "SetupDiDestroyDeviceInfoList",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c275",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "SetupDiEnumDeviceInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c138",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "SHGetSpecialFolderPathW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d07b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cf90"
+    },
+    {
+      "api_name": "SHGetSpecialFolderPathW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045db50",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045da50"
+    },
+    {
+      "api_name": "SHGetSpecialFolderPathW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f7a9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f6f0"
+    },
+    {
+      "api_name": "SHGetSpecialFolderPathW",
+      "api_resolution": "import",
+      "call_site_va": "0x004624d3",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462400"
+    },
+    {
+      "api_name": "SHGetFolderPathW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a235",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "PathGetDriveNumberW",
+      "api_resolution": "import",
+      "call_site_va": "0x00457394",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "PathMatchSpecW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046ddda",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d2f1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045d1a0"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x00462766",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462600"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045d09f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cf90"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045db7b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045da50"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f7cd",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f6f0"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x004624f7",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462400"
+    },
+    {
+      "api_name": "PathCombineW",
+      "api_resolution": "import",
+      "call_site_va": "0x00460062",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045fee0"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ccdb",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cc50"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cd01",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cc50"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cd27",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cc50"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cd4a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cc50"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cd6d",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cc50"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cd90",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045cc50"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cece",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ce20"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cef1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ce20"
+    },
+    {
+      "api_name": "StrCmpCW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045cf14",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ce20"
+    },
+    {
+      "api_name": "StrStrW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ceab",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ce20"
+    },
+    {
+      "api_name": "PathRemoveExtensionW",
+      "api_resolution": "import",
+      "call_site_va": "0x00458bae",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458a40"
+    },
+    {
+      "api_name": "wnsprintfW",
+      "api_resolution": "import",
+      "call_site_va": "0x004573e5",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "wnsprintfW",
+      "api_resolution": "import",
+      "call_site_va": "0x00457525",
+      "calling_convention": "cdecl",
+      "function_va": "0x004572c0"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x00435a73",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435950"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a825",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a89c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a8b8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a8f3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a90f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a94a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrChrW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a912",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a8d0"
+    },
+    {
+      "api_name": "StrChrW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a933",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a8d0"
+    },
+    {
+      "api_name": "StrCmpNIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a843",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpNIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a861",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "StrCmpNIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a38f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "StrCmpNIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a420",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "StrCmpNIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a482",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x004599d1",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x004599ed",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00459a09",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00459a25",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c1e3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c1ff",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c21b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c237",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c0a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00455bfd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455ad0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00455c19",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455ad0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b7d1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046e0e9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046e030"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00471e8a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045bde1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045be1c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045be38",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045be54",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a7d3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a7a0"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00459fb1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459e80"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00459fcd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459e80"
+    },
+    {
+      "api_name": "StrStrIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00459fe9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459e80"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00458b6e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458a40"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00464e38",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464dc0"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046ccc4",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046cb80"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044a4a7",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a140"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0044aa3f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044a8d0"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045e86e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045e720"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x00460a69",
+      "calling_convention": "cdecl",
+      "function_va": "0x004609e0"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cf24",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ce50"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0046cf77",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046ce50"
+    },
+    {
+      "api_name": "StrCmpIW",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fa32",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "PathFindFileNameW",
+      "api_resolution": "import",
+      "call_site_va": "0x00458ad0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458a40"
+    },
+    {
+      "api_name": "GetCursorPos",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a268",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a220"
+    },
+    {
+      "api_name": "GetCursorPos",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a28f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a220"
+    },
+    {
+      "api_name": "GetLastInputInfo",
+      "api_resolution": "import",
+      "call_site_va": "0x004592e9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459270"
+    },
+    {
+      "api_name": "MoveWindow",
+      "api_resolution": "import",
+      "call_site_va": "0x00468724",
+      "calling_convention": "cdecl",
+      "function_va": "0x004686c0"
+    },
+    {
+      "api_name": "GetWindowThreadProcessId",
+      "api_resolution": "import",
+      "call_site_va": "0x004406cf",
+      "calling_convention": "cdecl",
+      "function_va": "0x00440680"
+    },
+    {
+      "api_name": "GetShellWindow",
+      "api_resolution": "import",
+      "call_site_va": "0x004406c1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00440680"
+    },
+    {
+      "api_name": "KillTimer",
+      "api_resolution": "import",
+      "call_site_va": "0x0047452e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474460"
+    },
+    {
+      "api_name": "SetWindowsHookExW",
+      "api_resolution": "import",
+      "call_site_va": "0x00465c94",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465b00"
+    },
+    {
+      "api_name": "FindWindowW",
+      "api_resolution": "import",
+      "call_site_va": "0x00461d81",
+      "calling_convention": "regparm",
+      "function_va": "0x00461cc5"
+    },
+    {
+      "api_name": "FindWindowW",
+      "api_resolution": "import",
+      "call_site_va": "0x00461d9a",
+      "calling_convention": "regparm",
+      "function_va": "0x00461cc5"
+    },
+    {
+      "api_name": "wsprintfW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437bfd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "wsprintfW",
+      "api_resolution": "import",
+      "call_site_va": "0x00437dc5",
+      "calling_convention": "cdecl",
+      "function_va": "0x00437af0"
+    },
+    {
+      "api_name": "SetTimer",
+      "api_resolution": "import",
+      "call_site_va": "0x004744a1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474460"
+    },
+    {
+      "api_name": "DispatchMessageW",
+      "api_resolution": "import",
+      "call_site_va": "0x00474517",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474460"
+    },
+    {
+      "api_name": "TranslateMessage",
+      "api_resolution": "import",
+      "call_site_va": "0x00474504",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474460"
+    },
+    {
+      "api_name": "GetMessageW",
+      "api_resolution": "import",
+      "call_site_va": "0x004744e9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474460"
+    },
+    {
+      "api_name": "GetSystemMetrics",
+      "api_resolution": "import",
+      "call_site_va": "0x0046c31a",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046be80"
+    },
+    {
+      "api_name": "timeEndPeriod",
+      "api_resolution": "import",
+      "call_site_va": "0x0047495c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474860"
+    },
+    {
+      "api_name": "timeGetDevCaps",
+      "api_resolution": "import",
+      "call_site_va": "0x0047489a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474860"
+    },
+    {
+      "api_name": "timeKillEvent",
+      "api_resolution": "import",
+      "call_site_va": "0x00474949",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474860"
+    },
+    {
+      "api_name": "timeSetEvent",
+      "api_resolution": "import",
+      "call_site_va": "0x0047491b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00474860"
+    },
+    {
+      "api_name": "socket",
+      "api_resolution": "import",
+      "call_site_va": "0x00458543",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "WSAStartup",
+      "api_resolution": "import",
+      "call_site_va": "0x00458525",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "WSACleanup",
+      "api_resolution": "import",
+      "call_site_va": "0x0045874a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "getaddrinfo",
+      "api_resolution": "import",
+      "call_site_va": "0x004585af",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "freeaddrinfo",
+      "api_resolution": "import",
+      "call_site_va": "0x0045871c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "recv",
+      "api_resolution": "import",
+      "call_site_va": "0x0045867a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "connect",
+      "api_resolution": "import",
+      "call_site_va": "0x004585e2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "send",
+      "api_resolution": "import",
+      "call_site_va": "0x0045864c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "closesocket",
+      "api_resolution": "import",
+      "call_site_va": "0x0045873b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458450"
+    },
+    {
+      "api_name": "CoInitializeSecurity",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d0ec",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00459adf",
+      "calling_convention": "cdecl",
+      "function_va": "0x004598a0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b2ad",
+      "calling_convention": "regparm",
+      "function_va": "0x0045b0c7"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c727",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c5e0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045c766",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045c5e0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ef2d",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ecb0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00455cd3",
+      "calling_convention": "cdecl",
+      "function_va": "0x00455ad0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00461128",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460f70"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00456c4e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456a80"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00460881",
+      "calling_convention": "cdecl",
+      "function_va": "0x004606c0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a616",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a470"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045f31b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f0c0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d111",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d167",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d213",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d2ab",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045bf0e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0046bc30",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046bb40"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x004565a1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456450"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fc5f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00457132",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456ed0"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x00460dd8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460b40"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a0a3",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459e80"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x004615a4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00461290"
+    },
+    {
+      "api_name": "CoUninitialize",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ae22",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ac70"
+    },
+    {
+      "api_name": "CoInitializeEx",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d0ae",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoSetProxyBlanket",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d250",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "CoCreateInstance",
+      "api_resolution": "import",
+      "call_site_va": "0x0046d142",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046d080"
+    },
+    {
+      "api_name": "__stdio_common_vswprintf_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0043447a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00434430"
+    },
+    {
+      "api_name": "strtok_s",
+      "api_resolution": "import",
+      "call_site_va": "0x004352c8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435240"
+    },
+    {
+      "api_name": "strtok_s",
+      "api_resolution": "import",
+      "call_site_va": "0x00435326",
+      "calling_convention": "cdecl",
+      "function_va": "0x00435240"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00458bde",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458a40"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00458bf9",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458a40"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00458c14",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458a40"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x004449fd",
+      "calling_convention": "cdecl",
+      "function_va": "0x004449b0"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00467ccf",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467c90"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x0046496d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464700"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x0046510c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00464f10"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00463c2f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00463a70"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00468d37",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468c30"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00468d74",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468c30"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x00465763",
+      "calling_convention": "cdecl",
+      "function_va": "0x00465500"
+    },
+    {
+      "api_name": "wcslen",
+      "api_resolution": "import",
+      "call_site_va": "0x004668de",
+      "calling_convention": "cdecl",
+      "function_va": "0x004668b0"
+    },
+    {
+      "api_name": "terminate",
+      "api_resolution": "import",
+      "call_site_va": "0x0043ab45",
+      "calling_convention": "cdecl",
+      "function_va": "0x0043ab00"
+    },
+    {
+      "api_name": "terminate",
+      "api_resolution": "import",
+      "call_site_va": "0x0043aab5",
+      "calling_convention": "cdecl",
+      "function_va": "0x0043aa70"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00457c29",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00457c69",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00457cbb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00457d48",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00457d6e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00457d89",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b63b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b400"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045e116",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045e060"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x004605fb",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460510"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00468a04",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0044643b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00446492",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a7bf",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a7e8",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a7fe",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045aa50",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045aa66",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045aa7c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a770"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00459177",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459000"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00462c1a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462b80"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b803",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045683c",
+      "calling_convention": "cdecl",
+      "function_va": "0x004566e0"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00460402",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460260"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0046041d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460260"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00458df1",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458d60"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00458eef",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458d60"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00458f05",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458d60"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045a3d1",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045a360"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00473002",
+      "calling_convention": "cdecl",
+      "function_va": "0x00472f40"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00473091",
+      "calling_convention": "cdecl",
+      "function_va": "0x00472f40"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045e88f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045e720"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00471ea8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00471d40"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00462a94",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462960"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00462aaf",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462960"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00474253",
+      "calling_convention": "regparm",
+      "function_va": "0x004740a7"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045de69",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045dd00"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045de92",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045dd00"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045df0c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045dd00"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045df22",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045dd00"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00472ad5",
+      "calling_convention": "cdecl",
+      "function_va": "0x004728a0"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x004582ad",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458220"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045817d",
+      "calling_convention": "cdecl",
+      "function_va": "0x004580f0"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x00458049",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457fa0"
+    },
+    {
+      "api_name": "free",
+      "api_resolution": "import",
+      "call_site_va": "0x0045eb9c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ea10"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00457a97",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457a50"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0044626e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00446355",
+      "calling_convention": "cdecl",
+      "function_va": "0x00446210"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045b6f3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045b5a0"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004602a0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00460260"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00472f8d",
+      "calling_convention": "cdecl",
+      "function_va": "0x00472f40"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004629a0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00462960"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004741ed",
+      "calling_convention": "regparm",
+      "function_va": "0x004740a7"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045dd40",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045dd00"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00467d98",
+      "calling_convention": "cdecl",
+      "function_va": "0x00467d40"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00468d91",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468c30"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045826f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458220"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045813f",
+      "calling_convention": "cdecl",
+      "function_va": "0x004580f0"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00458009",
+      "calling_convention": "cdecl",
+      "function_va": "0x00457fa0"
+    },
+    {
+      "api_name": "malloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045ea4f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ea10"
+    },
+    {
+      "api_name": "calloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b4a3",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b400"
+    },
+    {
+      "api_name": "calloc",
+      "api_resolution": "import",
+      "call_site_va": "0x004729be",
+      "calling_convention": "cdecl",
+      "function_va": "0x004728a0"
+    },
+    {
+      "api_name": "calloc",
+      "api_resolution": "import",
+      "call_site_va": "0x00472a83",
+      "calling_convention": "cdecl",
+      "function_va": "0x004728a0"
+    },
+    {
+      "api_name": "realloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0044b510",
+      "calling_convention": "cdecl",
+      "function_va": "0x0044b400"
+    },
+    {
+      "api_name": "realloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0047302f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00472f40"
+    },
+    {
+      "api_name": "realloc",
+      "api_resolution": "import",
+      "call_site_va": "0x0045eb12",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045ea10"
+    },
+    {
+      "api_name": "_wcstoui64_l",
+      "api_resolution": "import",
+      "call_site_va": "0x00457062",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456ed0"
+    },
+    {
+      "api_name": "wcscmp",
+      "api_resolution": "import",
+      "call_site_va": "0x00456803",
+      "calling_convention": "cdecl",
+      "function_va": "0x004566e0"
+    },
+    {
+      "api_name": "wcscmp",
+      "api_resolution": "import",
+      "call_site_va": "0x0045bdfd",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045bcb0"
+    },
+    {
+      "api_name": "_wcsicmp",
+      "api_resolution": "import",
+      "call_site_va": "0x00459138",
+      "calling_convention": "cdecl",
+      "function_va": "0x00459000"
+    },
+    {
+      "api_name": "_wcsicmp",
+      "api_resolution": "import",
+      "call_site_va": "0x00458e7f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458d60"
+    },
+    {
+      "api_name": "_wcsicmp",
+      "api_resolution": "import",
+      "call_site_va": "0x00458eb0",
+      "calling_convention": "cdecl",
+      "function_va": "0x00458d60"
+    },
+    {
+      "api_name": "_wcsicmp",
+      "api_resolution": "import",
+      "call_site_va": "0x0045fba4",
+      "calling_convention": "cdecl",
+      "function_va": "0x0045f8c0"
+    },
+    {
+      "api_name": "_get_current_locale",
+      "api_resolution": "import",
+      "call_site_va": "0x0045704a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456ed0"
+    },
+    {
+      "api_name": "_calloc_dbg",
+      "api_resolution": "import",
+      "call_site_va": "0x0046613e",
+      "calling_convention": "cdecl",
+      "function_va": "0x004660f0"
+    },
+    {
+      "api_name": "_calloc_dbg",
+      "api_resolution": "import",
+      "call_site_va": "0x004662a8",
+      "calling_convention": "cdecl",
+      "function_va": "0x004661e0"
+    },
+    {
+      "api_name": "_calloc_dbg",
+      "api_resolution": "import",
+      "call_site_va": "0x0046690c",
+      "calling_convention": "cdecl",
+      "function_va": "0x004668b0"
+    },
+    {
+      "api_name": "_wassert",
+      "api_resolution": "import",
+      "call_site_va": "0x00466f3f",
+      "calling_convention": "cdecl",
+      "function_va": "0x00466e80"
+    },
+    {
+      "api_name": "_wassert",
+      "api_resolution": "import",
+      "call_site_va": "0x00467011",
+      "calling_convention": "cdecl",
+      "function_va": "0x00466e80"
+    },
+    {
+      "api_name": "_wassert",
+      "api_resolution": "import",
+      "call_site_va": "0x00466d2b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00466cb0"
+    },
+    {
+      "api_name": "_wassert",
+      "api_resolution": "import",
+      "call_site_va": "0x00466ad2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00466a40"
+    },
+    {
+      "api_name": "wctomb_s",
+      "api_resolution": "import",
+      "call_site_va": "0x004687c2",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468770"
+    },
+    {
+      "api_name": "__stdio_common_vswprintf",
+      "api_resolution": "import",
+      "call_site_va": "0x004688cd",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468880"
+    },
+    {
+      "api_name": "exit",
+      "api_resolution": "import",
+      "call_site_va": "0x00468cde",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468c30"
+    },
+    {
+      "api_name": "exit",
+      "api_resolution": "import",
+      "call_site_va": "0x00468d24",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468c30"
+    },
+    {
+      "api_name": "_wfopen_s",
+      "api_resolution": "import",
+      "call_site_va": "0x00468992",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "_wfopen_s",
+      "api_resolution": "import",
+      "call_site_va": "0x004689b7",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "fclose",
+      "api_resolution": "import",
+      "call_site_va": "0x00468b3b",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "fputc",
+      "api_resolution": "import",
+      "call_site_va": "0x00468a51",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "fputc",
+      "api_resolution": "import",
+      "call_site_va": "0x00468af4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "fputc",
+      "api_resolution": "import",
+      "call_site_va": "0x00468b18",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468940"
+    },
+    {
+      "api_name": "_wasctime_s",
+      "api_resolution": "import",
+      "call_site_va": "0x00468cfa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468c30"
+    },
+    {
+      "api_name": "_localtime64_s",
+      "api_resolution": "import",
+      "call_site_va": "0x00468f92",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468f60"
+    },
+    {
+      "api_name": "_time64",
+      "api_resolution": "import",
+      "call_site_va": "0x00468ffe",
+      "calling_convention": "cdecl",
+      "function_va": "0x00468fd0"
+    },
+    {
+      "api_name": "wcscpy_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dc3b",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "wcscpy_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dc5f",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "wcscpy_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dccc",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "wcscpy_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dd9c",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "wcsncpy_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dc16",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "__stdio_common_vfprintf",
+      "api_resolution": "import",
+      "call_site_va": "0x00432b66",
+      "calling_convention": "cdecl",
+      "function_va": "0x00432b20"
+    },
+    {
+      "api_name": "getchar",
+      "api_resolution": "import",
+      "call_site_va": "0x00433b24",
+      "calling_convention": "cdecl",
+      "function_va": "0x00432c40"
+    },
+    {
+      "api_name": "__stdio_common_vfwprintf",
+      "api_resolution": "import",
+      "call_site_va": "0x00432bf6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00432bb0"
+    },
+    {
+      "api_name": "__acrt_iob_func",
+      "api_resolution": "import",
+      "call_site_va": "0x00433f8c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00433f50"
+    },
+    {
+      "api_name": "__acrt_iob_func",
+      "api_resolution": "import",
+      "call_site_va": "0x0043402c",
+      "calling_convention": "cdecl",
+      "function_va": "0x00433ff0"
+    },
+    {
+      "api_name": "strtol",
+      "api_resolution": "import",
+      "call_site_va": "0x00432d69",
+      "calling_convention": "cdecl",
+      "function_va": "0x00432c40"
+    },
+    {
+      "api_name": "_errno",
+      "api_resolution": "import",
+      "call_site_va": "0x00432d43",
+      "calling_convention": "cdecl",
+      "function_va": "0x00432c40"
+    },
+    {
+      "api_name": "_errno",
+      "api_resolution": "import",
+      "call_site_va": "0x00432d7e",
+      "calling_convention": "cdecl",
+      "function_va": "0x00432c40"
+    },
+    {
+      "api_name": "_errno",
+      "api_resolution": "import",
+      "call_site_va": "0x00457035",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456ed0"
+    },
+    {
+      "api_name": "_errno",
+      "api_resolution": "import",
+      "call_site_va": "0x00457080",
+      "calling_convention": "cdecl",
+      "function_va": "0x00456ed0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0042f69e",
+      "calling_convention": "cdecl",
+      "function_va": "0x0042f630"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442b4c",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442bbf",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442c51",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442cd4",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x004531b8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453160"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f66f",
+      "calling_convention": "stdcall",
+      "function_va": "0x0043f610"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442606",
+      "calling_convention": "fastcall",
+      "function_va": "0x00442560"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442e3a",
+      "calling_convention": "cdecl",
+      "function_va": "0x00442de0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00442eaa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00442de0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00431022",
+      "calling_convention": "cdecl",
+      "function_va": "0x00430fa0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x004310aa",
+      "calling_convention": "cdecl",
+      "function_va": "0x00430fa0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f762",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043f710"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f7d5",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043f710"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f86d",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043f710"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0043c1cb",
+      "calling_convention": "cdecl",
+      "function_va": "0x0043c160"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x00453048",
+      "calling_convention": "cdecl",
+      "function_va": "0x00452ff0"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f56f",
+      "calling_convention": "stdcall",
+      "function_va": "0x0043f510"
+    },
+    {
+      "api_name": "_CrtDbgReport",
+      "api_resolution": "import",
+      "call_site_va": "0x0044134f",
+      "calling_convention": "thiscall",
+      "function_va": "0x004412f0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0042f6c9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0042f630"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442b7a",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442bed",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442c7f",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442d02",
+      "calling_convention": "thiscall",
+      "function_va": "0x00442ad0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x004531e6",
+      "calling_convention": "cdecl",
+      "function_va": "0x00453160"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f69d",
+      "calling_convention": "stdcall",
+      "function_va": "0x0043f610"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442634",
+      "calling_convention": "fastcall",
+      "function_va": "0x00442560"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442e68",
+      "calling_convention": "cdecl",
+      "function_va": "0x00442de0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00442ed8",
+      "calling_convention": "cdecl",
+      "function_va": "0x00442de0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00431054",
+      "calling_convention": "cdecl",
+      "function_va": "0x00430fa0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x004310dc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00430fa0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f790",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043f710"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f803",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043f710"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f89b",
+      "calling_convention": "fastcall",
+      "function_va": "0x0043f710"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0043c1f9",
+      "calling_convention": "cdecl",
+      "function_va": "0x0043c160"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x00453076",
+      "calling_convention": "cdecl",
+      "function_va": "0x00452ff0"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0043f59d",
+      "calling_convention": "stdcall",
+      "function_va": "0x0043f510"
+    },
+    {
+      "api_name": "_invalid_parameter",
+      "api_resolution": "import",
+      "call_site_va": "0x0044137d",
+      "calling_convention": "thiscall",
+      "function_va": "0x004412f0"
+    },
+    {
+      "api_name": "_wcsupr_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046dcea",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "_wcsupr_s",
+      "api_resolution": "import",
+      "call_site_va": "0x0046ddba",
+      "calling_convention": "cdecl",
+      "function_va": "0x0046db00"
+    },
+    {
+      "api_name": "isxdigit",
+      "api_resolution": "import",
+      "call_site_va": "0x00467584",
+      "calling_convention": "stdcall",
+      "function_va": "0x00467550"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00477f70",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00477fc4",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "RegCloseKey",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00477fdc",
+      "calling_convention": "cdecl",
+      "function_va": "0x00477eb0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x004783cc",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x004783f1",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00478560",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x0047841b",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00478445",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x0047854c",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x0047846c",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00478538",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00478493",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x00478524",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x004784c6",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x004784fb",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x004785b9",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    },
+    {
+      "api_name": "PDBOpenValidate5",
+      "api_resolution": "getprocaddress",
+      "call_site_va": "0x0047861a",
+      "calling_convention": "cdecl",
+      "function_va": "0x004782b0"
+    }
+  ],
+  "sample_path": "tests/fixtures/al-khaser_x86.exe",
+  "sample_sha256": "1fe91674eb8daacd14ab42926a303fd16b6b21dfaed2c65b2862dcb41197d119"
+}
