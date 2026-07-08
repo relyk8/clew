@@ -15,6 +15,7 @@ Generate the offline fixture once with the real run:
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -32,11 +33,16 @@ from clew.channels.bn_callsites import (
 )
 
 
-# Ground truth from the hand-built record tests/fixtures/1fe91674eb8d_01.expected.json:
-# IsDebuggerPresent, imported, call site 0x00434d4a inside function 0x00434d20.
-GT_API = "IsDebuggerPresent"
-GT_CALL_SITE_VA = 0x00434d4a
-GT_FUNCTION_VA = 0x00434d20
+# Ground truth is loaded directly from the hand-built record so it has a single
+# source of truth -- do not copy its values here. The record's first candidate
+# is IsDebuggerPresent, imported, call site 0x00434d4a in function 0x00434d20.
+_GT_RECORD = json.loads(
+    (Path(__file__).parent / "fixtures" / "1fe91674eb8d_01.expected.json").read_text()
+)
+_GT_CANDIDATE = _GT_RECORD["candidates"][0]
+GT_API = _GT_CANDIDATE["api_name"]
+GT_CALL_SITE_VA = int(_GT_CANDIDATE["call_site_va"], 16)
+GT_FUNCTION_VA = int(_GT_CANDIDATE["function_va"], 16)
 
 # al-khaser exercises a broad sweep of anti-debug/anti-VM APIs; a handful we
 # expect BN to enumerate as call sites regardless of dataflow. Note the WIDE
