@@ -358,7 +358,8 @@ def _collect_call_sites(bv, MediumLevelILOperation) -> list[CallSite]:
 def _import_symbols(bv, SymbolType) -> list:
     """All symbols that represent an imported API: the IAT slots
     (ImportAddressSymbol, which carry the call refs) and the imported
-    function symbols. Deduped by address, IAT slot preferred."""
+    function symbols. Not deduped here; dedup on (call_site_va, api_name)
+    happens downstream in _collect_call_sites."""
     syms = []
     syms.extend(bv.get_symbols_of_type(SymbolType.ImportAddressSymbol))
     syms.extend(bv.get_symbols_of_type(SymbolType.ImportedFunctionSymbol))

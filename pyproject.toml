@@ -5,6 +5,7 @@ requires-python = ">=3.10"
 dependencies = [
     "flare-capa>=9.4.0,<10",
     "flare-floss==3.1.1",
+    "requests>=2",
 ]
 
 [project.optional-dependencies]
