@@ -166,5 +166,106 @@ def test_capa_techniques_and_status_from_capa_result():
                       "not_derivable", "no_capa_signal"}
 
 
+def test_quiet_floss_logging_suppresses_and_restores():
+    import logging
+    lg = logging.getLogger("vivisect")
+    lg.setLevel(logging.DEBUG)                 # pretend vivisect is chatty
+    with pipeline._quiet_floss_logging():
+        assert lg.level == logging.ERROR       # raised inside the block
+    assert lg.level == logging.DEBUG           # restored exactly on exit
+
+
+def test_quiet_floss_logging_restores_on_exception():
+    import logging
+    lg = logging.getLogger("envi")
+    lg.setLevel(logging.INFO)
+    with pytest.raises(ValueError):
+        with pipeline._quiet_floss_logging():
+            raise ValueError("boom")
+    assert lg.level == logging.INFO            # restored even when body raises
+
+
+def test_quiet_floss_logging_is_scoped_not_global():
+    import logging
+    # a logger OUTSIDE the vivisect/floss trees must be untouched
+    other = logging.getLogger("clew.somewhere")
+    other.setLevel(logging.DEBUG)
+    with pipeline._quiet_floss_logging():
+        assert other.level == logging.DEBUG    # unaffected (unlike logging.disable)
+
+
+# --- FLOSS cache: key, sigs identity, and miss-vs-stale safety ---------------
+
+def test_sigs_identity_stable_and_size_sensitive(tmp_path):
+    d = tmp_path / "sigs"
+    d.mkdir()
+    (d / "a.sig").write_bytes(b"xxxx")
+    (d / "sub").mkdir()
+    (d / "sub" / "b.sig").write_bytes(b"yy")
+    first = pipeline._sigs_identity(d)
+    assert first == pipeline._sigs_identity(d)          # deterministic
+    (d / "a.sig").write_bytes(b"xxxxADDED")             # content/size change
+    assert pipeline._sigs_identity(d) != first          # detected
+
+
+def test_sigs_identity_bundled_sentinel():
+    assert pipeline._sigs_identity(None) == "bundled"
+
+
+def test_floss_cache_key_shape():
+    k = pipeline._floss_cache_key("a" * 64, None)
+    assert k["sample_sha256"] == "a" * 64
+    assert k["min_length"] == pipeline.FLOSS_MIN_LENGTH
+    assert k["sigs_identity"] == "bundled"
+    assert set(k["flags"]) == {"static", "stack", "tight", "decoded"}
+
+
+def test_key_diff_names_the_changed_field():
+    have = {"floss_version": "3.0.0", "min_length": 4}
+    want = {"floss_version": "3.1.0", "min_length": 4}
+    d = pipeline._key_diff(have, want)
+    assert "floss_version" in d and "3.0.0" in d and "3.1.0" in d
+    assert "min_length" not in d                        # unchanged field omitted
+
+
+def test_cache_read_miss_returns_none(tmp_path):
+    # empty cache dir -> clean miss, not an error
+    assert pipeline._floss_cache_read("b" * 64, None, tmp_path) is None
+
+
+def test_cache_read_stale_raises_naming_field(tmp_path):
+    sha = "c" * 64
+    # write a data file + a key sidecar whose key deliberately disagrees
+    (tmp_path / f"{sha}.floss.json").write_text("{}")
+    stale_key = pipeline._floss_cache_key(sha, None)
+    stale_key["floss_version"] = "SOME-OTHER-VERSION"
+    (tmp_path / f"{sha}.floss.key.json").write_text(json.dumps(stale_key))
+    with pytest.raises(pipeline.FlossCacheStale) as ei:
+        pipeline._floss_cache_read(sha, None, tmp_path)
+    assert "floss_version" in str(ei.value)             # tells the operator why
+    assert "refresh-floss-cache" in str(ei.value)       # and how to fix it
+
+
+def test_cache_read_matching_key_attempts_load(tmp_path):
+    # a MATCHING key must pass the stale gate and proceed to the FLOSS loader;
+    # without flare-floss installed that surfaces as ImportError (not stale),
+    # which confirms the gate opened rather than the key logic misfiring.
+    sha = "d" * 64
+    (tmp_path / f"{sha}.floss.json").write_text("{}")
+    (tmp_path / f"{sha}.floss.key.json").write_text(
+        json.dumps(pipeline._floss_cache_key(sha, None)))
+    with pytest.raises((ImportError, Exception)) as ei:
+        pipeline._floss_cache_read(sha, None, tmp_path)
+    assert not isinstance(ei.value, pipeline.FlossCacheStale)
+
+
+def test_cache_read_unreadable_key_is_stale(tmp_path):
+    sha = "e" * 64
+    (tmp_path / f"{sha}.floss.json").write_text("{}")
+    (tmp_path / f"{sha}.floss.key.json").write_text("{ this is not json")
+    with pytest.raises(pipeline.FlossCacheStale):
+        pipeline._floss_cache_read(sha, None, tmp_path)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

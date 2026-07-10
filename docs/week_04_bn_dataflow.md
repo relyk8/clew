@@ -362,6 +362,64 @@ bridge's stub carries only `[0x434d4a]` (the call site). This is by design — a
 no-argument call has nothing to trace, so there is no def-use path to record;
 unresolved and return-value stubs carry the call-site VA alone as a locator.
 
+## Reproducibility and determinism
+
+The bridge and its enumeration are deterministic; the remaining run-to-run
+variance is confined to one enrichment source (FLOSS, now pinned by caching) and
+to Binary Ninja's analysis of deliberately anti-analytic code, where it is
+small, bounded, and outside the validated cases. Concretely, on the al-khaser
+fixture:
+
+- **The bridge is deterministic given a fixed view.** Running `bridge_with_view`
+  twice on the *same* analysed `BinaryView` produces byte-identical
+  `to_partial_candidates()` output. Call-site enumeration (Unit 3) is likewise
+  stable (884 sites across independent analyses), as is BN's MLIL-SSA for a given
+  discovered function and BN's function discovery itself (3740 functions across
+  fresh loads). No nondeterminism originates in `dataflow.py` or
+  `bn_callsites.py`; this was confirmed with `PYTHONHASHSEED` pinned, ruling out
+  Python hash-order effects in the grouping/dedup path.
+- **FLOSS was the first variance source and is now pinned.** FLOSS's string
+  emulation is nondeterministic on adversarial code (its stack/tight/decoded
+  categories varied a few strings run-to-run; static strings, ~3947 here, are
+  deterministic). The pipeline caches FLOSS output as native `floss -j` JSON
+  keyed on sample + FLOSS version + min-length + signature identity + flags
+  (`.floss_cache/`), so a sample is emulated once and reused verbatim thereafter;
+  a key mismatch errors rather than silently using stale strings.
+- **A residual <1% BN variance remains on adversarial samples, in two layers.**
+  With FLOSS cached, full-pipeline candidate counts varied within a narrow band
+  (≈960–967 of ~967 total candidates; ≈269–271 of the resolved subset — under
+  1%). The affected call sites cluster in al-khaser's heavily-obfuscated
+  `0x0047xxxx` region, where BN's emulator reports the most anti-disassembly
+  (junk-byte opcodes, incomplete control flow). Isolating the cause showed it is
+  *not* in clew's code (the bridge is deterministic on a fixed view) nor in
+  Python hash order (`PYTHONHASHSEED` pinned changed nothing) nor in function
+  discovery (3740 functions, and all affected sites contained in a function, on
+  every fresh load). It has two contributing layers in BN's analysis itself:
+  pinning `analysis.limits.workerThreadCount` to 1 (default 32) **stabilises
+  candidate membership** — the set of call sites becomes reproducible at 967 on
+  every run, so BN's worker parallelism accounted for the count swing — but a
+  smaller, *field-level* drift persists even single-threaded and hash-pinned:
+  the output digest still differs run-to-run, meaning a few evidence fields on
+  candidates in the obfuscated region are not bit-reproducible. This deeper layer
+  was not chased further: it lives inside BN's analysis of anti-analytic code and
+  is not controllable from the channel. Crucially, neither layer touches any
+  validated case — the twelve-module indicator loop resolves 12/12, the
+  `IsDebuggerPresent` return-value check is located, and both hand-built oracles
+  pass on every run. The residual variance is therefore documented as a known,
+  bounded limitation of static analysis over deliberately anti-analytic binaries,
+  expected for the class of input, and not affecting the evasion-check cases the
+  channel exists to recover.
+
+For thesis reproducibility the intended workflow is to generate the FLOSS cache
+once and archive it alongside results, making re-runs fast, silent, and — modulo
+the residual BN variance above — reproducible. Where a reproducible *set* of
+findings matters (e.g. a headline candidate count), setting
+`analysis.limits.workerThreadCount` to 1 stabilises candidate membership at the
+cost of roughly doubled BN analysis time; it does not remove the smaller
+field-level drift, so it is offered as a knob rather than a default. The
+pragmatic stance for v1 is to report results with the measured <1% variance
+bound stated, since it falls entirely outside the validated evasion-check cases.
+
 ## BN API surface and version pinning
 
 The walk depends on: `func.mlil.ssa_form`; block/instruction iteration with
