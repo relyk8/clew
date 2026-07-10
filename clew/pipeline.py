@@ -32,12 +32,31 @@ import contextlib
 import hashlib
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Optional
 
 
 CLEW_VERSION = "0.3.0"
+
+# Site defaults for capa's rules/signatures. These are the pinned locations on
+# the AFIT cluster: capa-rules is the checkout at CAPA_PINS["capa_rules_tag"]
+# (be59710a), and the sigs come from the capa source tree (capa 9.4.0 ships them
+# there, not in the installed package). Kept here -- a deployment/orchestration
+# concern -- rather than in capa.py's CAPA_PINS, which records version identity
+# (a git hash) not filesystem layout. Overridable per-machine via the CLEW_CAPA_*
+# env vars, and per-run via --capa-rules / --capa-sigs.
+DEFAULT_CAPA_RULES = "/home/shared/clew-env/capa-rules"
+DEFAULT_CAPA_SIGS = "/home/shared/clew-env/capa-src/sigs"
+
+
+def _default_capa_rules() -> str:
+    return os.environ.get("CLEW_CAPA_RULES", DEFAULT_CAPA_RULES)
+
+
+def _default_capa_sigs() -> str:
+    return os.environ.get("CLEW_CAPA_SIGS", DEFAULT_CAPA_SIGS)
 
 
 # --- pure record assembly (no heavy imports; fully offline-testable) ---------
@@ -368,8 +387,10 @@ def main(argv=None) -> int:
         description="Run the clew static pipeline over a sample and emit the "
                     "intermediate clew record.")
     p.add_argument("sample")
-    p.add_argument("--capa-rules", required=True, type=Path)
-    p.add_argument("--capa-sigs", required=True, type=Path)
+    p.add_argument("--capa-rules", type=Path, default=Path(_default_capa_rules()),
+                   help=f"capa rules dir (default: $CLEW_CAPA_RULES or {DEFAULT_CAPA_RULES})")
+    p.add_argument("--capa-sigs", type=Path, default=Path(_default_capa_sigs()),
+                   help=f"capa signatures dir (default: $CLEW_CAPA_SIGS or {DEFAULT_CAPA_SIGS})")
     p.add_argument("--floss-sigs", type=Path, default=None)
     p.add_argument("--capa-bin", default="capa")
     p.add_argument("--no-license-checkout", action="store_true",

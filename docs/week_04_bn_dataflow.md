@@ -7,6 +7,12 @@ code does but the design decisions and the debugging path that produced it,
 because that reasoning is the part worth having on record before Channel 4 and
 the derivation stage build on top of it.
 
+Unit 4 is now integrated into the static pipeline that runs it alongside capa,
+FLOSS, and Unit 3 -- see `static_pipeline.md` for the orchestrator (the
+single-view architecture, FLOSS caching, the CLI, and the operational runbook).
+This document is the bridge's internal record; that one is how the channels are
+wired together and how to run them.
+
 ## What Unit 4 produces
 
 Unit 4 is the *bridge*. clew already had the two halves it joins:

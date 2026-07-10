@@ -267,5 +267,21 @@ def test_cache_read_unreadable_key_is_stale(tmp_path):
         pipeline._floss_cache_read(sha, None, tmp_path)
 
 
+# --- capa path defaults: env-overridable, cluster fallback -------------------
+
+def test_capa_path_defaults_fall_back_when_env_unset(monkeypatch):
+    monkeypatch.delenv("CLEW_CAPA_RULES", raising=False)
+    monkeypatch.delenv("CLEW_CAPA_SIGS", raising=False)
+    assert pipeline._default_capa_rules() == pipeline.DEFAULT_CAPA_RULES
+    assert pipeline._default_capa_sigs() == pipeline.DEFAULT_CAPA_SIGS
+
+
+def test_capa_path_defaults_respect_env(monkeypatch):
+    monkeypatch.setenv("CLEW_CAPA_RULES", "/opt/my/rules")
+    monkeypatch.setenv("CLEW_CAPA_SIGS", "/opt/my/sigs")
+    assert pipeline._default_capa_rules() == "/opt/my/rules"
+    assert pipeline._default_capa_sigs() == "/opt/my/sigs"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
