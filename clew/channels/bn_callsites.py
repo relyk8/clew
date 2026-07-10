@@ -281,6 +281,34 @@ def run_bn_callsites(
         return _enumerate()
 
 
+def enumerate_with_view(
+    bv,
+    *,
+    sample_path: str = "",
+    sample_sha256: Optional[str] = None,
+) -> BNCallSites:
+    """Unit 3 against an already-open, already-analysed BinaryView.
+
+    The single-analysis orchestrator entry point, mirroring
+    clew.analysis.dataflow.bridge_with_view. The orchestrator opens the view
+    once (one update_analysis_and_wait, inside one LicenseCheckout), calls this
+    to enumerate call sites, then bridge_with_view() to trace them -- avoiding a
+    second full analysis. `bv` MUST already be analysed; unlike run_bn_callsites
+    this neither loads the sample nor checks out a license (the caller owns
+    both). sample_path/sample_sha256 are provenance the caller supplies since
+    they aren't recoverable from the view alone.
+    """
+    import binaryninja
+    from binaryninja import MediumLevelILOperation
+    sites = _collect_call_sites(bv, MediumLevelILOperation)
+    return BNCallSites(
+        sample_path=sample_path,
+        sample_sha256=sample_sha256,
+        bn_core_version=binaryninja.core_version(),
+        call_sites=sites,
+    )
+
+
 # --- enumeration internals ---------------------------------------------------
 
 def _collect_call_sites(bv, MediumLevelILOperation) -> list[CallSite]:
@@ -358,7 +386,8 @@ def _collect_call_sites(bv, MediumLevelILOperation) -> list[CallSite]:
 def _import_symbols(bv, SymbolType) -> list:
     """All symbols that represent an imported API: the IAT slots
     (ImportAddressSymbol, which carry the call refs) and the imported
-    function symbols. Deduped by address, IAT slot preferred."""
+    function symbols. Not deduped here; dedup on (call_site_va, api_name)
+    happens downstream in _collect_call_sites."""
     syms = []
     syms.extend(bv.get_symbols_of_type(SymbolType.ImportAddressSymbol))
     syms.extend(bv.get_symbols_of_type(SymbolType.ImportedFunctionSymbol))

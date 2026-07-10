@@ -182,51 +182,40 @@ class FlossIndex:
 
     @classmethod
     def from_floss_result(cls, floss_result) -> "FlossIndex":
-        """Adapter over Unit 2's FlossResult.
+        """Adapter over Unit 2's `FlossResult` (any object exposing
+        `all_strings()`/`values()`, or an iterable of `FlossString`).
 
-        RECONCILE-WITH-floss.py: this reads FLOSS output defensively via
-        common attribute names. If floss.py exposes different accessors,
-        this method is the only thing to change; the rest of the bridge is
-        insulated. Expected per-string shape (any of):
-            s.value:str
-            s.source / s.type / s.kind : category label
-            s.function_va / s.function / s.address_of_function : int VA
-        Category labels are normalised: 'stackstring'/'stack' -> stackstring,
-        'tightstring'/'tight' -> tightstring, 'decoded'/'decode' -> decoded,
-        anything else / 'static' -> static.
+        Reads `FlossString`'s real fields: `value`; `source` (already a schema
+        `string_source` value); `function` (stack/tight locus); and
+        `decoding_routine` (decoded locus -- decoded strings have no `function`).
+        A stack/tight/decoded string with no usable VA still corroborates by
+        value, so it falls back into `static_values`. Kept in lock-step with
+        `from_floss_json`, which handles the same categories from raw json.
         """
         static: set[str] = set()
         by_func: dict[int, list[tuple[str, str]]] = {}
 
-        strings = _floss_iter(floss_result)
-        for s in strings:
+        for s in _floss_iter(floss_result):
             value = getattr(s, "value", None)
             if value is None:
                 continue
-            source = _normalise_floss_source(
-                getattr(s, "source", None)
-                or getattr(s, "type", None)
-                or getattr(s, "kind", None)
-            )
+            source = _normalise_floss_source(getattr(s, "source", None))
             if source == SOURCE_STATIC:
                 static.add(value)
                 continue
-            fva = (
-                getattr(s, "function_va", None)
-                or getattr(s, "function", None)
-                or getattr(s, "address_of_function", None)
-            )
+            # stack/tight use `function`; decoded uses `decoding_routine`.
+            fva = getattr(s, "function", None)
+            if fva is None:
+                fva = getattr(s, "decoding_routine", None)
             if isinstance(fva, str):
                 try:
                     fva = int(fva, 16)
                 except ValueError:
                     fva = None
-            if fva is None:
-                # Obfuscated string with no function locus -- still corroborates
-                # by value, so keep it in the static-value set as a fallback.
-                static.add(value)
+            if not isinstance(fva, int):
+                static.add(value)          # no locus -> corroborate by value only
                 continue
-            by_func.setdefault(int(fva), []).append((value, source))
+            by_func.setdefault(fva, []).append((value, source))
 
         return cls(static_values=static, obfuscated_by_function=by_func)
 

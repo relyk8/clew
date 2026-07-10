@@ -157,10 +157,13 @@ def test_flossindex_dict_roundtrip():
 
 
 class _FakeFlossString:
-    def __init__(self, value, source, function_va=None):
+    """Mirrors clew's FlossString: value, source, and category-specific loci
+    (function for stack/tight, decoding_routine for decoded)."""
+    def __init__(self, value, source, function=None, decoding_routine=None):
         self.value = value
         self.source = source
-        self.function_va = function_va
+        self.function = function
+        self.decoding_routine = decoding_routine
 
 
 class _FakeFlossResult:
@@ -173,20 +176,21 @@ class _FakeFlossResult:
 
 def test_flossindex_from_floss_result_categorizes():
     fr = _FakeFlossResult([
-        _FakeFlossString("SbieDll.dll", "static string"),
-        _FakeFlossString("cmd.exe", "stackstring", function_va=0x401200),
-        _FakeFlossString("evil", "tight string", function_va=0x401500),
-        _FakeFlossString("payload", "decoded", function_va=0x401700),
+        _FakeFlossString("SbieDll.dll", "static"),
+        _FakeFlossString("cmd.exe", "stackstring", function=0x401200),
+        _FakeFlossString("evil", "tightstring", function=0x401500),
+        _FakeFlossString("payload", "decoded", decoding_routine=0x401700),
     ])
     fi = FlossIndex.from_floss_result(fr)
     assert fi.has_static("SbieDll.dll")
     assert fi.obfuscated_for_function(0x401200) == [("cmd.exe", SOURCE_STACKSTRING)]
     assert fi.obfuscated_for_function(0x401500) == [("evil", SOURCE_TIGHTSTRING)]
+    # decoded string keyed off decoding_routine (it has no `function`)
     assert fi.obfuscated_for_function(0x401700) == [("payload", SOURCE_DECODED)]
 
 
 def test_flossindex_from_floss_result_hex_function_va():
-    fr = _FakeFlossResult([_FakeFlossString("s", "stackstring", function_va="0x401200")])
+    fr = _FakeFlossResult([_FakeFlossString("s", "stackstring", function="0x401200")])
     fi = FlossIndex.from_floss_result(fr)
     assert fi.obfuscated_for_function(0x401200)[0][0] == "s"
 
