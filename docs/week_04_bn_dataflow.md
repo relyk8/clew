@@ -316,6 +316,52 @@ resolve as static. Re-run with `--floss tests/fixtures/al-khaser_x86.floss.json`
 the same call sites report `["bn_xref","floss"]` and the corroborated values move
 to `0.9`, confirming the FLOSS-json adapter against real output.
 
+### Oracle grading against hand-built ground truth
+
+The strongest check is not self-consistency but agreement with an independently
+written oracle. `tests/fixtures/1fe91674eb8d_0{1,2}.expected.json` are hand-built
+*full* schema records for two al-khaser candidates — `_01` an `IsDebuggerPresent`
+return-value check, `_02` the 12-DLL indicator loop. `clew/analysis/oracle_grade.py`
+grades the bridge's `to_partial_candidates(include_unresolved=True)` output against
+them, and `tests/test_oracle_grade.py` runs it (BN-gated live; the grading logic
+itself is covered by eight offline tests).
+
+Grading is deliberately *scoped*. An oracle is a full record; the bridge produces
+only the bridge-owned fields. So the grader compares only what the bridge owns —
+`call_site_va`, `function_va`, `api_name`, `api_resolution`, `parameter_index`,
+the set of `candidate_values[].value`, and `evidence.string_source` /
+`dataflow_path` — and treats the derivation/Channel-4 fields (`represents`,
+`retarget_to`, `evasion_tier`, `comparison_operator`, `coordination_constraint`)
+as report-only context, never as failures. Value comparison is
+case-insensitive (oracle source casing vs binary casing). For a return-value
+check (`parameter_index == -1`) only structural identification is bridge-owned;
+the "value" is a return, not an argument, so it is report-only.
+
+Both oracles pass on every bridge-owned field (1/1 each):
+
+- **`_02`** — all 12 module-name values match the oracle set, with correct
+  `parameter_index`, `string_source: static`, and a `dataflow_path` reaching the
+  call site. The report also makes the architecture boundary concrete: the oracle
+  assigns *different* `represents` per element — `vmcheck.dll` → `vm_detected`,
+  `sbiedll.dll` / `pstorec.dll` / `cmdvrt64.dll` / `cmdvrt32.dll` →
+  `sandbox_detected`, the rest → `analysis_tool_detected`. The bridge correctly
+  recovers the value *set*; the per-value semantic classification genuinely is a
+  separate judgment. This is direct evidence that the Person A / Person B split is
+  load-bearing, not merely tidy — the bridge cannot and should not make that call.
+- **`_01`** — the bridge nails the structural identification (`call_site_va`,
+  `function_va`, `api_name`, `api_resolution`, `parameter_index: -1`) and produces
+  *no* value. The oracle's `True` / `debugger_detected` / `retarget_to: false` are
+  all return-value semantics owned by Channel 4 and derivation. This is the
+  cleanest evidence that the bridge respects the limit of static argument
+  dataflow: it locates the check and stops, rather than inventing a return value
+  it cannot statically know.
+
+One honest detail the report surfaces (reported, not graded): for `_01` the oracle
+`dataflow_path` is `[0x434d20, 0x434d4a]` (function entry → call) while the
+bridge's stub carries only `[0x434d4a]` (the call site). This is by design — a
+no-argument call has nothing to trace, so there is no def-use path to record;
+unresolved and return-value stubs carry the call-site VA alone as a locator.
+
 ## BN API surface and version pinning
 
 The walk depends on: `func.mlil.ssa_form`; block/instruction iteration with
@@ -329,15 +375,20 @@ to `BN_PINS` in `bn_callsites.py`.
 
 ## Open items
 
-- **Second-fixture validation.** al-khaser confirms the walk; validate on at
-  least one sample from a different family before the limitations section is
-  considered settled, so the static-envelope claim rests on more than one
-  binary.
-- **Cosmetic pin check.** The smoke script compares `core_version()` (which
-  returns `"4.2.6455 Ultimate"`) against the bare pinned string and prints a
-  spurious `!= pinned`. Compare on `core.split()[0]`, or store the edition
-  suffix in `BN_PINS`.
+- **Real-malware evaluation (deferred to week-5 piloting).** al-khaser confirms
+  the walk and both hand-built oracles pass, but al-khaser is the deliberate v1
+  fixture (see `tests/fixtures/SOURCES.md`): hand-built oracles are not tractable
+  for wrapper-router malware (Delphi RTL, NSIS, dispatch helpers), so real-family
+  evaluation moves to Channel 2 piloting, graded qualitatively against published
+  RE writeups rather than `expected.json`. The deferred samples
+  (`269aff53…` rebhip, `68644c…` Pony) are that test set. The relevant risk to
+  watch there is a *wrong-value* resolution (false positive), which a
+  different-family sample is where it would surface.
 - **Global-array fallback.** The block-copy-from-global path is stubbed but
   untested; a fixture exercising it would close the second static-array idiom.
 - **Orchestrator wiring.** `bridge_with_view` is ready; wire Unit 3 + Unit 4
   onto one analysed `BinaryView` in the orchestrator so analysis runs once.
+
+_Closed since first draft: the `!= pinned` cosmetic check (now compares
+`core.split()[0]`); FLOSS corroboration on real data (via `--floss` and
+`FlossIndex.from_floss_json`); oracle grading against `_01`/`_02`._
