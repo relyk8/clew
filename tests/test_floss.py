@@ -12,6 +12,7 @@ fixture at tests/fixtures/al-khaser_x86.floss.json; generate it once with:
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -30,14 +31,28 @@ from clew.channels.floss import (
 # capa's `reference anti-VM strings` rule covers 8 and misses 4; FLOSS must
 # recover all 12 — that gap is Channel 1's reason to exist
 # (docs/schema_v2_notes.md finding #2).
-ALKHASER_DLLS_CAPA_COVERED = frozenset({
-    "avghookx.dll", "avghooka.dll", "snxhk.dll", "pstorec.dll",
-    "vmcheck.dll", "wpespy.dll", "cmdvrt64.dll", "cmdvrt32.dll",
-})
+#
+# The full set of 12 is loaded from the record's candidate_values so it has a
+# single source of truth -- do not copy those values here.
+_GT_RECORD = json.loads(
+    (Path(__file__).parent / "fixtures" / "1fe91674eb8d_02.expected.json").read_text()
+)
+ALKHASER_DLLS_ALL = frozenset(
+    cv["value"] for cv in _GT_RECORD["candidates"][0]["candidate_values"]
+)
+# The 4 DLLs capa's rule misses live nowhere else (the fixture's `represents`
+# field is detection-category, not capa coverage), so keep them explicit and
+# DERIVE the covered set. Assert the missed set is a subset of the loaded 12 so
+# a fixture change that drops one of these DLLs surfaces here immediately.
 ALKHASER_DLLS_CAPA_MISSED = frozenset({
     "dbghelp.dll", "sbiedll.dll", "api_log.dll", "dir_watch.dll",
 })
-ALKHASER_DLLS_ALL = ALKHASER_DLLS_CAPA_COVERED | ALKHASER_DLLS_CAPA_MISSED
+assert ALKHASER_DLLS_CAPA_MISSED <= ALKHASER_DLLS_ALL, (
+    "capa-missed DLLs absent from fixture "
+    "1fe91674eb8d_02.expected.json: "
+    f"{ALKHASER_DLLS_CAPA_MISSED - ALKHASER_DLLS_ALL}"
+)
+ALKHASER_DLLS_CAPA_COVERED = ALKHASER_DLLS_ALL - ALKHASER_DLLS_CAPA_MISSED
 
 
 integration = pytest.mark.skipif(
