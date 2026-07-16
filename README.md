@@ -28,8 +28,9 @@ The output contract lives in `docs/schema.md` (human-readable) and
 - **Core channel (Binary Ninja):** Binary Ninja `4.2.6455 Ultimate` with an
   Enterprise license is required to run the pipeline over a real sample.
 - **capa rules/sigs:** supply paths via `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS`.
-  The built-in defaults point at internal cluster paths and will not exist on a
-  fresh checkout.
+  Copy `.env.example` to `.env`, fill in your paths, and load it
+  (`set -a; source .env; set +a`). The built-in defaults are placeholders and
+  will not exist on a fresh checkout.
 - **Without a license:** the offline, fixture-driven test suite runs clean on a
   bare checkout — see [Running tests](#running-tests). This is the recommended
   way to explore Clew's behavior without BN or capa.

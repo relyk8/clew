@@ -8,6 +8,7 @@ Migrated from ariadneX; originally written for RL-guided mutation submission.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -163,7 +164,9 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser()
     p.add_argument(
-        "--base", default="http://192.168.186.128:8000", help="CAPE base URL (scheme://host:port)"
+        "--base",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL (scheme://host:port); defaults to $CAPE_BASE_URL",
     )
     p.add_argument("--sample", required=True, help="Path to benign test binary")
     p.add_argument("--timeout", type=int, default=60)

@@ -40,15 +40,15 @@ from typing import Optional
 
 CLEW_VERSION = "0.3.0"
 
-# Site defaults for capa's rules/signatures. These are the pinned locations on
-# the AFIT cluster: capa-rules is the checkout at CAPA_PINS["capa_rules_tag"]
-# (be59710a), and the sigs come from the capa source tree (capa 9.4.0 ships them
-# there, not in the installed package). Kept here -- a deployment/orchestration
-# concern -- rather than in capa.py's CAPA_PINS, which records version identity
-# (a git hash) not filesystem layout. Overridable per-machine via the CLEW_CAPA_*
-# env vars, and per-run via --capa-rules / --capa-sigs.
-DEFAULT_CAPA_RULES = "/home/shared/clew-env/capa-rules"
-DEFAULT_CAPA_SIGS = "/home/shared/clew-env/capa-src/sigs"
+# Placeholder fallbacks for capa's rules/signatures. Real per-machine locations
+# are supplied via the CLEW_CAPA_* env vars (see .env.example) or per-run via
+# --capa-rules / --capa-sigs; capa-rules is the checkout pinned to
+# CAPA_PINS["capa_rules_tag"], and the sigs come from the capa source tree
+# (capa 9.4.0 ships them there, not in the installed package). Kept here -- a
+# deployment/orchestration concern -- rather than in capa.py's CAPA_PINS, which
+# records version identity (a git hash) not filesystem layout.
+DEFAULT_CAPA_RULES = "/path/to/capa-rules"
+DEFAULT_CAPA_SIGS = "/path/to/capa-src/sigs"
 
 
 def _default_capa_rules() -> str:
