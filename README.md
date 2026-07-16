@@ -46,7 +46,7 @@ pip install -e '.[dev,analysis]'
 ```bash
 # Full static pipeline over a sample (BN license + capa rules/sigs required)
 export CLEW_CAPA_RULES=/path/to/capa-rules
-export CLEW_CAPA_SIGS=/path/to/capa-sigs
+export CLEW_CAPA_SIGS=/path/to/capa-src/sigs
 clew tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
 ```
 

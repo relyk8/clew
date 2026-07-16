@@ -42,6 +42,16 @@ CLEW_VERSION = "0.3.0"
 
 _log = logging.getLogger("clew.pipeline")
 
+
+class SampleNotFoundError(FileNotFoundError):
+    """The sample path given to the pipeline does not exist.
+
+    A FileNotFoundError subclass so the CLI can map exactly this case to exit 1
+    without catching an unrelated FileNotFoundError raised deeper in the run --
+    e.g. by the Binary Ninja core channel, whose errors must propagate.
+    """
+
+
 # Placeholder fallbacks for capa's rules/signatures. Real per-machine locations
 # are supplied via the CLEW_CAPA_* env vars (see .env.example) or per-run via
 # --capa-rules / --capa-sigs; capa-rules is the checkout pinned to
@@ -161,7 +171,7 @@ def run_static_pipeline(
     """
     sample = Path(sample)
     if not sample.exists():
-        raise FileNotFoundError(f"sample not found: {sample}")
+        raise SampleNotFoundError(f"sample not found: {sample}")
     sha = sha256_file(sample)
     cache_dir = Path(floss_cache_dir) if floss_cache_dir else Path(DEFAULT_FLOSS_CACHE)
     _log.info("sample %s (sha256 %s)", sample.name, sha[:12])

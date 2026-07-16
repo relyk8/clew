@@ -246,7 +246,7 @@ to `.env` and load it (`set -a; source .env; set +a`), or export them in the
 shell profile. capa 9.4.0 ships its sigs in its source tree, not the installed
 package.
 
-The AFIT cluster layout is one such site config: capa-rules at
+A shared-cluster layout is one such site config: capa-rules at
 `$CLEW_CAPA_RULES` (a root-owned git checkout), capa sigs at `$CLEW_CAPA_SIGS`.
 When capa-rules is owned by another user, git refuses to read it until it is
 marked trusted. To verify the pinned ruleset:

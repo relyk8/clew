@@ -3,8 +3,9 @@
 Both the `clew` console script and `python -m clew.pipeline` dispatch here. This
 module owns argument parsing and logging setup; the analysis itself lives in
 `clew.pipeline.run_static_pipeline`. Runtime progress is emitted through the
-`logging` module (per-stage lines to stderr); the record JSON and the one-line
-summary go to stdout so stdout stays clean for piping.
+`logging` module (per-stage lines to stderr); stdout carries only the output --
+the record JSON (default) or, with `-o`, a one-line summary -- so stdout stays
+clean for piping.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from clew.pipeline import (
     DEFAULT_CAPA_SIGS,
     DEFAULT_FLOSS_CACHE,
     FlossCacheStale,
+    SampleNotFoundError,
     _default_capa_rules,
     _default_capa_sigs,
     run_static_pipeline,
@@ -92,7 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--verbose",
         action="count",
         default=0,
-        help="verbose (debug) logging; repeat for more",
+        help="verbose (debug-level) logging",
     )
     verbosity.add_argument(
         "-q",
@@ -141,7 +143,7 @@ def main(argv=None) -> int:
     except FlossCacheStale as e:
         log.error("%s", e)
         return 2
-    except FileNotFoundError as e:
+    except SampleNotFoundError as e:
         log.error("%s", e)
         return 1
 

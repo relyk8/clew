@@ -55,7 +55,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-# Validated against the headless install on ml-cluster-01.
+# Validated against a headless Binary Ninja 4.2.6455 Ultimate install.
 # Bump when re-validating against a new BN release.
 BN_PINS: dict[str, str] = {
     "core_version": "4.2.6455",
