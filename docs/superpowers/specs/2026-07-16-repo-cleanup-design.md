@@ -28,6 +28,10 @@ package version (`0.1.0`) out of sync with `CLEW_VERSION` (`0.3.0`).
   fixes that would alter semantics (e.g. "fixing" a deliberately deferred
   import) get a justified `# noqa` instead.
 - **Offline `pytest` suite must pass after every stage.**
+- **Publishability is reviewed, not assumed.** The repo is being prepared for
+  public release, so each stage includes a publishability check (see §5), and
+  the known internal references are dispositioned explicitly rather than
+  shipped by default.
 
 ## 1. Lint/format tooling (ruff)
 
@@ -39,10 +43,11 @@ package version (`0.1.0`) out of sync with `CLEW_VERSION` (`0.3.0`).
   - `ruff check --fix` for the mechanical findings (f-strings without
     placeholders, unused imports, import sorting).
   - Hand-review the remainder. The two `E402` (module import not at top of
-    file) hits are suspect-deliberate: this codebase defers heavy imports
-    (Binary Ninja, capa) by design so `assemble_record()` stays
-    offline-testable. If deliberate, annotate `# noqa: E402` with a one-line
-    reason; only genuinely accidental cases get moved.
+    file) hits are both in `scripts/batch_channel0.py`, caused by the
+    deliberate `sys.path.insert` shim at the top of the script; they get
+    `# noqa: E402` with a one-line reason rather than a "fix". (The
+    codebase's deferred heavy imports of Binary Ninja/capa are
+    function-local and are not flagged by E402.)
   - `ruff format` once over the whole repo (one-time diff noise accepted
     pre-publication).
 - Enforcement stays manual (`ruff check .`, `ruff format --check .`); no
@@ -73,14 +78,23 @@ Nothing is deleted; files split into reader-facing vs. process/history.
 | `week_03_bn_callsites.md`, `week_03_floss.md` | move (superseded by module docstrings + canonical docs) |
 | `plan_derivation_rename.md` | move |
 | `context/CONTEXT.md`, `context/clew-brainstorm.md`, `context/defcon-slide-outline.md`, `context/defcon-submission.txt` | move; `docs/context/` is then removed |
-| README's strawman schema + 12-week plan | extracted → `docs/notes/original-plan.md` (see §3) |
+| current `README.md` (entire file) | extracted verbatim → `docs/notes/original-plan.md` (see §3) |
 
 **Unchanged:** `docs/cape_integration/` stays intact, including
 `exe_drcov.py` — it is a self-contained integration record and the script is
 documentation-adjacent evidence cited by `pilot_results.md`, not pipeline code.
 
+**`docs/superpowers/`** (design specs, including this one) stays where the
+tooling writes it — moving it would break the spec-writing convention for
+future work. It ships publicly under the same research-trail rationale as
+`docs/notes/`, and is included in the §5 publishability audit like everything
+else.
+
 **Mechanics:** every move/rename is `git mv`, followed by a grep-driven update
-of all references in code docstrings, tests, docs, and `CLAUDE.md`. Done when
+of all references in code docstrings, tests, docs, `CLAUDE.md`, and
+`schema/clew_record.schema.json` (its `EvasionTier` `description` at line 66
+cites `docs/context/evasion-taxonomy.md`; only that non-functional description
+string changes — the machine contract is otherwise untouched). Done when
 `grep -rn` for each old path returns zero hits outside `docs/notes/` history
 context (references *within* moved retrospectives to other moved files are
 updated too; prose that narrates history, e.g. "we created
@@ -94,16 +108,28 @@ Rewrite `README.md` as the public front door:
    environment-sensitive malware, seeds for Pfuzzer).
 2. The channel model at a glance (channels 0/1/2 static, 4/5 dynamic; who owns
    which record fields).
-3. Install (`pip install -e '.[dev,analysis]'`) and CLI quickstart
+3. **Prerequisites, stated up front**: the core channel needs Binary Ninja
+   `4.2.6455 Ultimate` with an Enterprise license, and capa rules/sigs must be
+   supplied via `CLEW_CAPA_RULES`/`CLEW_CAPA_SIGS` (the built-in defaults
+   point at internal cluster paths). Equally important: what a reader *can*
+   do without a license — the fixture-driven offline test suite runs clean on
+   a bare checkout.
+4. Install (`pip install -e '.[dev,analysis]'`) and CLI quickstart
    (`python -m clew.pipeline …`).
-4. Running tests, including the gating model (`BN_INTEGRATION=1`,
+5. Design decisions — a trimmed version of the old README's "Locked design
+   decisions" table, carried forward because it is current contract content
+   (e.g. "LLM enrichment: out of v1", "Target API list: Pfuzzer's 68") that
+   appears nowhere else in the reader-facing docs.
+6. Running tests, including the gating model (`BN_INTEGRATION=1`,
    `CAPA_RULES_PATH`/`CAPA_SIGS_PATH`, fixture-driven offline default).
-5. Reading guide into `docs/` (schema first, then static_pipeline, then
+7. Reading guide into `docs/` (schema first, then static_pipeline, then
    bn_dataflow).
 
-The current README's strawman schema and 12-week plan move verbatim to
-`docs/notes/original-plan.md` with a one-line header noting it is the original
-proposal and that the layout diverged.
+The **entire current README** moves verbatim to `docs/notes/original-plan.md`
+with a one-line header noting it is the original proposal and that the layout
+diverged. It is a coherent proposal document — extracting only fragments would
+silently lose content (pilot plans, AriadneX reuse notes, DefCon success
+criteria) that exists nowhere else.
 
 ## 4. Metadata hygiene
 
@@ -111,7 +137,11 @@ proposal and that the layout diverged.
   reproducibility pointers) to the post-move layout.
 - Sync `pyproject.toml` `version` from `0.1.0` to `0.3.0`, matching
   `CLEW_VERSION` in `clew/pipeline.py`. Going forward the package version and
-  schema/record version move together.
+  schema/record version move together — and because the previous drift
+  happened precisely because nothing enforced the pairing, add a two-line
+  offline test asserting
+  `importlib.metadata.version("clew") == CLEW_VERSION`, so the offline suite
+  (already required green at every stage) enforces the policy.
 
 **Non-goals (deliberate):**
 
@@ -122,18 +152,50 @@ proposal and that the layout diverged.
   formatting/organization pass.
 - Pre-commit hooks / CI — not in this pass.
 
+## 5. Publishability audit
+
+A repo being prepared "for public release" must explicitly ask *should this
+be public?*, not just *is this tidy?*. This section records the decisions for
+the known items and adds a final sweep.
+
+**Dispositions decided now:**
+
+- `docs/notes/` and `docs/superpowers/` **ship publicly**. The research trail
+  (retrospectives, planning notes, design specs) strengthens a DefCon artifact;
+  that was the rationale for "reorganize, don't delete" and it extends to the
+  specs directory.
+- `clew/pipeline.py:50-51` cluster-path defaults (`/home/shared/clew-env/…`)
+  **stay as defaults** — changing them is a behavior change, out of scope for
+  this pass. They are harmless path strings; the README Prerequisites section
+  (§3 item 3) documents them as internal defaults overridden by
+  `CLEW_CAPA_RULES`/`CLEW_CAPA_SIGS`.
+- `CLAUDE.md`'s AFIT-cluster mention **stays** — same reasoning; it is
+  accurate operational context, not sensitive.
+
+**Final sweep (last implementation stage):** re-read every file that ships —
+especially `docs/notes/` (advisor interactions in `CONTEXT.md`, submission
+drafts) — for anything the author would not want in a DefCon audience's
+hands: credentials, internal hostnames beyond the known paths above,
+personal/process detail that reads wrong in public. The sweep produces a
+short findings list for **user sign-off** before the cleanup is called done;
+anything flagged is resolved by user decision (redact, move out of the repo,
+or accept), not unilaterally.
+
 ## Verification
 
-- Offline `pytest` suite green after each stage and at the end.
+- Offline `pytest` suite green after each stage and at the end (including the
+  new version-sync test from §4).
 - `ruff check .` and `ruff format --check .` clean.
 - Zero grep hits for any old doc path (`week_04_bn_dataflow`,
   `docs/context/`, moved filenames) outside `docs/notes/`.
 - All relative links in README and reader-facing docs resolve to existing
   files.
+- Publishability sweep findings list produced and signed off by the user (§5).
 
 ## Suggested staging (one commit per stage)
 
 1. Ruff config + one-time lint/format pass.
-2. Docs moves + reference updates.
-3. README rewrite + `original-plan.md` extraction.
-4. Metadata: CLAUDE.md commit + version sync.
+2. Docs moves + reference updates (including `schema/clew_record.schema.json`).
+3. README rewrite + full-README extraction to `docs/notes/original-plan.md`.
+4. Metadata: CLAUDE.md commit + version sync + version-sync test.
+5. Publishability sweep + user sign-off.
