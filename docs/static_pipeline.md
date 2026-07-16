@@ -212,8 +212,8 @@ report results with the measured variance bound stated.
 
 ## Running it
 
-The common invocation needs only a sample, since capa rules/sigs default to the
-cluster locations:
+With `$CLEW_CAPA_RULES` / `$CLEW_CAPA_SIGS` set (see `.env.example`), the common
+invocation needs only a sample:
 
 ```
 python -m clew.pipeline tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
@@ -225,28 +225,29 @@ record to the file. Operational notes (FLOSS cache hit/miss, cache status) go to
 stderr, keeping stdout clean for piping.
 
 Flags: `--capa-rules DIR` / `--capa-sigs DIR` (default to `$CLEW_CAPA_RULES` /
-`$CLEW_CAPA_SIGS`, then the cluster paths); `--floss-sigs DIR` (default: FLOSS's
+`$CLEW_CAPA_SIGS`, then placeholder paths); `--floss-sigs DIR` (default: FLOSS's
 bundled sigs); `--capa-bin` (default `capa`); `--floss-cache DIR` /`--no-cache`
 /`--refresh-floss-cache` (FLOSS caching); `--verbose-floss` (unsuppress emulator
 logging); `--exclude-unresolved` (omit the Channel 4 work list);
 `--no-license-checkout` (a license is already held).
 
-### Cluster setup
+### Site setup (capa rules/sigs)
 
-The paths default to the AFIT cluster layout: capa-rules at
-`/home/shared/clew-env/capa-rules`, capa sigs at
-`/home/shared/clew-env/capa-src/sigs` (capa 9.4.0 ships sigs in its source tree,
-not the installed package). On another machine, set `CLEW_CAPA_RULES` and
-`CLEW_CAPA_SIGS` (e.g. in the shell profile that already sources `bn_env.sh`) to
-redirect without a code change.
+The built-in defaults are placeholders (`/path/to/capa-rules`,
+`/path/to/capa-src/sigs`) that won't exist on any machine. Point them at a real
+checkout by setting `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS` — copy `.env.example`
+to `.env` and load it (`set -a; source .env; set +a`), or export them in the
+shell profile. capa 9.4.0 ships its sigs in its source tree, not the installed
+package.
 
-One one-time step per user on the shared box: capa-rules is a root-owned git
-checkout, and git refuses to read a repo owned by another user until it is
+The AFIT cluster layout is one such site config: capa-rules at
+`$CLEW_CAPA_RULES` (a root-owned git checkout), capa sigs at `$CLEW_CAPA_SIGS`.
+When capa-rules is owned by another user, git refuses to read it until it is
 marked trusted. To verify the pinned ruleset:
 
 ```
-git config --global --add safe.directory /home/shared/clew-env/capa-rules
-git -C /home/shared/clew-env/capa-rules rev-parse HEAD   # be59710a...
+git config --global --add safe.directory "$CLEW_CAPA_RULES"
+git -C "$CLEW_CAPA_RULES" rev-parse HEAD   # be59710a...
 ```
 
 ## Testing
