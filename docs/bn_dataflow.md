@@ -1,8 +1,8 @@
 # Channel 2 / Unit 4: MLIL-SSA Dataflow Bridge
 
 Implementation record for `clew/analysis/dataflow.py` and
-`tests/test_bn_dataflow.py`. Companion to `notes/week_03_bn_callsites.md` (Unit 3)
-and `notes/week_03_floss.md` (Channel 1). Like those, this captures not just what the
+`tests/test_bn_dataflow.py`. Companion to `bn_callsites.md` (Unit 3)
+and `floss.md` (Channel 1). Like those, this captures not just what the
 code does but the design decisions and the debugging path that produced it,
 because that reasoning is the part worth having on record before Channel 4 and
 the derivation stage build on top of it.

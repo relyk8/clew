@@ -86,6 +86,7 @@ checkout runs a reduced-but-green suite.
 
 - `docs/schema.md` — the record contract (read first).
 - `docs/static_pipeline.md` — the orchestrator in depth (canonical architecture doc).
-- `docs/bn_dataflow.md` — the dataflow bridge internals and reproducibility investigation.
+- `docs/floss.md` — Channel 1: FLOSS string extraction.
+- `docs/bn_callsites.md` — Channel 2 / Unit 3: Binary Ninja call-site enumeration.
+- `docs/bn_dataflow.md` — Channel 2 / Unit 4: the dataflow bridge internals and reproducibility investigation.
 - `docs/evasion-taxonomy.md` — the defeatability-tier taxonomy.
-- `docs/notes/` — research trail: retrospectives, planning notes, the original proposal.
