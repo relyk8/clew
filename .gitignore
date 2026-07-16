@@ -210,3 +210,6 @@ __marimo__/
 # Test artifacts
 tests/fixtures/*.exe
 tests/fixtures/*.bin
+
+# Local Claude Code working instructions (internal; not for public release)
+CLAUDE.md
