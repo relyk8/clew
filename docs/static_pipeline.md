@@ -216,20 +216,26 @@ With `$CLEW_CAPA_RULES` / `$CLEW_CAPA_SIGS` set (see `.env.example`), the common
 invocation needs only a sample:
 
 ```
-python -m clew.pipeline tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
+clew tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
 ```
+
+The entry point is `clew/cli.py` (installed as the `clew` console command;
+`python -m clew.pipeline` is an equivalent alias). `cli.py` owns argument parsing
+and logging setup; the analysis is `clew.pipeline.run_static_pipeline`.
 
 Without `-o` the record JSON goes to stdout; with `-o` a one-line summary
 (candidate counts, `derivation_status`, technique count) goes to stdout and the
-record to the file. Operational notes (FLOSS cache hit/miss, cache status) go to
-stderr, keeping stdout clean for piping.
+record to the file. Per-stage progress (capa → FLOSS → Binary Ninja, with
+elapsed timings and FLOSS cache status) is logged to stderr via the `logging`
+module, keeping stdout clean for piping.
 
 Flags: `--capa-rules DIR` / `--capa-sigs DIR` (default to `$CLEW_CAPA_RULES` /
 `$CLEW_CAPA_SIGS`, then placeholder paths); `--floss-sigs DIR` (default: FLOSS's
 bundled sigs); `--capa-bin` (default `capa`); `--floss-cache DIR` /`--no-cache`
 /`--refresh-floss-cache` (FLOSS caching); `--verbose-floss` (unsuppress emulator
 logging); `--exclude-unresolved` (omit the Channel 4 work list);
-`--no-license-checkout` (a license is already held).
+`--no-license-checkout` (a license is already held); `-v/--verbose` (debug
+logging, repeatable) / `-q/--quiet` (warnings and errors only).
 
 ### Site setup (capa rules/sigs)
 

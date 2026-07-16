@@ -34,11 +34,13 @@ import hashlib
 import json
 import logging
 import os
-import sys
+import time
 from pathlib import Path
 from typing import Optional
 
 CLEW_VERSION = "0.3.0"
+
+_log = logging.getLogger("clew.pipeline")
 
 # Placeholder fallbacks for capa's rules/signatures. Real per-machine locations
 # are supplied via the CLEW_CAPA_* env vars (see .env.example) or per-run via
@@ -162,10 +164,21 @@ def run_static_pipeline(
         raise FileNotFoundError(f"sample not found: {sample}")
     sha = sha256_file(sample)
     cache_dir = Path(floss_cache_dir) if floss_cache_dir else Path(DEFAULT_FLOSS_CACHE)
+    _log.info("sample %s (sha256 %s)", sample.name, sha[:12])
 
+    _log.info("capa: detecting techniques...")
+    t = time.perf_counter()
     capa_techniques, derivation_status = _run_capa_stage(
         sample, capa_rules_path, capa_sigs_path, capa_bin
     )
+    _log.info(
+        "capa: %d technique(s), derivation_status=%s (%.1fs)",
+        len(capa_techniques),
+        derivation_status,
+        time.perf_counter() - t,
+    )
+
+    t = time.perf_counter()
     floss_index = _run_floss_stage(
         sample,
         sha,
@@ -175,7 +188,12 @@ def run_static_pipeline(
         refresh=refresh_floss_cache,
         quiet=quiet_floss,
     )
+    _log.info("FLOSS: done (%.1fs)", time.perf_counter() - t)
+
+    _log.info("Binary Ninja: enumerating call sites + running dataflow bridge...")
+    t = time.perf_counter()
     candidates = _run_bn_stage(sample, sha, floss_index, include_unresolved, run_license_checkout)
+    _log.info("Binary Ninja: %d candidate(s) (%.1fs)", len(candidates), time.perf_counter() - t)
 
     return assemble_record(
         sample_sha256=sha,
@@ -346,7 +364,7 @@ def _floss_cache_write(result, sha, sigs_path, cache_dir) -> None:
             json.dumps(_floss_cache_key(sha, sigs_path), indent=2, sort_keys=True)
         )
     except OSError as e:
-        logging.getLogger("clew.pipeline").warning("could not write FLOSS cache: %s", e)
+        _log.warning("could not write FLOSS cache: %s", e)
 
 
 def _run_floss_stage(
@@ -366,7 +384,7 @@ def _run_floss_stage(
     if use_cache and not refresh:
         cached = _floss_cache_read(sha, floss_sigs_path, cache_dir)
         if cached is not None:
-            print(f"FLOSS: cache hit ({sha[:12]})", file=sys.stderr)
+            _log.info("FLOSS: cache hit (%s)", sha[:12])
             return FlossIndex.from_floss_result(cached)
 
     # miss / refresh / disabled: run FLOSS (the slow, noisy, emulated path)
@@ -375,7 +393,7 @@ def _run_floss_stage(
         if (use_cache and refresh)
         else ("cache miss -- running" if use_cache else "cache disabled -- running")
     )
-    print(f"FLOSS: {note}", file=sys.stderr)
+    _log.info("FLOSS: %s", note)
     cm = _quiet_floss_logging() if quiet else contextlib.nullcontext()
     try:
         with cm:
@@ -418,105 +436,11 @@ def _run_bn_stage(sample, sha, floss_index, include_unresolved, run_license_chec
 
 
 # --- CLI ---------------------------------------------------------------------
-
-
-def main(argv=None) -> int:
-    import argparse
-
-    p = argparse.ArgumentParser(
-        description="Run the clew static pipeline over a sample and emit the "
-        "intermediate clew record."
-    )
-    p.add_argument("sample")
-    p.add_argument(
-        "--capa-rules",
-        type=Path,
-        default=Path(_default_capa_rules()),
-        help=f"capa rules dir (default: $CLEW_CAPA_RULES or {DEFAULT_CAPA_RULES})",
-    )
-    p.add_argument(
-        "--capa-sigs",
-        type=Path,
-        default=Path(_default_capa_sigs()),
-        help=f"capa signatures dir (default: $CLEW_CAPA_SIGS or {DEFAULT_CAPA_SIGS})",
-    )
-    p.add_argument("--floss-sigs", type=Path, default=None)
-    p.add_argument("--capa-bin", default="capa")
-    p.add_argument(
-        "--no-license-checkout",
-        action="store_true",
-        help="assume a license is already checked out for this process",
-    )
-    p.add_argument(
-        "--exclude-unresolved",
-        action="store_true",
-        help="omit located-but-unresolved call sites (the Channel 4 work list)",
-    )
-    p.add_argument(
-        "--verbose-floss",
-        action="store_true",
-        help="don't suppress vivisect/FLOSS emulator logging (debugging FLOSS)",
-    )
-    p.add_argument(
-        "--floss-cache",
-        type=Path,
-        default=None,
-        help=f"FLOSS result cache directory (default: {DEFAULT_FLOSS_CACHE}/)",
-    )
-    p.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="disable the FLOSS result cache (always re-run FLOSS, don't read/write)",
-    )
-    p.add_argument(
-        "--refresh-floss-cache",
-        action="store_true",
-        help="force a FLOSS re-run and overwrite the cache entry (use after a FLOSS/sigs change)",
-    )
-    p.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        default=None,
-        help="write the record JSON here (default: stdout)",
-    )
-    args = p.parse_args(argv)
-
-    try:
-        record = run_static_pipeline(
-            args.sample,
-            capa_rules_path=args.capa_rules,
-            capa_sigs_path=args.capa_sigs,
-            floss_sigs_path=args.floss_sigs,
-            capa_bin=args.capa_bin,
-            include_unresolved=not args.exclude_unresolved,
-            run_license_checkout=not args.no_license_checkout,
-            quiet_floss=not args.verbose_floss,
-            floss_cache_dir=args.floss_cache,
-            use_floss_cache=not args.no_cache,
-            refresh_floss_cache=args.refresh_floss_cache,
-        )
-    except FlossCacheStale as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 2
-    text = json.dumps(record, indent=2)
-    if args.output:
-        args.output.write_text(text)
-        resolved = sum(
-            1
-            for c in record["candidates"]
-            if any(v.get("value") is not None for v in c["candidate_values"])
-        )
-        print(
-            f"wrote {args.output}: {len(record['candidates'])} candidates "
-            f"({resolved} with values), "
-            f"derivation_status={record['derivation_status']}, "
-            f"{len(record['capa_techniques'])} capa techniques"
-        )
-    else:
-        print(text)
-    return 0
-
+# The command-line entry point lives in `clew/cli.py` (the `clew` console script
+# and the top-level controller). `python -m clew.pipeline` delegates to it so
+# both invocations share one parser and one logging setup.
 
 if __name__ == "__main__":
+    from clew.cli import main
+
     raise SystemExit(main())

@@ -47,10 +47,13 @@ pip install -e '.[dev,analysis]'
 # Full static pipeline over a sample (BN license + capa rules/sigs required)
 export CLEW_CAPA_RULES=/path/to/capa-rules
 export CLEW_CAPA_SIGS=/path/to/capa-sigs
-python -m clew.pipeline tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
+clew tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
 ```
 
-There is no console-script entry point; the CLI is `python -m clew.pipeline`.
+Installing the package provides the `clew` console command (entry point
+`clew.cli:main`); `python -m clew.pipeline` is an equivalent alias. The pipeline
+logs per-stage progress to stderr as it runs — add `-v` for debug detail or `-q`
+to quiet it to warnings/errors. `clew --help` lists all options.
 
 ## Locked design decisions
 
