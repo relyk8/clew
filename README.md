@@ -87,9 +87,21 @@ checkout runs a reduced-but-green suite.
 
 ## Reading guide
 
+**Start here:**
+
 - `docs/schema.md` — the record contract (read first).
 - `docs/static_pipeline.md` — the orchestrator in depth (canonical architecture doc).
+
+**Per channel:**
+
 - `docs/floss.md` — Channel 1: FLOSS string extraction.
 - `docs/bn_callsites.md` — Channel 2 / Unit 3: Binary Ninja call-site enumeration.
 - `docs/bn_dataflow.md` — Channel 2 / Unit 4: the dataflow bridge internals and reproducibility investigation.
+
+**Reference:**
+
 - `docs/evasion-taxonomy.md` — the defeatability-tier taxonomy.
+- `docs/schema_v2_notes.md` — known limits of the v1 schema (read before proposing schema changes).
+- `docs/pilot_results.md` — pre-proposal channel pilots (FLOSS, DynamoRIO-in-CAPE).
+- `docs/channel0_at_scale.md` — capa (Channel 0) characterized over a 500-sample corpus.
+- `docs/binary_ninja_headless_setup.md` — headless Binary Ninja setup notes (environment-specific).
