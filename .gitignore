@@ -213,3 +213,6 @@ tests/fixtures/*.bin
 
 # Local Claude Code working instructions (internal; not for public release)
 CLAUDE.md
+
+# Superpowers planning artifacts (plans/specs; internal, not for public release)
+docs/superpowers/
