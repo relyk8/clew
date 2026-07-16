@@ -321,6 +321,28 @@ def test_cache_read_unreadable_key_is_stale(tmp_path):
         pipeline._floss_cache_read(sha, None, tmp_path)
 
 
+def test_floss_cache_stale_escapes_run_floss_stage(tmp_path):
+    # FlossCacheStale must propagate out of _run_floss_stage, NOT be swallowed by
+    # its `except floss.FlossError` degradation wrapper -- the seam where making
+    # FlossCacheStale a FlossError subclass would silently break the halt-on-stale
+    # contract. The reader-level tests above don't cover this wrapper.
+    sha = "f" * 64
+    (tmp_path / f"{sha}.floss.json").write_text("{}")
+    stale_key = pipeline._floss_cache_key(sha, None)
+    stale_key["floss_version"] = "SOME-OTHER-VERSION"
+    (tmp_path / f"{sha}.floss.key.json").write_text(json.dumps(stale_key))
+    with pytest.raises(pipeline.FlossCacheStale):
+        pipeline._run_floss_stage(
+            tmp_path / "sample.exe",
+            sha,
+            None,
+            cache_dir=tmp_path,
+            use_cache=True,
+            refresh=False,
+            quiet=True,
+        )
+
+
 # --- capa path defaults: env-overridable, cluster fallback -------------------
 
 
