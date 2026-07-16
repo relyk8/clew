@@ -3,6 +3,7 @@
 Picks N samples from each of four archive dates, validates each is a
 PE32 via libmagic, and writes paths to a manifest file.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -54,8 +55,12 @@ def main() -> int:
         type=Path,
         default=Path("results/channel0_at_scale/manifest.txt"),
     )
-    ap.add_argument("--validate-pe32", action="store_true", default=True,
-                    help="filter to PE32 32-bit only (default on)")
+    ap.add_argument(
+        "--validate-pe32",
+        action="store_true",
+        default=True,
+        help="filter to PE32 32-bit only (default on)",
+    )
     args = ap.parse_args()
 
     rng = random.Random(args.seed)

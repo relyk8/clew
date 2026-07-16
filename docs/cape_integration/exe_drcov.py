@@ -1,7 +1,7 @@
-import os
 import glob
-import shutil
 import logging
+import os
+import shutil
 from subprocess import call
 
 from lib.common.abstracts import Package
@@ -48,9 +48,7 @@ class ExeDrcov(Package):
 
         # Use -c <full_path_to_dll> form, NOT -t drcov, to avoid issue #1750
         # (empty-token bug in drrun's tool option parsing).
-        drrun_args = '-c "{}" -logdir "{}" -- "{}"'.format(
-            self.DRCOV_DLL, self.LOGDIR, path
-        )
+        drrun_args = '-c "{}" -logdir "{}" -- "{}"'.format(self.DRCOV_DLL, self.LOGDIR, path)
         if args:
             drrun_args += " " + args
 

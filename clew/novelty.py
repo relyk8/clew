@@ -16,7 +16,6 @@ Migrated from ariadneX.
 import re
 from typing import Any
 
-
 # The canonical category order. Keep this list in sync anywhere we enumerate
 # IoC types (env observation shape, reward shaping, logging).
 IOC_CATEGORIES = (
@@ -52,7 +51,7 @@ def extract_iocs(report: dict[str, Any]) -> dict[str, set[str]]:
 
     apis: set[str] = set()
     for proc in processes:
-        for call in (proc.get("calls") or []):
+        for call in proc.get("calls") or []:
             name = call.get("api")
             if name:
                 apis.add(name)
@@ -67,8 +66,7 @@ def extract_iocs(report: dict[str, Any]) -> dict[str, set[str]]:
     }
 
 
-def novelty_score(baseline: dict[str, set[str]],
-                  mutated: dict[str, set[str]]) -> dict[str, int]:
+def novelty_score(baseline: dict[str, set[str]], mutated: dict[str, set[str]]) -> dict[str, int]:
     """Count new items per category: |mutated - baseline|.
 
     Symmetric difference is deliberately NOT used — we only care about
@@ -79,8 +77,7 @@ def novelty_score(baseline: dict[str, set[str]],
     return {k: len(mutated[k] - baseline[k]) for k in baseline}
 
 
-def novel_items(baseline: dict[str, set[str]],
-                mutated: dict[str, set[str]]) -> dict[str, set[str]]:
+def novel_items(baseline: dict[str, set[str]], mutated: dict[str, set[str]]) -> dict[str, set[str]]:
     """Same as novelty_score but returns the actual novel elements.
     Useful for debugging / inspecting *what* is new, not just how many."""
     return {k: mutated[k] - baseline[k] for k in baseline}
@@ -93,6 +90,7 @@ def load_stable_baseline(path) -> tuple[dict[str, set[str]], dict[str, set[str]]
     """
     import json
     from pathlib import Path
+
     data = json.loads(Path(path).read_text())
     persistent = {k: set(v) for k, v in data["persistent"].items()}
     volatile = {k: set(v) for k, v in data["volatile"].items()}
@@ -103,9 +101,9 @@ def load_stable_baseline(path) -> tuple[dict[str, set[str]], dict[str, set[str]]
     return persistent, volatile
 
 
-def noise_filtered_novelty(persistent: dict[str, set[str]],
-                           volatile: dict[str, set[str]],
-                           mutated: dict[str, set[str]]) -> dict[str, int]:
+def noise_filtered_novelty(
+    persistent: dict[str, set[str]], volatile: dict[str, set[str]], mutated: dict[str, set[str]]
+) -> dict[str, int]:
     """Count items novel vs persistent baseline AND not already seen as volatile.
 
     persistent: items reliably present across baseline runs

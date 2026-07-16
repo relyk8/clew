@@ -4,6 +4,7 @@ Emits one JSONL record per sample with timing, status, and parsed rule info.
 Resumable: re-running skips samples whose SHA-256 already appears in the
 output file.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,15 +20,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from clew.channels.capa import (
-    run_capa,
-    filter_evasion_techniques,
+from clew.channels.capa import (  # noqa: E402  (import follows sys.path shim above)
     CapaError,
     CapaNotFoundError,
-    CapaRunError,
     CapaParseError,
+    CapaRunError,
+    filter_evasion_techniques,
+    run_capa,
 )
-from clew.tiers import classify
+from clew.tiers import classify  # noqa: E402  (import follows sys.path shim above)
 
 
 def sha256_of(path: Path) -> str:
@@ -198,8 +199,10 @@ def main() -> int:
                 pass
         todo.append(t)
 
-    print(f"Total targets: {len(targets)}; already done: {len(done)}; to process: {len(todo)}",
-          flush=True)
+    print(
+        f"Total targets: {len(targets)}; already done: {len(done)}; to process: {len(todo)}",
+        flush=True,
+    )
 
     run_started = time.time()
     n_ok = n_timeout = n_err = 0
@@ -237,8 +240,11 @@ def main() -> int:
                 )
 
     total_elapsed = time.time() - run_started
-    print(f"\nDone. Processed {len(todo)} in {total_elapsed:.1f}s "
-          f"(ok={n_ok}, timeout={n_timeout}, error={n_err})", flush=True)
+    print(
+        f"\nDone. Processed {len(todo)} in {total_elapsed:.1f}s "
+        f"(ok={n_ok}, timeout={n_timeout}, error={n_err})",
+        flush=True,
+    )
     return 0
 
 

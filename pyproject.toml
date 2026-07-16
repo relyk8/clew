@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "jsonschema>=4"]
+dev = ["pytest>=7", "jsonschema>=4", "ruff>=0.15"]
 analysis = ["matplotlib>=3.8", "pandas>=2.0"]
 
 [build-system]
@@ -18,3 +18,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["clew*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+extend-select = ["I"]

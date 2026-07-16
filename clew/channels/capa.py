@@ -10,6 +10,7 @@ currently-validated set. Mismatches will silently change which rules
 fire; bump all three together when integrating. Reports generated under
 a given pin should cite it (see scripts/analyze_channel0.py).
 """
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,6 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
-
 
 # Validated pin set from the 500-sample scale test (docs/channel0_at_scale.md).
 # Bump all three together when re-validating.
@@ -51,14 +51,16 @@ class CapaResult:
     raw: dict
 
 
-EVASION_NAME_OVERRIDES: frozenset[str] = frozenset({
-    "find graphical window",
-    "check process job object",
-    "check for unmoving mouse cursor",
-    "check for time delay via GetTickCount",
-    "acquire debug privileges",
-    "execute anti-debugging instructions",
-})
+EVASION_NAME_OVERRIDES: frozenset[str] = frozenset(
+    {
+        "find graphical window",
+        "check process job object",
+        "check for unmoving mouse cursor",
+        "check for time delay via GetTickCount",
+        "acquire debug privileges",
+        "execute anti-debugging instructions",
+    }
+)
 
 
 def run_capa(
@@ -72,8 +74,10 @@ def run_capa(
     """Run capa against a PE; return parsed result."""
     cmd = [
         capa_bin,
-        "-r", str(rules_path),
-        "-s", str(sigs_path),
+        "-r",
+        str(rules_path),
+        "-s",
+        str(sigs_path),
         "-j",
         str(sample_path),
     ]
@@ -89,9 +93,7 @@ def run_capa(
 
     if proc.returncode != 0:
         stderr = proc.stderr.decode("utf-8", errors="replace")
-        raise CapaRunError(
-            f"capa exited with code {proc.returncode}: {stderr}"
-        )
+        raise CapaRunError(f"capa exited with code {proc.returncode}: {stderr}")
 
     stdout = proc.stdout.decode("utf-8", errors="replace")
     return _parse_capa_json(stdout)

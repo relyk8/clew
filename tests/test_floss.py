@@ -10,6 +10,7 @@ fixture at tests/fixtures/al-khaser_x86.floss.json; generate it once with:
 
     floss -j tests/fixtures/al-khaser_x86.exe > tests/fixtures/al-khaser_x86.floss.json
 """
+
 from __future__ import annotations
 
 import json
@@ -20,12 +21,9 @@ import pytest
 
 from clew.channels.floss import (
     FlossResult,
-    FlossString,
     load_floss_results,
     run_floss,
-    _adapt_result_document,
 )
-
 
 # The 12 DLL fingerprints in al-khaser's loaded_dlls candidate (record #2).
 # capa's `reference anti-VM strings` rule covers 8 and misses 4; FLOSS must
@@ -37,16 +35,19 @@ from clew.channels.floss import (
 _GT_RECORD = json.loads(
     (Path(__file__).parent / "fixtures" / "1fe91674eb8d_02.expected.json").read_text()
 )
-ALKHASER_DLLS_ALL = frozenset(
-    cv["value"] for cv in _GT_RECORD["candidates"][0]["candidate_values"]
-)
+ALKHASER_DLLS_ALL = frozenset(cv["value"] for cv in _GT_RECORD["candidates"][0]["candidate_values"])
 # The 4 DLLs capa's rule misses live nowhere else (the fixture's `represents`
 # field is detection-category, not capa coverage), so keep them explicit and
 # DERIVE the covered set. Assert the missed set is a subset of the loaded 12 so
 # a fixture change that drops one of these DLLs surfaces here immediately.
-ALKHASER_DLLS_CAPA_MISSED = frozenset({
-    "dbghelp.dll", "sbiedll.dll", "api_log.dll", "dir_watch.dll",
-})
+ALKHASER_DLLS_CAPA_MISSED = frozenset(
+    {
+        "dbghelp.dll",
+        "sbiedll.dll",
+        "api_log.dll",
+        "dir_watch.dll",
+    }
+)
 assert ALKHASER_DLLS_CAPA_MISSED <= ALKHASER_DLLS_ALL, (
     "capa-missed DLLs absent from fixture "
     "1fe91674eb8d_02.expected.json: "
@@ -62,6 +63,7 @@ integration = pytest.mark.skipif(
 
 
 # --- unit tests (offline; need the saved JSON fixture) -----------------------
+
 
 @pytest.fixture
 def floss_fixture(fixtures_dir):
@@ -106,6 +108,7 @@ def test_flossstring_location_fields_by_source(floss_fixture):
 
 
 # --- integration tests (run the real tool) -----------------------------------
+
 
 @integration
 def test_run_floss_extracts_all_twelve_dlls(fixtures_dir):

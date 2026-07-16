@@ -7,6 +7,7 @@ Validates that:
 
 Run with: pytest tests/test_schema.py -v
 """
+
 from __future__ import annotations
 
 import json
@@ -44,8 +45,7 @@ def _fixture_paths():
 
 def _format_errors(errors):
     return "\n" + "\n".join(
-        f"  at {'/'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}"
-        for e in errors
+        f"  at {'/'.join(str(p) for p in e.absolute_path) or '<root>'}: {e.message}" for e in errors
     )
 
 
