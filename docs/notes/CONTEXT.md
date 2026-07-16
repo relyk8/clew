@@ -116,8 +116,8 @@ Order matters:
 1. [`README.md`](../../README.md) — pilot study plan, locked decisions, the five channels, 12-week schedule, repo structure. This is the operating doc.
 2. [`schema.md`](../schema.md) — output contract.
 3. [`schema_v2_notes.md`](../schema_v2_notes.md) — known limits of the v1 schema discovered while implementing Channel 0. Read before proposing schema changes.
-4. [`week_01_retrospective.md`](../week_01_retrospective.md), [`week_02_retrospective.md`](../week_02_retrospective.md), [`pilot_results.md`](../pilot_results.md) — what's been done, what was deferred and why.
+4. [`week_01_retrospective.md`](week_01_retrospective.md), [`week_02_retrospective.md`](week_02_retrospective.md), [`pilot_results.md`](../pilot_results.md) — what's been done, what was deferred and why.
 5. [`clew-brainstorm.md`](clew-brainstorm.md) — original brainstorm with per-channel concerns. Older than the README; treat it as historical context, not current scope.
 6. [`defcon-submission.txt`](defcon-submission.txt) — public-facing Clew description.
 7. [`defcon-slide-outline.md`](defcon-slide-outline.md) — how Clew is currently being framed publicly.
-8. [`evasion-taxonomy.md`](evasion-taxonomy.md) — the 54-technique, 4-tier evasion-defeatability taxonomy. Useful when reasoning about scope (Tier 1 full, Tier 2 partial, Tier 3–4 triage-only).
+8. [`evasion-taxonomy.md`](../evasion-taxonomy.md) — the 54-technique, 4-tier evasion-defeatability taxonomy. Useful when reasoning about scope (Tier 1 full, Tier 2 partial, Tier 3–4 triage-only).

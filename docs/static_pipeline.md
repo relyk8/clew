@@ -9,11 +9,11 @@ It is the entry point that turns "a PE on disk" into "the static portion of a
 clew record, ready for the derivation stage."
 
 This document covers the orchestrator specifically. The Unit 4 dataflow bridge
-it drives is documented separately in `week_04_bn_dataflow.md`; that record
+it drives is documented separately in `bn_dataflow.md`; that record
 covers the MLIL-SSA walk, resolution cases, confidence model, the derivation
 boundary, and the reproducibility investigation in detail. Read this document
 for how the channels are wired together and how to run the pipeline; read
-`week_04_bn_dataflow.md` for what the bridge does internally.
+`bn_dataflow.md` for what the bridge does internally.
 
 ## What it produces
 
@@ -28,7 +28,7 @@ index, recovered values, and evidence (string source, VA, dataflow path,
 channels), with the three derivation-owned fields (`evasion_tier`,
 `iteration_number`, `coordination_constraint`) and the Channel-4 comparison
 operands deliberately absent. This is the same boundary the oracle grader
-validated against hand-built ground truth (see `week_04_bn_dataflow.md`): a
+validated against hand-built ground truth (see `bn_dataflow.md`): a
 bridge candidate plus those three fields is a schema-valid candidate, and the
 pipeline's own test suite confirms the assembled record validates against
 `schema/clew_record.schema.json` once a simulated derivation stage adds them.
@@ -207,7 +207,7 @@ on every run). Pinning `analysis.limits.workerThreadCount` to 1 stabilises
 candidate *membership* but not all field-level content; it is offered as a knob,
 not a default. The full investigation -- what was ruled out (clew's code, Python
 hash order, function discovery) and what remains -- is in
-`week_04_bn_dataflow.md`'s reproducibility section. The pragmatic v1 stance is to
+`bn_dataflow.md`'s reproducibility section. The pragmatic v1 stance is to
 report results with the measured variance bound stated.
 
 ## Running it
