@@ -215,7 +215,7 @@ The sequence of instruction VAs Clew traced from the value's source (string refe
 
 ### `cmp_operand_a`, `cmp_operand_b` (required, string or null)
 
-Populated by Channel 4. When DynamoRIO observes a `cmp` or `test` instruction following an API return at the call site, both operand values at the time of comparison are logged here as hex strings. `null` for candidates not observed dynamically.
+Populated by Channel 3. When DynamoRIO observes a `cmp` or `test` instruction following an API return at the call site, both operand values at the time of comparison are logged here as hex strings. `null` for candidates not observed dynamically.
 
 When both are populated, the relation `cmp_operand_a <comparison_operator> cmp_operand_b` should hold true at runtime.
 

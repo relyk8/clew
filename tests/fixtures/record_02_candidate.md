@@ -122,7 +122,7 @@ The third-and-much-deeper-future framing — "v3 introduces an OR-gate field" �
 | `evidence.dataflow_path` | TBD from BN, 2 entries | Function entry VA → loop-body call-site VA (the call instruction has a single address regardless of iteration) |
 | `function_va` | TBD from BN | VA of `loaded_dlls` itself |
 | `call_site_va` | TBD from BN | VA of the single `call ds:[__imp__GetModuleHandleW@4]` instruction in the loop body |
-| `evidence.cmp_operand_a` / `cmp_operand_b` | `null` | Not observed dynamically (Channel 4 / DynamoRIO not in scope for record #2) |
+| `evidence.cmp_operand_a` / `cmp_operand_b` | `null` | Not observed dynamically (Channel 3 / DynamoRIO not in scope for record #2) |
 
 ## Schema gap flag — `evidence.string_va` is per-candidate, but per-value VAs differ
 

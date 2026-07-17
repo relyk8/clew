@@ -17,8 +17,8 @@ output record:
 | 0 | capa | sample-level technique detection, derivation status | static |
 | 1 | FLOSS | string values (static, stackstring, tightstring, decoded) | static |
 | 2 | Binary Ninja | API call sites + MLIL-SSA dataflow joining sites to values | static |
-| 4 | DynamoRIO cmp-logging (in CAPE) | comparison operands after API returns | dynamic (not yet integrated) |
-| 5 | CAPE config extractors | family-specific config (C2, keys) | dynamic (not yet integrated) |
+| 3 | DynamoRIO cmp-logging (in CAPE) | comparison operands after API returns | dynamic (not yet integrated) |
+| 4 | CAPE config extractors | family-specific config (C2, keys) | dynamic (not yet integrated) |
 
 The output contract lives in `docs/schema.md` (human-readable) and
 `schema/clew_record.schema.json` (machine-checkable).
@@ -64,8 +64,8 @@ Not re-opened without cause.
 | LLM enrichment | Out of v1 |
 | capa preprocessing | In as explicit stage |
 | Target API list | Pfuzzer's 68 for v1 |
-| Packaging | Standalone Clew CLI; Channel 4 uses CAPE via REST API |
-| Channel 3 status | Folded into Channel 2 as enrichment |
+| Packaging | Standalone Clew CLI; Channel 3 uses CAPE via REST API |
+| Dataflow enrichment | Merged into Channel 2 (no separate channel) |
 | Iterative mode | Deferred to v2; schema and orchestration built iteration-ready |
 | Scope tiers | Tier 1 full, Tier 2 partial, Tier 3–4 triage-only |
 

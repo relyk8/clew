@@ -58,7 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--exclude-unresolved",
         action="store_true",
-        help="omit located-but-unresolved call sites (the Channel 4 work list)",
+        help="omit located-but-unresolved call sites (the Channel 3 work list)",
     )
     p.add_argument(
         "--verbose-floss",

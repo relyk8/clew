@@ -34,7 +34,7 @@ Scope (v1) -- what the bridge DOES:
 Scope (v1) -- what the bridge deliberately does NOT do (the boundaries the
 earlier scoping flagged):
     * comparison semantics (comparison_operator / cmp_operand_a / _b) --
-      that is Channel 4 (DynamoRIO cmp-logging), left null here.
+      that is Channel 3 (DynamoRIO cmp-logging), left null here.
     * semantic classification (represents / retarget_to / evasion_tier)
       and derivation_status -- that is the derivation stage (Person B).
       The bridge emits `represents == "unknown"` and no evasion_tier.
@@ -42,7 +42,7 @@ earlier scoping flagged):
       only ever consumes the schema-emittable call sites Unit 3 produced.
     * deep inter-procedural tracing. A value flowing in from a *caller*
       (parameter of the containing function) or out of another API's return
-      is reported as *unresolved* -- evidence that this call needs Channel 4,
+      is reported as *unresolved* -- evidence that this call needs Channel 3,
       not a guessed value.
 
 Output: like Unit 3, this is an *intermediate* artifact (BNDataflow ->
@@ -348,7 +348,7 @@ class BridgedCallSite:
     dataflow_path: tuple[int, ...]  # VAs from source def down to the call site
     source_channels: tuple[str, ...]
     confidence: float
-    resolved: bool  # False => arg not statically recoverable (-> Channel 4)
+    resolved: bool  # False => arg not statically recoverable (-> Channel 3)
 
     def to_dict(self) -> dict:
         return {
@@ -405,7 +405,7 @@ class BNDataflow:
         return [b for b in self.bridged if b.resolved]
 
     def unresolved(self) -> list[BridgedCallSite]:
-        """Located calls whose arguments need Channel 4. Not noise -- these
+        """Located calls whose arguments need Channel 3. Not noise -- these
         tell the dynamic stage exactly which call sites to instrument."""
         return [b for b in self.bridged if not b.resolved]
 
@@ -492,7 +492,7 @@ class BNDataflow:
                     "api_name": rep.api_name,
                     "api_resolution": rep.api_resolution,
                     "parameter_index": rep.parameter_index,
-                    "comparison_operator": "unknown",  # Channel 4 fills
+                    "comparison_operator": "unknown",  # Channel 3 fills
                     "candidate_values": candidate_values,
                     "evidence": {
                         "channels": list(group_channels),
@@ -504,7 +504,7 @@ class BNDataflow:
                             else f"0x{rep.string_function_va:08x}"
                         ),
                         "dataflow_path": [f"0x{va:08x}" for va in path],
-                        "cmp_operand_a": None,  # Channel 4 fills
+                        "cmp_operand_a": None,  # Channel 3 fills
                         "cmp_operand_b": None,
                     },
                 }
@@ -689,7 +689,7 @@ def _bridge_call_site(bv, cs: CallSite, floss: FlossIndex, MLILOps) -> list[Brid
                 )
             )
 
-    # No argument resolved: keep one unresolved record for Channel 4 targeting.
+    # No argument resolved: keep one unresolved record for Channel 3 targeting.
     if not results:
         return [_unresolved(cs, parameter_index=-1)]
     return results
@@ -777,7 +777,7 @@ def _resolve(bv, ssa, expr, floss, function_va, MLILOps, depth, path, visited):
             return []
         read = _read_string_at(bv, const)
         if read is None:
-            return []  # a constant that isn't a string -> Channel 4 territory in v1
+            return []  # a constant that isn't a string -> Channel 3 territory in v1
         channels, conf = _score_static(read[0], floss)
         return [_Finding(read[0], SOURCE_STATIC, const, None, channels, conf)]
 

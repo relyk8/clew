@@ -13,8 +13,8 @@ statically available -- `sample_sha256`, `capa_techniques`, `derivation_status`
 -- are filled here. The candidates are the bridge's `to_partial_candidates()`
 output: call site + argument dataflow + values, with the three derivation-owned
 fields (`evasion_tier`, `iteration_number`, `coordination_constraint`) and the
-Channel-4 comparison operands deliberately absent. The derivation stage (Person
-B) completes each candidate and Channel 4 adds comparison semantics. This is the
+Channel-3 comparison operands deliberately absent. The derivation stage (Person
+B) completes each candidate and Channel 3 adds comparison semantics. This is the
 same boundary the oracle grader validated.
 
 Degradation: capa and FLOSS are enrichment. If capa fails or times out the

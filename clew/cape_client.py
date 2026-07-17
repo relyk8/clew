@@ -1,5 +1,5 @@
 """
-Minimal CAPE REST client for Clew's Channel 4 (DynamoRIO comparison logging).
+Minimal CAPE REST client for Clew's Channel 3 (DynamoRIO comparison logging).
 Targets CAPEv2 apiv2 endpoints. Tested against the services-based layout
 (cape, cape-web, cape-processor, cape-rooter).
 

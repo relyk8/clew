@@ -1,8 +1,8 @@
 # Pilot Results
 
-Two channel pilots conducted ahead of the DefCon proposal: FLOSS (Channel 1) and DynamoRIO-inside-CAPE (Channel 4). Channel 0 (capa) was implemented in full during week 2 and is not duplicated here. Channels 2 and 5 do not require pre-proposal pilots — Channel 2's risk is in the dataflow research itself (weeks 5–7), Channel 5 is family-specific and load-bearing on no proposal claims.
+Two channel pilots conducted ahead of the DefCon proposal: FLOSS (Channel 1) and DynamoRIO-inside-CAPE (Channel 3). Channel 0 (capa) was implemented in full during week 2 and is not duplicated here. Channels 2 and 4 do not require pre-proposal pilots — Channel 2's risk is in the dataflow research itself (weeks 5–7), Channel 4 is family-specific and load-bearing on no proposal claims.
 
-Both pilots passed. DynamoRIO required engineering iteration to expose what production Channel 4 will need; that iteration is documented here so the proposal can cite concrete cost estimates rather than hedged predictions.
+Both pilots passed. DynamoRIO required engineering iteration to expose what production Channel 3 will need; that iteration is documented here so the proposal can cite concrete cost estimates rather than hedged predictions.
 
 ## Channel 1 — FLOSS
 
@@ -22,9 +22,9 @@ Both pilots passed. DynamoRIO required engineering iteration to expose what prod
 
 **Verdict**: pass. Channel 1 is feasible as designed. Implementation in week 3 should be straightforward — Python API, no external configuration, output shape matches schema expectations.
 
-## Channel 4 — DynamoRIO inside CAPE
+## Channel 3 — DynamoRIO inside CAPE
 
-The README's pre-proposal characterization was right: this is the riskiest channel. The infrastructure question — "can DynamoRIO be invoked inside CAPE's analysis VM and produce retrievable coverage logs" — has now been answered yes, but the path to that answer exposed multiple specific engineering costs that production Channel 4 will need to absorb.
+The README's pre-proposal characterization was right: this is the riskiest channel. The infrastructure question — "can DynamoRIO be invoked inside CAPE's analysis VM and produce retrievable coverage logs" — has now been answered yes, but the path to that answer exposed multiple specific engineering costs that production Channel 3 will need to absorb.
 
 ### Final working pipeline
 
@@ -56,38 +56,38 @@ Per-sample coverage log size: ~1 MB for the short execution measured. Production
 
 ### Engineering iteration log
 
-Six concrete obstacles surfaced. Each is a specific work item for week 8's full Channel 4 implementation, not a re-derivable surprise.
+Six concrete obstacles surfaced. Each is a specific work item for week 8's full Channel 3 implementation, not a re-derivable surprise.
 
-**1. al-khaser self-terminates under CAPE, regardless of DynamoRIO.** First test submission (task 39) ran al-khaser unwrapped through CAPE's `exe` package. CAPE's monitor injected successfully, sample executed for ~13 seconds, then exited. No `.bson` behavior logs were produced. al-khaser detected something (almost certainly CAPE's monitor DLL or environmental fingerprints) and exited before any meaningful execution happened. This is consistent with the README's note that "sophisticated malware detects DynamoRIO" and the same applies to CAPE's monitor. **Implication**: Channel 4 cannot use al-khaser as its end-to-end test target. A benign 32-bit PE (in this pilot, an arbitrary 32-bit console exe from CAPE's sample store) is required for pipeline validation.
+**1. al-khaser self-terminates under CAPE, regardless of DynamoRIO.** First test submission (task 39) ran al-khaser unwrapped through CAPE's `exe` package. CAPE's monitor injected successfully, sample executed for ~13 seconds, then exited. No `.bson` behavior logs were produced. al-khaser detected something (almost certainly CAPE's monitor DLL or environmental fingerprints) and exited before any meaningful execution happened. This is consistent with the README's note that "sophisticated malware detects DynamoRIO" and the same applies to CAPE's monitor. **Implication**: Channel 3 cannot use al-khaser as its end-to-end test target. A benign 32-bit PE (in this pilot, an arbitrary 32-bit console exe from CAPE's sample store) is required for pipeline validation.
 
 **2. KVM snapshot type matters.** libvirt distinguishes "running" snapshots (memory + disk state, fast revert to running guest) from "shutoff" snapshots (disk only, requires boot on revert). CAPE's KVM machinery expects running snapshots. An initial "shutoff" snapshot caused tasks to hang in `pending` indefinitely because the analyzer waited for the agent to respond and the agent never started. Resolved by booting the guest interactively, installing DynamoRIO, then snapshotting from the running state. **Implication for production**: snapshot management documentation needs to specify "running" snapshots. The `--atomic` flag alone doesn't enforce this.
 
-**3. CAPE's `exe` package has no executable-redirect option.** The `exe.py` package always launches the dropped sample directly via `self.execute(path, args, path)`. There's no option to wrap the launch in a different executable. Production Channel 4 requires a custom analysis package (`exe_drcov.py`), not configuration of the existing one. About 50 lines of Python.
+**3. CAPE's `exe` package has no executable-redirect option.** The `exe.py` package always launches the dropped sample directly via `self.execute(path, args, path)`. There's no option to wrap the launch in a different executable. Production Channel 3 requires a custom analysis package (`exe_drcov.py`), not configuration of the existing one. About 50 lines of Python.
 
-**4. drcov has a known option-parsing bug for `-t drcov -logdir`.** DynamoRIO issue #1750 (filed 2015) documents that invoking `drrun -t drcov -logdir <dir>` fails to pass the `-logdir` option through to drcov correctly — an empty token gets prepended to drcov's argv that causes its option parser to stop reading. The documented workaround is to use the `-c <full_path_to_drcov.dll>` form instead of `-t drcov`. The `-c` form was used in the final package. **Implication**: production Channel 4 should pin the working invocation form and not assume `-t` syntactic sugar works.
+**4. drcov has a known option-parsing bug for `-t drcov -logdir`.** DynamoRIO issue #1750 (filed 2015) documents that invoking `drrun -t drcov -logdir <dir>` fails to pass the `-logdir` option through to drcov correctly — an empty token gets prepended to drcov's argv that causes its option parser to stop reading. The documented workaround is to use the `-c <full_path_to_drcov.dll>` form instead of `-t drcov`. The `-c` form was used in the final package. **Implication**: production Channel 3 should pin the working invocation form and not assume `-t` syntactic sugar works.
 
-**5. CAPE's resultserver has a strict destination-path allowlist.** The `upload_to_host(local_path, remote_filename)` call rejects any `remote_filename` with a path prefix not on its allowlist. Initial attempts using `"drcov/<filename>"` were rejected with `Netlog client requested banned path: b'drcov/...'`. Resolved by using `files/<filename>` — the standard landing path for CAPE-collected artifacts. **Implication**: Channel 4 documentation should be explicit that drcov outputs land under `files/`, alongside CAPE's normal collected files. Downstream consumers parsing the analysis tree need to filter `files/drcov.*.log` to find Channel 4's contribution.
+**5. CAPE's resultserver has a strict destination-path allowlist.** The `upload_to_host(local_path, remote_filename)` call rejects any `remote_filename` with a path prefix not on its allowlist. Initial attempts using `"drcov/<filename>"` were rejected with `Netlog client requested banned path: b'drcov/...'`. Resolved by using `files/<filename>` — the standard landing path for CAPE-collected artifacts. **Implication**: Channel 3 documentation should be explicit that drcov outputs land under `files/`, alongside CAPE's normal collected files. Downstream consumers parsing the analysis tree need to filter `files/drcov.*.log` to find Channel 3's contribution.
 
-**6. CAPE's monitor injects into drrun, not into the instrumented child.** The behavior log produced at task 44 (one of the intermediate iterations) recorded drrun's API calls, not the sample's. This is correct CAPE behavior — its monitor injects into the launched process, which is drrun.exe, not into drrun's children. For Channel 4 this is actually fine: the deliverable is the drcov coverage log, not CAPE's behavior trace. But it means that for a sample run under Channel 4, CAPE's normal `behavior.processes` data describes drrun's lifecycle rather than the sample's. Reports that combine Channel 4 output with CAPE's normal behavior signatures need to handle this asymmetry.
+**6. CAPE's monitor injects into drrun, not into the instrumented child.** The behavior log produced at task 44 (one of the intermediate iterations) recorded drrun's API calls, not the sample's. This is correct CAPE behavior — its monitor injects into the launched process, which is drrun.exe, not into drrun's children. For Channel 3 this is actually fine: the deliverable is the drcov coverage log, not CAPE's behavior trace. But it means that for a sample run under Channel 3, CAPE's normal `behavior.processes` data describes drrun's lifecycle rather than the sample's. Reports that combine Channel 3 output with CAPE's normal behavior signatures need to handle this asymmetry.
 
 ### Architecture decision confirmed
 
-The README's design choice to run Channel 4 inside CAPE (rather than as a separate DBI sandbox) is viable and is now demonstrated to work. Channel 4 stays in scope for the proposal as a CAPE-integrated channel. The infrastructure complexity above is engineering work for week 8, not architecture rework.
+The README's design choice to run Channel 3 inside CAPE (rather than as a separate DBI sandbox) is viable and is now demonstrated to work. Channel 3 stays in scope for the proposal as a CAPE-integrated channel. The infrastructure complexity above is engineering work for week 8, not architecture rework.
 
 ### Out of scope, deliberately
 
-The pilot did not test Channel 4 against an evasion-aware target (e.g. samples that detect DynamoRIO via TLS callbacks, INT 2D, or DR-specific module paths). The README explicitly scopes 19 such samples out of Clew's coverage based on Pfuzzer's findings. Channel 4 evaluation in week 8 will document specific failure modes against known DR-detecting samples; this pilot does not.
+The pilot did not test Channel 3 against an evasion-aware target (e.g. samples that detect DynamoRIO via TLS callbacks, INT 2D, or DR-specific module paths). The README explicitly scopes 19 such samples out of Clew's coverage based on Pfuzzer's findings. Channel 3 evaluation in week 8 will document specific failure modes against known DR-detecting samples; this pilot does not.
 
 ### Verdict: pass with engineering-cost notes
 
-Channel 4 is feasible as designed. The infrastructure works end-to-end. Six specific engineering costs are now documented, none of which threaten the channel's viability — all are tractable in week 8's implementation budget.
+Channel 3 is feasible as designed. The infrastructure works end-to-end. Six specific engineering costs are now documented, none of which threaten the channel's viability — all are tractable in week 8's implementation budget.
 
 ## Cross-pilot v2 schema findings
 
 Both pilots surfaced items that have been appended to `docs/schema_v2_notes.md`:
 
 - **Item 16 (FLOSS)**: `language_strings` and `language_strings_missed` are FLOSS output categories not represented in the `string_source` enum. v2 should either widen the enum or document the omission as deliberate.
-- **Item 17 (DynamoRIO)**: drcov logs land in `files/drcov.*.log` under CAPE's per-task analysis directory. The schema doesn't currently constrain output-collection paths; this is a Channel 4 evidence-source convention rather than a schema field, but downstream consumers parsing the analysis tree need to know where to look. Possibly an `evidence.channels` value of `drio_drcov` in v2 (currently `drio` is the schema's reserved value; v2 may want sub-types).
+- **Item 17 (DynamoRIO)**: drcov logs land in `files/drcov.*.log` under CAPE's per-task analysis directory. The schema doesn't currently constrain output-collection paths; this is a Channel 3 evidence-source convention rather than a schema field, but downstream consumers parsing the analysis tree need to know where to look. Possibly an `evidence.channels` value of `drio_drcov` in v2 (currently `drio` is the schema's reserved value; v2 may want sub-types).
 
 ## What feeds the proposal
 
@@ -95,8 +95,8 @@ Concrete numbers and findings the proposal's "Pilot results" section can cite di
 
 - **Channel 0 (capa)**: 106 rules fired against al-khaser, 25 evasion-relevant after filtering. capa's `reference anti-VM strings` rule covered 8 of 12 al-khaser DLL fingerprints; FLOSS covered all 12. Together they cover the full record-#2 candidate set.
 - **Channel 1 (FLOSS)**: pass clean. 113s runtime, 12/12 fingerprint coverage, 9 stackstrings (including ACPI BIOS fingerprints), schema mapping 1:1.
-- **Channel 4 (DynamoRIO)**: pass with documented engineering cost. End-to-end pipeline confirmed: CAPE → custom analysis package → drrun-with-drcov → guest-side log → `upload_to_host` → host-side `files/`. ~1 MB log per short execution, ~37s end-to-end runtime for short execs versus ~59s baseline. Six specific engineering costs documented.
-- **Channels 2 and 5**: no pilots needed before the proposal. Channel 2's risk is dataflow tractability (weeks 5–7); Channel 5 is family-specific.
+- **Channel 3 (DynamoRIO)**: pass with documented engineering cost. End-to-end pipeline confirmed: CAPE → custom analysis package → drrun-with-drcov → guest-side log → `upload_to_host` → host-side `files/`. ~1 MB log per short execution, ~37s end-to-end runtime for short execs versus ~59s baseline. Six specific engineering costs documented.
+- **Channels 2 and 4**: no pilots needed before the proposal. Channel 2's risk is dataflow tractability (weeks 5–7); Channel 4 is family-specific.
 
 The proposal can now make the contribution claim — "Clew automates per-sample candidate extraction across five channels covering Pfuzzer's 68 evasion APIs" — with infrastructure-level evidence that the channel architecture is real, not aspirational.
 

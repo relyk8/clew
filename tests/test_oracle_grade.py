@@ -204,7 +204,7 @@ def test_return_value_candidate_graded_on_structure_only():
     assert g.is_return_value and g.matched and g.passed
     # the value field is report-only for a return-value check
     vf = next(f for f in g.fields if f.field == "candidate_values.value")
-    assert vf.ok is None and "Channel 4" in vf.note
+    assert vf.ok is None and "Channel 3" in vf.note
     # structural identification is graded and matches
     for name in ("call_site_va", "function_va", "api_name", "api_resolution", "parameter_index"):
         assert next(f for f in g.fields if f.field == name).ok is True

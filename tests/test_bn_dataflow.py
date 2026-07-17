@@ -310,9 +310,9 @@ def test_to_partial_candidate_shape_and_boundaries():
     assert c["evidence"]["dataflow_path"] == ["0x00401220", "0x00401228", "0x00401234"]
 
     # deliberately NOT owned by the bridge
-    assert c["comparison_operator"] == "unknown"  # Channel 4
-    assert c["evidence"]["cmp_operand_a"] is None  # Channel 4
-    assert c["evidence"]["cmp_operand_b"] is None  # Channel 4
+    assert c["comparison_operator"] == "unknown"  # Channel 3
+    assert c["evidence"]["cmp_operand_a"] is None  # Channel 3
+    assert c["evidence"]["cmp_operand_b"] is None  # Channel 3
     assert c["candidate_values"][0]["represents"] == "unknown"  # derivation
     assert c["candidate_values"][0]["retarget_to"] is None  # derivation
     assert "evasion_tier" not in c  # derivation

@@ -2,7 +2,7 @@
 
 An oracle is a *full* clew schema record. The bridge (`to_partial_candidates`)
 produces only the *intermediate*, bridge-owned fields; the rest are filled by
-the derivation stage and Channel 4. So grading compares only the bridge-owned
+the derivation stage and Channel 3. So grading compares only the bridge-owned
 fields and treats derivation-owned fields as report-only context -- never as
 failures. This keeps the grade honest: the bridge is not marked wrong for
 leaving `represents`/`evasion_tier`/comparison operands unset, because that is
@@ -13,12 +13,12 @@ Bridge-owned (graded):
     the set of candidate_values[].value,
     evidence.string_source, evidence.dataflow_path
 
-Derivation / Channel-4 (report-only, never a failure):
+Derivation / Channel-3 (report-only, never a failure):
     comparison_operator, cmp_operand_a/_b, evasion_tier, iteration_number,
     coordination_constraint, candidate_values[].{represents,retarget_to,confidence}
 
 Return-value checks (`parameter_index == -1`, e.g. IsDebuggerPresent): the
-"value" is the API's return in the detected state, which is dynamic (Channel 4)
+"value" is the API's return in the detected state, which is dynamic (Channel 3)
 and semantic (derivation), NOT static argument dataflow. For these the bridge
 can only be expected to *locate* the call, so only structural identification is
 graded; the value and its semantics are report-only.
@@ -34,7 +34,7 @@ from typing import Optional
 # Graded exactly (bridge-owned scalars).
 STRUCTURAL_FIELDS = ("call_site_va", "function_va", "api_name", "api_resolution")
 
-# Reported but never failed (owned by derivation / Channel 4).
+# Reported but never failed (owned by derivation / Channel 3).
 DERIVATION_FIELDS = ("comparison_operator", "evasion_tier", "coordination_constraint")
 
 
@@ -137,7 +137,7 @@ def grade_candidate(expected: dict, actual: Optional[dict]) -> CandidateGrade:
                 None,
                 sorted(map(str, exp_vals)),
                 sorted(map(str, act_vals)),
-                "return-value check -> value is Channel 4 / derivation, not static arg dataflow",
+                "return-value check -> value is Channel 3 / derivation, not static arg dataflow",
             )
         )
     else:

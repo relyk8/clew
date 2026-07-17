@@ -4,7 +4,7 @@ Implementation record for `clew/analysis/dataflow.py` and
 `tests/test_bn_dataflow.py`. Companion to `bn_callsites.md` (Unit 3)
 and `floss.md` (Channel 1). Like those, this captures not just what the
 code does but the design decisions and the debugging path that produced it,
-because that reasoning is the part worth having on record before Channel 4 and
+because that reasoning is the part worth having on record before Channel 3 and
 the derivation stage build on top of it.
 
 Unit 4 is now integrated into the static pipeline that runs it alongside capa,
@@ -43,7 +43,7 @@ The bridge is deliberately scoped to Person A's static job. It does **not**:
 - **Comparison semantics** (`comparison_operator`, `cmp_operand_a/_b`). Whether
   a recovered value is compared with `==`, `!=`, `contains`, etc. is what the
   dynamic channel observes at runtime. The bridge leaves `comparison_operator`
-  as `"unknown"` and the operands null. **→ Channel 4 (DynamoRIO cmp-logging).**
+  as `"unknown"` and the operands null. **→ Channel 3 (DynamoRIO cmp-logging).**
 - **Semantic classification** (`represents`, `retarget_to`, `evasion_tier`) and
   the sample-level `derivation_status`. Deciding that `"SbieDll.dll"` means
   `sandbox_detected` with `retarget_to: null`, and assigning a defeatability
@@ -163,7 +163,7 @@ json path reads the real per-category fields — `static_strings[].string`,
 `decoded_strings` keyed by `decoding_routine` (decoded entries have no
 `function`) — and was validated against the actual `al-khaser_x86.floss.json`.
 
-### Unresolved → Channel 4 work list
+### Unresolved → Channel 3 work list
 
 Arguments that don't statically reduce to a value — computed indices,
 inter-procedural flow, runtime-decoded names, `GetModuleHandleW(NULL)` — are
@@ -195,7 +195,7 @@ elsewhere: `confidence` answers "is this value real and correctly
 characterized," and a BN+FLOSS-agreed module name is exactly that however the
 argument was shaped. The "these N checks form one OR over a set" property is a
 *coordination* fact — it maps onto `coordination_constraint` and the comparison
-semantics, which are the derivation stage's and Channel 4's concern, not a
+semantics, which are the derivation stage's and Channel 3's concern, not a
 haircut on the static confidence score.
 
 With FLOSS wired in, BN-only static values (including array elements) that FLOSS
@@ -282,7 +282,7 @@ Resolves statically:
 - Local pointer-arrays indexed in a loop (indicator arrays), element-by-element
   initialised.
 
-Falls to Channel 4 (reported unresolved, by design):
+Falls to Channel 3 (reported unresolved, by design):
 
 - Arrays block-copied from a global pointer table (a partial, currently
   untested global-array fallback exists).
@@ -336,7 +336,7 @@ Grading is deliberately *scoped*. An oracle is a full record; the bridge produce
 only the bridge-owned fields. So the grader compares only what the bridge owns —
 `call_site_va`, `function_va`, `api_name`, `api_resolution`, `parameter_index`,
 the set of `candidate_values[].value`, and `evidence.string_source` /
-`dataflow_path` — and treats the derivation/Channel-4 fields (`represents`,
+`dataflow_path` — and treats the derivation/Channel-3 fields (`represents`,
 `retarget_to`, `evasion_tier`, `comparison_operator`, `coordination_constraint`)
 as report-only context, never as failures. Value comparison is
 case-insensitive (oracle source casing vs binary casing). For a return-value
@@ -357,7 +357,7 @@ Both oracles pass on every bridge-owned field (1/1 each):
 - **`_01`** — the bridge nails the structural identification (`call_site_va`,
   `function_va`, `api_name`, `api_resolution`, `parameter_index: -1`) and produces
   *no* value. The oracle's `True` / `debugger_detected` / `retarget_to: false` are
-  all return-value semantics owned by Channel 4 and derivation. This is the
+  all return-value semantics owned by Channel 3 and derivation. This is the
   cleanest evidence that the bridge respects the limit of static argument
   dataflow: it locates the check and stops, rather than inventing a return value
   it cannot statically know.

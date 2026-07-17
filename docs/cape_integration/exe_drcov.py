@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 class ExeDrcov(Package):
-    """EXE-under-drcov analysis package for Clew Channel 4 pilot."""
+    """EXE-under-drcov analysis package for Clew Channel 3 pilot."""
 
     summary = "Runs the supplied executable under DynamoRIO drcov for coverage logging."
     description = "Executes the sample under drrun -c drcov.dll -logdir; uploads drcov.*.log via upload_to_host."

@@ -684,7 +684,7 @@ def write_report(
         w(
             f"- **Timeout rate: {pct_to:.1f}% ({n_timeouts} samples)** hit the 120s ceiling. These are "
             f"capa-pathological samples — likely heavy packers, large overlays, or control-flow "
-            f"obfuscation that defeats capa's analysis budget. **Not automatically Channel 4 territory:** "
+            f"obfuscation that defeats capa's analysis budget. **Not automatically Channel 3 territory:** "
             f"DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't "
             f"complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. "
             f"Treat these as scope-limit findings, not as a queue handed to another channel."

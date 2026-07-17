@@ -19,14 +19,14 @@ for how the channels are wired together and how to run the pipeline; read
 
 The pipeline emits one intermediate clew record per sample. "Intermediate"
 because the static channels fill only the fields they own, leaving the
-derivation stage (Person B) and Channel 4 to complete each candidate. Concretely
+derivation stage (Person B) and Channel 3 to complete each candidate. Concretely
 the record carries the sample-level envelope -- `sample_sha256`, `sample_path`,
 `clew_version`, `capa_techniques`, `derivation_status`, `total_iterations`
 (always 1 in v1) -- and a `candidates` array. Each candidate is exactly the
 bridge's `to_partial_candidates()` output: call site, API identity, parameter
 index, recovered values, and evidence (string source, VA, dataflow path,
 channels), with the three derivation-owned fields (`evasion_tier`,
-`iteration_number`, `coordination_constraint`) and the Channel-4 comparison
+`iteration_number`, `coordination_constraint`) and the Channel-3 comparison
 operands deliberately absent. This is the same boundary the oracle grader
 validated against hand-built ground truth (see `bn_dataflow.md`): a
 bridge candidate plus those three fields is a schema-valid candidate, and the
@@ -180,7 +180,7 @@ stage finds 884 call sites.
 
 `include_unresolved` defaults to `True`. The unresolved call sites -- API calls
 the bridge located but could not statically resolve a value for, including
-return-value checks like `IsDebuggerPresent` -- are precisely Channel 4's work
+return-value checks like `IsDebuggerPresent` -- are precisely Channel 3's work
 list, so dropping them would lose that hand-off. `--exclude-unresolved` omits
 them if a consumer wants only resolved candidates.
 
@@ -233,7 +233,7 @@ Flags: `--capa-rules DIR` / `--capa-sigs DIR` (default to `$CLEW_CAPA_RULES` /
 `$CLEW_CAPA_SIGS`, then placeholder paths); `--floss-sigs DIR` (default: FLOSS's
 bundled sigs); `--capa-bin` (default `capa`); `--floss-cache DIR` /`--no-cache`
 /`--refresh-floss-cache` (FLOSS caching); `--verbose-floss` (unsuppress emulator
-logging); `--exclude-unresolved` (omit the Channel 4 work list);
+logging); `--exclude-unresolved` (omit the Channel 3 work list);
 `--no-license-checkout` (a license is already held); `-v/--verbose` (debug
 logging, repeatable) / `-q/--quiet` (warnings and errors only).
 

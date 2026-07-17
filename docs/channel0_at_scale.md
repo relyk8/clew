@@ -128,7 +128,7 @@ With that caveat: the table reports the rate of anti-analysis rules firing on ea
 - **104 samples (20.8%) are `partially_derivable`** — some matched rules are actionable, others are not (unmapped or APIs outside target). Clew acts on the actionable portion; the rest is derivation backlog.
 - **79 samples (15.8%) are `not_derivable`** — capa surfaced anti-analysis rules but none are actionable yet. Sized derivation work in this module: extend `CAPA_RULE_TO_APIS` and these flip to `fully_derivable` or `partially_derivable`.
 - **219 samples (43.8%) are `no_capa_signal`** — capa returned no anti-analysis rules (truly silent, or didn't successfully complete). Channel 0 has nothing on these; FLOSS / BN / DRIO must surface what capa missed.
-- **Timeout rate: 4.6% (23 samples)** hit the 120s ceiling. These are capa-pathological samples — likely heavy packers, large overlays, or control-flow obfuscation that defeats capa's analysis budget. **Not automatically Channel 4 territory:** DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. Treat these as scope-limit findings, not as a queue handed to another channel.
+- **Timeout rate: 4.6% (23 samples)** hit the 120s ceiling. These are capa-pathological samples — likely heavy packers, large overlays, or control-flow obfuscation that defeats capa's analysis budget. **Not automatically Channel 3 territory:** DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. Treat these as scope-limit findings, not as a queue handed to another channel.
 
 ## 8. Honest limitations
 
