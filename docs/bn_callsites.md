@@ -1,7 +1,7 @@
 # Channel 2 / Unit 3: Binary Ninja Call-Site Enumeration
 
 Implementation record for `clew/channels/bn_callsites.py` and
-`tests/test_bn_callsites.py`. Companion to `week_03_floss.md`.
+`tests/test_bn_callsites.py`. Companion to `floss.md` (Channel 1).
 
 ## What Unit 3 produces
 
@@ -125,7 +125,7 @@ is available.
 Offline unit tests (no BN, no license) run against the saved fixture
 `tests/fixtures/al-khaser_x86.bn_callsites.json`. Integration tests run the
 real headless analysis, gated behind `BN_INTEGRATION` (the run is ~4 min and
-needs a checked-out Enterprise license — source `bn_env.sh` first).
+needs a checked-out Enterprise license).
 
 Ground truth comes from the hand-built record
 `tests/fixtures/1fe91674eb8d_01.expected.json`: `IsDebuggerPresent` at call
@@ -152,7 +152,6 @@ Whenever the enumerator changes, regenerate the offline fixture from a real
 run before trusting the offline tests (a stale fixture will pass against old
 behavior):
 
-    source /home/shared/clew-env/bn_env.sh
     BN_INTEGRATION=1 python -c "from clew.channels.bn_callsites import \
         run_bn_callsites; run_bn_callsites('tests/fixtures/al-khaser_x86.exe')\
         .write_json('tests/fixtures/al-khaser_x86.bn_callsites.json')"

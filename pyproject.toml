@@ -1,6 +1,6 @@
 [project]
 name = "clew"
-version = "0.1.0"
+version = "0.3.0"
 requires-python = ">=3.10"
 dependencies = [
     "flare-capa>=9.4.0,<10",
@@ -9,8 +9,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "jsonschema>=4"]
+dev = ["pytest>=7", "jsonschema>=4", "ruff>=0.15"]
 analysis = ["matplotlib>=3.8", "pandas>=2.0"]
+
+[project.scripts]
+clew = "clew.cli:main"
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -18,3 +21,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["clew*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+extend-select = ["I"]

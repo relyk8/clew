@@ -9,6 +9,7 @@
 A rule is actionable iff it's mapped in CAPA_RULE_TO_APIS AND every
 implied API is in PFUZZER_68_APIS.
 """
+
 from __future__ import annotations
 
 from clew import tiers
@@ -25,10 +26,12 @@ def test_classify_partially_derivable_mixed_mapped_unmapped():
     # A mapped rule + an unmapped rule = mix; should be partially_derivable.
     # (Earlier short-circuit would have demoted to tier_3; pre-rollup model
     # incorrectly promoted to fully_derivable. Correct answer is partial.)
-    status, unmapped = tiers.classify([
-        "check for debugger via API",
-        "totally invented rule name",
-    ])
+    status, unmapped = tiers.classify(
+        [
+            "check for debugger via API",
+            "totally invented rule name",
+        ]
+    )
     assert status == "partially_derivable"
     assert unmapped == ["totally invented rule name"]
 
@@ -41,10 +44,12 @@ def test_classify_partially_derivable_outside_target(monkeypatch):
     new_map[outside_rule] = frozenset({"NotInPfuzzer68_xyz"})
     monkeypatch.setattr(tiers, "CAPA_RULE_TO_APIS", new_map)
 
-    status, unmapped = tiers.classify([
-        "check for debugger via API",
-        outside_rule,
-    ])
+    status, unmapped = tiers.classify(
+        [
+            "check for debugger via API",
+            outside_rule,
+        ]
+    )
     assert status == "partially_derivable"
     assert unmapped == []  # outside_rule is mapped, so not unmapped
 

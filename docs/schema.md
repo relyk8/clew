@@ -51,7 +51,7 @@ Note: `not_capa_detectable` was a reserved value in earlier schema versions but 
 
 Null if classification was skipped (e.g. capa was disabled).
 
-**This field is *not* a defeatability tier.** It describes the state of Clew's derivation pipeline for the sample, not the structural difficulty of the techniques. The defeatability tier of each candidate's underlying technique lives in the per-candidate `evasion_tier` field below, drawn from the taxonomy in `docs/context/evasion-taxonomy.md`.
+**This field is *not* a defeatability tier.** It describes the state of Clew's derivation pipeline for the sample, not the structural difficulty of the techniques. The defeatability tier of each candidate's underlying technique lives in the per-candidate `evasion_tier` field below, drawn from the taxonomy in `docs/evasion-taxonomy.md`.
 
 A sample with `derivation_status == fully_derivable` may still carry a non-empty backlog of unmapped capa rules — those don't change the categorical, but they do represent future derivation work and surface separately in producer outputs (e.g. `scripts/batch_channel0.py` emits an `unmapped_rules` field per record).
 
@@ -113,7 +113,7 @@ When the API has no parameters and the check is on the return value (parameter_i
 
 ### `evasion_tier` (required, string enum)
 
-The **defeatability tier** of the evasion technique this candidate addresses, drawn from the taxonomy in `docs/context/evasion-taxonomy.md`. One of:
+The **defeatability tier** of the evasion technique this candidate addresses, drawn from the taxonomy in `docs/evasion-taxonomy.md`. One of:
 
 - `tier_1` — single-call defeatable; hooking one API and returning a crafted value bypasses the check (e.g. `IsDebuggerPresent` returning FALSE)
 - `tier_2` — multi-call coordination; 2–5 calls with consistent state required to bypass (e.g. querying several VM-related registry keys and proceeding only if all are absent)

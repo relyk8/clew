@@ -13,6 +13,7 @@ Generate the offline fixture once with the real run:
         run_bn_callsites; run_bn_callsites('tests/fixtures/al-khaser_x86.exe')\
         .write_json('tests/fixtures/al-khaser_x86.bn_callsites.json')"
 """
+
 from __future__ import annotations
 
 import json
@@ -22,16 +23,15 @@ from pathlib import Path
 import pytest
 
 from clew.channels.bn_callsites import (
+    RESOLUTION_GETPROCADDRESS,
+    RESOLUTION_IMPORT,
+    RESOLUTION_ORDINAL,
+    V1_SCHEMA_RESOLUTIONS,
     BNCallSites,
     CallSite,
     load_bn_results,
     run_bn_callsites,
-    RESOLUTION_IMPORT,
-    RESOLUTION_GETPROCADDRESS,
-    RESOLUTION_ORDINAL,
-    V1_SCHEMA_RESOLUTIONS,
 )
-
 
 # Ground truth is loaded directly from the hand-built record so it has a single
 # source of truth -- do not copy its values here. The record's first candidate
@@ -48,11 +48,13 @@ GT_FUNCTION_VA = int(_GT_CANDIDATE["function_va"], 16)
 # expect BN to enumerate as call sites regardless of dataflow. Note the WIDE
 # variant: al-khaser calls OutputDebugStringW (confirmed via BN symbol probe),
 # reached through its ImportAddressSymbol (IAT slot) which carries the refs.
-EXPECTED_SOME_APIS = frozenset({
-    "IsDebuggerPresent",
-    "GetTickCount",
-    "OutputDebugStringW",
-})
+EXPECTED_SOME_APIS = frozenset(
+    {
+        "IsDebuggerPresent",
+        "GetTickCount",
+        "OutputDebugStringW",
+    }
+)
 
 
 integration = pytest.mark.skipif(
@@ -62,6 +64,7 @@ integration = pytest.mark.skipif(
 
 
 # --- unit tests (offline; need the saved intermediate JSON fixture) ----------
+
 
 @pytest.fixture
 def bn_fixture(fixtures_dir):
@@ -82,10 +85,7 @@ def test_isdebuggerpresent_call_site_present(bn_fixture):
     """The hand-built record's IsDebuggerPresent call site is enumerated at
     the exact VA, in the exact function, as an import."""
     result = load_bn_results(bn_fixture)
-    matches = [
-        cs for cs in result.for_api(GT_API)
-        if cs.call_site_va == GT_CALL_SITE_VA
-    ]
+    matches = [cs for cs in result.for_api(GT_API) if cs.call_site_va == GT_CALL_SITE_VA]
     assert matches, (
         f"{GT_API} @ {hex(GT_CALL_SITE_VA)} not enumerated; "
         f"got call sites for {GT_API}: "
@@ -102,10 +102,7 @@ def test_all_resolutions_are_valid(bn_fixture):
     result = load_bn_results(bn_fixture)
     valid = V1_SCHEMA_RESOLUTIONS | {"unknown"}
     assert all(cs.api_resolution in valid for cs in result.call_sites)
-    assert all(
-        cs.api_resolution in V1_SCHEMA_RESOLUTIONS
-        for cs in result.schema_emittable()
-    )
+    assert all(cs.api_resolution in V1_SCHEMA_RESOLUTIONS for cs in result.schema_emittable())
 
 
 def test_no_hashed_resolution_in_v1(bn_fixture):
@@ -132,10 +129,7 @@ def test_no_import_thunk_rows(bn_fixture):
     exact start of its containing function) must be filtered out. Before the
     thunk filter, 673/11205 al-khaser rows were these degenerate stubs."""
     result = load_bn_results(bn_fixture)
-    degenerate = [
-        cs for cs in result.call_sites
-        if cs.call_site_va == cs.function_va
-    ]
+    degenerate = [cs for cs in result.call_sites if cs.call_site_va == cs.function_va]
     assert not degenerate, (
         f"{len(degenerate)} import-thunk rows leaked through the filter, "
         f"e.g. {[hex(degenerate[0].call_site_va)]}"
@@ -168,8 +162,11 @@ def test_no_internal_function_names(bn_fixture):
     """No row names an internal function (sub_*, j_sub_*, loc_*) — those have
     no symbol in BN and must not be classified as imports."""
     result = load_bn_results(bn_fixture)
-    bad = [cs.api_name for cs in result.call_sites
-           if cs.api_name.startswith(("sub_", "j_sub_", "loc_", "j_loc_"))]
+    bad = [
+        cs.api_name
+        for cs in result.call_sites
+        if cs.api_name.startswith(("sub_", "j_sub_", "loc_", "j_loc_"))
+    ]
     assert not bad, f"internal-function names leaked in as APIs: {set(bad)}"
 
 
@@ -180,12 +177,9 @@ def test_roundtrip_serialization(tmp_path):
         sample_sha256="ab" * 32,
         bn_core_version="4.2.6455",
         call_sites=[
-            CallSite(GT_API, GT_CALL_SITE_VA, GT_FUNCTION_VA,
-                     RESOLUTION_IMPORT, "cdecl"),
-            CallSite("LoadLibraryA", 0x401000, 0x401000,
-                     RESOLUTION_GETPROCADDRESS, "stdcall"),
-            CallSite("ordinal_17", 0x402000, 0x402000,
-                     RESOLUTION_ORDINAL, "stdcall", ordinal=17),
+            CallSite(GT_API, GT_CALL_SITE_VA, GT_FUNCTION_VA, RESOLUTION_IMPORT, "cdecl"),
+            CallSite("LoadLibraryA", 0x401000, 0x401000, RESOLUTION_GETPROCADDRESS, "stdcall"),
+            CallSite("ordinal_17", 0x402000, 0x402000, RESOLUTION_ORDINAL, "stdcall", ordinal=17),
         ],
     )
     out = tmp_path / "rt.json"
@@ -197,8 +191,7 @@ def test_roundtrip_serialization(tmp_path):
 
 def test_va_hex_format(tmp_path):
     """VAs serialize as 0x-prefixed lowercase hex, matching the schema."""
-    cs = CallSite(GT_API, GT_CALL_SITE_VA, GT_FUNCTION_VA,
-                  RESOLUTION_IMPORT, "cdecl")
+    cs = CallSite(GT_API, GT_CALL_SITE_VA, GT_FUNCTION_VA, RESOLUTION_IMPORT, "cdecl")
     d = cs.to_dict()
     assert d["call_site_va"] == "0x00434d4a"
     assert d["function_va"] == "0x00434d20"
@@ -206,16 +199,14 @@ def test_va_hex_format(tmp_path):
 
 # --- integration tests (run the real tool) -----------------------------------
 
+
 @integration
 def test_run_enumerates_isdebuggerpresent(fixtures_dir):
     """Day-one grading target: real headless BN enumerates the hand-built
     IsDebuggerPresent call site at the exact VA and function."""
     sample = fixtures_dir / "al-khaser_x86.exe"
     result = run_bn_callsites(sample)
-    matches = [
-        cs for cs in result.for_api(GT_API)
-        if cs.call_site_va == GT_CALL_SITE_VA
-    ]
+    matches = [cs for cs in result.for_api(GT_API) if cs.call_site_va == GT_CALL_SITE_VA]
     assert matches, (
         f"BN did not enumerate {GT_API} @ {hex(GT_CALL_SITE_VA)}; "
         f"found: {sorted(hex(cs.call_site_va) for cs in result.for_api(GT_API))}"

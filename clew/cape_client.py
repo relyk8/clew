@@ -8,6 +8,7 @@ Migrated from ariadneX; originally written for RL-guided mutation submission.
 
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -35,9 +36,7 @@ class CapeClient:
     # ---------- low level ----------
 
     def _get(self, path: str, timeout: int | None = None) -> dict[str, Any]:
-        r = self.session.get(
-            f"{self.base}{path}", timeout=timeout or self.http_timeout
-        )
+        r = self.session.get(f"{self.base}{path}", timeout=timeout or self.http_timeout)
         r.raise_for_status()
         return r.json()
 
@@ -130,8 +129,7 @@ class CapeClient:
                 return status
             time.sleep(poll_interval)
         raise TimeoutError(
-            f"task {task_id} did not terminate within {max_wait}s "
-            f"(last status: {last})"
+            f"task {task_id} did not terminate within {max_wait}s (last status: {last})"
         )
 
     def fetch_report(self, task_id: int) -> dict[str, Any]:
@@ -163,15 +161,18 @@ class CapeClient:
 
 if __name__ == "__main__":
     import argparse
-    import json
 
     p = argparse.ArgumentParser()
-    p.add_argument("--base", default="http://192.168.186.128:8000",
-                   help="CAPE base URL (scheme://host:port)")
+    p.add_argument(
+        "--base",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL (scheme://host:port); defaults to $CAPE_BASE_URL",
+    )
     p.add_argument("--sample", required=True, help="Path to benign test binary")
     p.add_argument("--timeout", type=int, default=60)
-    p.add_argument("--keep", action="store_true",
-                   help="Skip delete at end (keep for manual inspection)")
+    p.add_argument(
+        "--keep", action="store_true", help="Skip delete at end (keep for manual inspection)"
+    )
     args = p.parse_args()
 
     c = CapeClient(args.base)

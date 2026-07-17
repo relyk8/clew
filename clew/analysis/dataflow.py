@@ -14,7 +14,7 @@ to the call-site stub -- turning `evidence.channels == ["bn_xref"]` into
 `["bn_xref", "floss"]` and producing a candidate with a value on it.
 
 See docs/schema_v2_notes.md (findings #2 and #4) for the value-channel vs
-call-site-channel split, and docs/context/evasion-taxonomy.md for tiers.
+call-site-channel split, and docs/evasion-taxonomy.md for tiers.
 
 Scope (v1) -- what the bridge DOES:
     * locate the MLIL-SSA call at each Unit-3 call_site_va
@@ -67,6 +67,7 @@ bn_callsites.py):
     mlil.ssa_form.get_ssa_var_definition(var)
     bv.get_string_at / bv.get_ascii_string_at / bv.read
 """
+
 from __future__ import annotations
 
 import json
@@ -79,19 +80,19 @@ from typing import NamedTuple, Optional
 # flat layout for standalone tests.
 try:  # pragma: no cover - trivial import shim
     from clew.channels.bn_callsites import (
+        BNAnalysisError,
         BNCallSites,
-        CallSite,
         BNError,
         BNNotAvailableError,
-        BNAnalysisError,
+        CallSite,
     )
 except ImportError:  # pragma: no cover
     from bn_callsites import (  # type: ignore
+        BNAnalysisError,
         BNCallSites,
-        CallSite,
         BNError,
         BNNotAvailableError,
-        BNAnalysisError,
+        CallSite,
     )
 
 
@@ -108,16 +109,14 @@ SOURCE_DECODED = "decoded"
 
 # FLOSS obfuscated categories the bridge associates by function. FLOSS's own
 # category names are normalised to these on the way into FlossIndex.
-FLOSS_OBFUSCATED_SOURCES = frozenset(
-    {SOURCE_STACKSTRING, SOURCE_TIGHTSTRING, SOURCE_DECODED}
-)
+FLOSS_OBFUSCATED_SOURCES = frozenset({SOURCE_STACKSTRING, SOURCE_TIGHTSTRING, SOURCE_DECODED})
 
 # Confidence heuristics. Not calibrated probabilities -- comparable within a
 # single run only, per docs/schema.md. Centralised so tuning is one edit.
-CONF_STATIC_CORROBORATED = 0.9   # BN dataflow + FLOSS agree on a static string
-CONF_STATIC_BN_ONLY = 0.7        # BN read the string; FLOSS did not report it
-CONF_OBFUSCATED_ASSOC = 0.6      # BN saw a stack ptr; FLOSS supplied the value
-CONF_UNRESOLVED = 0.0            # call located, argument not statically recoverable
+CONF_STATIC_CORROBORATED = 0.9  # BN dataflow + FLOSS agree on a static string
+CONF_STATIC_BN_ONLY = 0.7  # BN read the string; FLOSS did not report it
+CONF_OBFUSCATED_ASSOC = 0.6  # BN saw a stack ptr; FLOSS supplied the value
+CONF_UNRESOLVED = 0.0  # call located, argument not statically recoverable
 
 # Guard against pathological SSA graphs / cycles, and against a runaway array.
 MAX_TRACE_DEPTH = 64
@@ -133,6 +132,7 @@ _LOAD_OPS = frozenset({"MLIL_LOAD_SSA", "MLIL_LOAD"})
 class _Finding(NamedTuple):
     """One recovered value for a single argument. An argument yields a list of
     these: one for a plain string, N for an indicator array."""
+
     value: object
     string_source: Optional[str]
     string_va: Optional[int]
@@ -143,11 +143,13 @@ class _Finding(NamedTuple):
 
 # --- errors ------------------------------------------------------------------
 
+
 class DataflowError(BNError):
     """The bridge located a call but tracing failed structurally."""
 
 
 # --- FLOSS side: a lookup the bridge consults, decoupled from floss.py -------
+
 
 @dataclass
 class FlossIndex:
@@ -213,7 +215,7 @@ class FlossIndex:
                 except ValueError:
                     fva = None
             if not isinstance(fva, int):
-                static.add(value)          # no locus -> corroborate by value only
+                static.add(value)  # no locus -> corroborate by value only
                 continue
             by_func.setdefault(fva, []).append((value, source))
 
@@ -260,7 +262,7 @@ class FlossIndex:
                 if fva is None:
                     fva = entry.get("decoding_routine")
                 if not isinstance(fva, int):
-                    static.add(value)          # no locus -> corroborate by value only
+                    static.add(value)  # no locus -> corroborate by value only
                     continue
                 by_func.setdefault(fva, []).append((value, source))
 
@@ -328,6 +330,7 @@ def _normalise_floss_source(raw) -> str:
 
 # --- typed result objects (mirror CallSite / BNCallSites) --------------------
 
+
 @dataclass(frozen=True)
 class BridgedCallSite:
     """One (call site, parameter) after tracing. Structural + value, still
@@ -336,16 +339,16 @@ class BridgedCallSite:
     api_name: str
     call_site_va: int
     function_va: int
-    api_resolution: str            # carried through from the Unit-3 CallSite
-    parameter_index: int           # >= 0; the argument that was traced
-    value: object                  # str | int | bool | None (the recovered value)
-    string_source: Optional[str]   # StringSource enum, or None for non-strings
-    string_va: Optional[int]       # where the static string lives; None if on stack
+    api_resolution: str  # carried through from the Unit-3 CallSite
+    parameter_index: int  # >= 0; the argument that was traced
+    value: object  # str | int | bool | None (the recovered value)
+    string_source: Optional[str]  # StringSource enum, or None for non-strings
+    string_va: Optional[int]  # where the static string lives; None if on stack
     string_function_va: Optional[int]  # function the string was built in (obfuscated)
-    dataflow_path: tuple[int, ...] # VAs from source def down to the call site
+    dataflow_path: tuple[int, ...]  # VAs from source def down to the call site
     source_channels: tuple[str, ...]
     confidence: float
-    resolved: bool                 # False => arg not statically recoverable (-> Channel 4)
+    resolved: bool  # False => arg not statically recoverable (-> Channel 4)
 
     def to_dict(self) -> dict:
         return {
@@ -457,9 +460,7 @@ class BNDataflow:
         for key in order:
             recs = groups[key]
             rep = max(recs, key=lambda r: r.confidence)  # representative
-            group_channels = _channels_union(
-                tuple(ch for r in recs for ch in r.source_channels)
-            )
+            group_channels = _channels_union(tuple(ch for r in recs for ch in r.source_channels))
 
             candidate_values = []
             seen = set()
@@ -467,13 +468,15 @@ class BNDataflow:
                 if r.value in seen:
                     continue
                 seen.add(r.value)
-                candidate_values.append({
-                    "value": r.value,
-                    "represents": "unknown",       # derivation refines
-                    "retarget_to": None,           # derivation refines
-                    "confidence": r.confidence,
-                    "source_channels": list(_channels_union(r.source_channels)),
-                })
+                candidate_values.append(
+                    {
+                        "value": r.value,
+                        "represents": "unknown",  # derivation refines
+                        "retarget_to": None,  # derivation refines
+                        "confidence": r.confidence,
+                        "source_channels": list(_channels_union(r.source_channels)),
+                    }
+                )
 
             multi = len(candidate_values) > 1
             # A multi-value (array) candidate has no single string_va; the per-
@@ -482,27 +485,30 @@ class BNDataflow:
             string_va = None if multi else rep.string_va
             path = sorted({va for r in recs for va in r.dataflow_path})
 
-            out.append({
-                "call_site_va": f"0x{rep.call_site_va:08x}",
-                "function_va": f"0x{rep.function_va:08x}",
-                "api_name": rep.api_name,
-                "api_resolution": rep.api_resolution,
-                "parameter_index": rep.parameter_index,
-                "comparison_operator": "unknown",  # Channel 4 fills
-                "candidate_values": candidate_values,
-                "evidence": {
-                    "channels": list(group_channels),
-                    "string_source": rep.string_source,
-                    "string_va": None if string_va is None else f"0x{string_va:08x}",
-                    "string_function_va": (
-                        None if rep.string_function_va is None
-                        else f"0x{rep.string_function_va:08x}"
-                    ),
-                    "dataflow_path": [f"0x{va:08x}" for va in path],
-                    "cmp_operand_a": None,         # Channel 4 fills
-                    "cmp_operand_b": None,
-                },
-            })
+            out.append(
+                {
+                    "call_site_va": f"0x{rep.call_site_va:08x}",
+                    "function_va": f"0x{rep.function_va:08x}",
+                    "api_name": rep.api_name,
+                    "api_resolution": rep.api_resolution,
+                    "parameter_index": rep.parameter_index,
+                    "comparison_operator": "unknown",  # Channel 4 fills
+                    "candidate_values": candidate_values,
+                    "evidence": {
+                        "channels": list(group_channels),
+                        "string_source": rep.string_source,
+                        "string_va": None if string_va is None else f"0x{string_va:08x}",
+                        "string_function_va": (
+                            None
+                            if rep.string_function_va is None
+                            else f"0x{rep.string_function_va:08x}"
+                        ),
+                        "dataflow_path": [f"0x{va:08x}" for va in path],
+                        "cmp_operand_a": None,  # Channel 4 fills
+                        "cmp_operand_b": None,
+                    },
+                }
+            )
         return out
 
 
@@ -518,6 +524,7 @@ def load_dataflow_results(path: str | Path) -> BNDataflow:
 
 
 # --- pure decision helpers (BN-free, directly unit-testable) -----------------
+
 
 def _channels_union(source_channels) -> tuple[str, ...]:
     """bn_xref is always present (the bridge is BN-driven); order stable."""
@@ -548,6 +555,7 @@ def _match_obfuscated(function_va: int, floss: FlossIndex) -> Optional[tuple[str
 
 
 # --- BN-driven bridging ------------------------------------------------------
+
 
 def run_bn_dataflow(
     call_sites: BNCallSites,
@@ -584,8 +592,7 @@ def run_bn_dataflow(
         if bv is None:
             raise BNAnalysisError(f"BN returned no view for {sample}")
         bv.update_analysis_and_wait()
-        bridged = _bridge(bv, call_sites, floss_index or FlossIndex.empty(),
-                          MediumLevelILOperation)
+        bridged = _bridge(bv, call_sites, floss_index or FlossIndex.empty(), MediumLevelILOperation)
         return BNDataflow(
             sample_path=str(sample),
             sample_sha256=call_sites.sample_sha256,
@@ -624,8 +631,8 @@ def bridge_with_view(
     `update_analysis_and_wait` shared with Unit 3.
     """
     from binaryninja import MediumLevelILOperation
-    return _bridge(bv, call_sites, floss_index or FlossIndex.empty(),
-                   MediumLevelILOperation)
+
+    return _bridge(bv, call_sites, floss_index or FlossIndex.empty(), MediumLevelILOperation)
 
 
 def _bridge(bv, call_sites: BNCallSites, floss: FlossIndex, MLILOps) -> list[BridgedCallSite]:
@@ -664,21 +671,23 @@ def _bridge_call_site(bv, cs: CallSite, floss: FlossIndex, MLILOps) -> list[Brid
         path, findings = traced
         path_vas = tuple(sorted(set(path) | {cs.call_site_va}))
         for f in findings:
-            results.append(BridgedCallSite(
-                api_name=cs.api_name,
-                call_site_va=cs.call_site_va,
-                function_va=cs.function_va,
-                api_resolution=cs.api_resolution,
-                parameter_index=idx,
-                value=f.value,
-                string_source=f.string_source,
-                string_va=f.string_va,
-                string_function_va=f.string_function_va,
-                dataflow_path=path_vas,
-                source_channels=f.channels,
-                confidence=f.confidence,
-                resolved=True,
-            ))
+            results.append(
+                BridgedCallSite(
+                    api_name=cs.api_name,
+                    call_site_va=cs.call_site_va,
+                    function_va=cs.function_va,
+                    api_resolution=cs.api_resolution,
+                    parameter_index=idx,
+                    value=f.value,
+                    string_source=f.string_source,
+                    string_va=f.string_va,
+                    string_function_va=f.string_function_va,
+                    dataflow_path=path_vas,
+                    source_channels=f.channels,
+                    confidence=f.confidence,
+                    resolved=True,
+                )
+            )
 
     # No argument resolved: keep one unresolved record for Channel 4 targeting.
     if not results:
@@ -716,9 +725,12 @@ def _find_ssa_call(ssa, call_site_va: int, MLILOps):
 
 def _call_ops(MLILOps) -> set:
     names = (
-        "MLIL_CALL_SSA", "MLIL_TAILCALL_SSA",
-        "MLIL_CALL_UNTYPED_SSA", "MLIL_TAILCALL_UNTYPED_SSA",
-        "MLIL_SYSCALL_SSA", "MLIL_SYSCALL_UNTYPED_SSA",
+        "MLIL_CALL_SSA",
+        "MLIL_TAILCALL_SSA",
+        "MLIL_CALL_UNTYPED_SSA",
+        "MLIL_TAILCALL_UNTYPED_SSA",
+        "MLIL_SYSCALL_SSA",
+        "MLIL_SYSCALL_UNTYPED_SSA",
     )
     return {getattr(MLILOps, n) for n in names if hasattr(MLILOps, n)}
 
@@ -784,8 +796,11 @@ def _resolve(bv, ssa, expr, floss, function_va, MLILOps, depth, path, visited):
         if match is None:
             return []
         value, source = match
-        return [_Finding(value, source, None, function_va,
-                         (CHANNEL_BN, CHANNEL_FLOSS), CONF_OBFUSCATED_ASSOC)]
+        return [
+            _Finding(
+                value, source, None, function_va, (CHANNEL_BN, CHANNEL_FLOSS), CONF_OBFUSCATED_ASSOC
+            )
+        ]
 
     # 4) SSA variable -> follow its definition.
     if opname == "MLIL_VAR_SSA":
@@ -803,14 +818,31 @@ def _resolve(bv, ssa, expr, floss, function_va, MLILOps, depth, path, visited):
                 match = _match_obfuscated(function_va, floss)
                 if match is not None:
                     value, source = match
-                    return [_Finding(value, source, None, function_va,
-                                     (CHANNEL_BN, CHANNEL_FLOSS), CONF_OBFUSCATED_ASSOC)]
+                    return [
+                        _Finding(
+                            value,
+                            source,
+                            None,
+                            function_va,
+                            (CHANNEL_BN, CHANNEL_FLOSS),
+                            CONF_OBFUSCATED_ASSOC,
+                        )
+                    ]
             return []
         def_addr = getattr(definition, "address", None)
         if def_addr is not None:
             path.append(def_addr)
-        return _resolve(bv, ssa, getattr(definition, "src", None), floss,
-                        function_va, MLILOps, depth + 1, path, visited)
+        return _resolve(
+            bv,
+            ssa,
+            getattr(definition, "src", None),
+            floss,
+            function_va,
+            MLILOps,
+            depth + 1,
+            path,
+            visited,
+        )
 
     # 5) Phi node -> resolve each incoming version; first that yields values wins
     #    (multi-value phis across control flow are a v2 refinement).
@@ -826,8 +858,17 @@ def _resolve(bv, ssa, expr, floss, function_va, MLILOps, depth, path, visited):
             da = getattr(definition, "address", None)
             if da is not None:
                 branch_path.append(da)
-            got = _resolve(bv, ssa, getattr(definition, "src", None), floss,
-                           function_va, MLILOps, depth + 1, branch_path, visited)
+            got = _resolve(
+                bv,
+                ssa,
+                getattr(definition, "src", None),
+                floss,
+                function_va,
+                MLILOps,
+                depth + 1,
+                branch_path,
+                visited,
+            )
             if got:
                 path[:] = branch_path
                 return got
@@ -891,7 +932,10 @@ def _enumerate_pointer_array(ssa, base_storage, stride, bv):
             if getattr(getattr(insn, "operation", None), "name", "") not in _SET_OPS:
                 continue
             src = getattr(insn, "src", None)
-            if src is None or getattr(getattr(src, "operation", None), "name", "") not in _CONST_OPS:
+            if (
+                src is None
+                or getattr(getattr(src, "operation", None), "name", "") not in _CONST_OPS
+            ):
                 continue
             const = getattr(src, "constant", None)
             if const is None:
@@ -911,10 +955,12 @@ def _enumerate_pointer_array(ssa, base_storage, stride, bv):
     run = [slots[base_storage]]
     s = base_storage + stride
     while s in slots:
-        run.append(slots[s]); s += stride
+        run.append(slots[s])
+        s += stride
     s = base_storage - stride
     while s in slots:
-        run.insert(0, slots[s]); s -= stride
+        run.insert(0, slots[s])
+        s -= stride
     return run
 
 
@@ -1063,4 +1109,5 @@ def _read_string_at(bv, addr):
 
 def _warn(msg: str) -> None:
     import logging
+
     logging.getLogger("clew.analysis.dataflow").warning(msg)

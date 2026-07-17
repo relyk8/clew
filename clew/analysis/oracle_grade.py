@@ -23,11 +23,11 @@ and semantic (derivation), NOT static argument dataflow. For these the bridge
 can only be expected to *locate* the call, so only structural identification is
 graded; the value and its semantics are report-only.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Optional
-
 
 # --- field categories --------------------------------------------------------
 
@@ -41,7 +41,7 @@ DERIVATION_FIELDS = ("comparison_operator", "evasion_tier", "coordination_constr
 @dataclass
 class FieldVerdict:
     field: str
-    ok: Optional[bool]        # True=match, False=mismatch, None=report-only
+    ok: Optional[bool]  # True=match, False=mismatch, None=report-only
     expected: object
     actual: object
     note: str = ""
@@ -53,7 +53,7 @@ class FieldVerdict:
 @dataclass
 class CandidateGrade:
     call_site_va: object
-    matched: bool             # did the bridge produce a candidate at this call site?
+    matched: bool  # did the bridge produce a candidate at this call site?
     is_return_value: bool
     api_name: str = ""
     fields: list = field(default_factory=list)
@@ -64,6 +64,7 @@ class CandidateGrade:
 
 
 # --- helpers -----------------------------------------------------------------
+
 
 def _va_int(s):
     if isinstance(s, int):
@@ -88,15 +89,22 @@ def _nonnull_values(cand: dict) -> set:
 
 # --- grading -----------------------------------------------------------------
 
+
 def grade_candidate(expected: dict, actual: Optional[dict]) -> CandidateGrade:
     csva = expected.get("call_site_va")
     is_rv = expected.get("parameter_index") == -1
     api = expected.get("api_name", "")
 
     if actual is None:
-        return CandidateGrade(csva, matched=False, is_return_value=is_rv, api_name=api,
-                              fields=[FieldVerdict("(located)", False, csva,
-                                                   None, "bridge produced no candidate here")])
+        return CandidateGrade(
+            csva,
+            matched=False,
+            is_return_value=is_rv,
+            api_name=api,
+            fields=[
+                FieldVerdict("(located)", False, csva, None, "bridge produced no candidate here")
+            ],
+        )
 
     fields: list[FieldVerdict] = []
 
@@ -110,18 +118,28 @@ def grade_candidate(expected: dict, actual: Optional[dict]) -> CandidateGrade:
         fields.append(FieldVerdict(f, ok, e, a))
 
     # parameter_index (bridge-owned)
-    fields.append(FieldVerdict("parameter_index",
-                               expected.get("parameter_index") == actual.get("parameter_index"),
-                               expected.get("parameter_index"), actual.get("parameter_index")))
+    fields.append(
+        FieldVerdict(
+            "parameter_index",
+            expected.get("parameter_index") == actual.get("parameter_index"),
+            expected.get("parameter_index"),
+            actual.get("parameter_index"),
+        )
+    )
 
     # candidate values
     exp_vals = _nonnull_values(expected)
     act_vals = _nonnull_values(actual)
     if is_rv:
-        fields.append(FieldVerdict(
-            "candidate_values.value", None,
-            sorted(map(str, exp_vals)), sorted(map(str, act_vals)),
-            "return-value check -> value is Channel 4 / derivation, not static arg dataflow"))
+        fields.append(
+            FieldVerdict(
+                "candidate_values.value",
+                None,
+                sorted(map(str, exp_vals)),
+                sorted(map(str, act_vals)),
+                "return-value check -> value is Channel 4 / derivation, not static arg dataflow",
+            )
+        )
     else:
         missing = exp_vals - act_vals
         extra = act_vals - exp_vals
@@ -130,39 +148,77 @@ def grade_candidate(expected: dict, actual: Optional[dict]) -> CandidateGrade:
             note += f"MISSING from bridge: {sorted(map(str, missing))} "
         if extra:
             note += f"(extra found by bridge: {sorted(map(str, extra))})"
-        fields.append(FieldVerdict("candidate_values.value(set)", len(missing) == 0,
-                                   sorted(map(str, exp_vals)), sorted(map(str, act_vals)),
-                                   note.strip()))
+        fields.append(
+            FieldVerdict(
+                "candidate_values.value(set)",
+                len(missing) == 0,
+                sorted(map(str, exp_vals)),
+                sorted(map(str, act_vals)),
+                note.strip(),
+            )
+        )
 
     # evidence: string_source (bridge-owned unless return-value), dataflow_path
     ev_e = expected.get("evidence", {}) or {}
     ev_a = actual.get("evidence", {}) or {}
     if is_rv:
-        fields.append(FieldVerdict("evidence.string_source", None,
-                                   ev_e.get("string_source"), ev_a.get("string_source"),
-                                   "return-value"))
-        fields.append(FieldVerdict("evidence.dataflow_path", None,
-                                   ev_e.get("dataflow_path"), ev_a.get("dataflow_path"),
-                                   "return-value"))
+        fields.append(
+            FieldVerdict(
+                "evidence.string_source",
+                None,
+                ev_e.get("string_source"),
+                ev_a.get("string_source"),
+                "return-value",
+            )
+        )
+        fields.append(
+            FieldVerdict(
+                "evidence.dataflow_path",
+                None,
+                ev_e.get("dataflow_path"),
+                ev_a.get("dataflow_path"),
+                "return-value",
+            )
+        )
     else:
-        fields.append(FieldVerdict("evidence.string_source",
-                                   ev_e.get("string_source") == ev_a.get("string_source"),
-                                   ev_e.get("string_source"), ev_a.get("string_source")))
+        fields.append(
+            FieldVerdict(
+                "evidence.string_source",
+                ev_e.get("string_source") == ev_a.get("string_source"),
+                ev_e.get("string_source"),
+                ev_a.get("string_source"),
+            )
+        )
         dfa = ev_a.get("dataflow_path") or []
         csi = _va_int(csva)
         includes = csi is not None and any(_va_int(x) == csi for x in dfa)
         df_ok = len(dfa) > 0 and includes
-        fields.append(FieldVerdict("evidence.dataflow_path", df_ok,
-                                   ev_e.get("dataflow_path"), dfa,
-                                   "" if df_ok else "expected a non-empty path reaching the call site"))
+        fields.append(
+            FieldVerdict(
+                "evidence.dataflow_path",
+                df_ok,
+                ev_e.get("dataflow_path"),
+                dfa,
+                "" if df_ok else "expected a non-empty path reaching the call site",
+            )
+        )
 
     # derivation-owned (report-only)
     for f in DERIVATION_FIELDS:
         fields.append(FieldVerdict(f, None, expected.get(f), actual.get(f), "derivation stage"))
-    exp_sem = [(cv.get("value"), cv.get("represents"), cv.get("retarget_to"))
-               for cv in expected.get("candidate_values", [])]
-    fields.append(FieldVerdict("candidate_values.represents/retarget_to", None, exp_sem,
-                               "[unknown / null]", "derivation stage"))
+    exp_sem = [
+        (cv.get("value"), cv.get("represents"), cv.get("retarget_to"))
+        for cv in expected.get("candidate_values", [])
+    ]
+    fields.append(
+        FieldVerdict(
+            "candidate_values.represents/retarget_to",
+            None,
+            exp_sem,
+            "[unknown / null]",
+            "derivation stage",
+        )
+    )
 
     return CandidateGrade(csva, matched=True, is_return_value=is_rv, api_name=api, fields=fields)
 
@@ -187,6 +243,7 @@ def grade_record(expected_record: dict, bridge_candidates: list) -> list:
 
 # --- reporting ---------------------------------------------------------------
 
+
 def format_report(grades: list, title: str = "") -> str:
     lines = []
     if title:
@@ -200,13 +257,17 @@ def format_report(grades: list, title: str = "") -> str:
             m = f.marker()
             base = f"  [{m}] {f.field}"
             if f.ok is None:
-                lines.append(f"{base}: oracle={f.expected!r} bridge={f.actual!r}"
-                             + (f"  ({f.note})" if f.note else ""))
+                lines.append(
+                    f"{base}: oracle={f.expected!r} bridge={f.actual!r}"
+                    + (f"  ({f.note})" if f.note else "")
+                )
             elif f.ok:
                 lines.append(f"{base}")
             else:
-                lines.append(f"{base}: oracle={f.expected!r} bridge={f.actual!r}"
-                             + (f"  {f.note}" if f.note else ""))
+                lines.append(
+                    f"{base}: oracle={f.expected!r} bridge={f.actual!r}"
+                    + (f"  {f.note}" if f.note else "")
+                )
     npass = sum(1 for g in grades if g.passed)
     lines.append(f"\n{npass}/{len(grades)} candidates pass bridge-owned grading.")
     return "\n".join(lines)

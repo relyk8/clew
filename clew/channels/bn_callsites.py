@@ -47,15 +47,15 @@ docs/binary_ninja_headless_setup.md.
 Version pinning: BN's analysis output can shift across releases; BN_PINS
 records the currently-validated core version. Bump when re-validating.
 """
+
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
-
-# Validated against the headless install on ml-cluster-01.
+# Validated against a headless Binary Ninja 4.2.6455 Ultimate install.
 # Bump when re-validating against a new BN release.
 BN_PINS: dict[str, str] = {
     "core_version": "4.2.6455",
@@ -76,6 +76,7 @@ V1_SCHEMA_RESOLUTIONS = frozenset(
 
 # --- errors (mirror capa.py / floss.py hierarchy) ----------------------------
 
+
 class BNError(Exception):
     """Base error for Channel 2."""
 
@@ -91,17 +92,18 @@ class BNAnalysisError(BNError):
 
 # --- typed result objects (mirror FlossString / FlossResult) -----------------
 
+
 @dataclass(frozen=True)
 class CallSite:
     """One enumerated API call site. Structural only — no values, no
     dataflow, no comparison semantics (those belong to later units)."""
 
     api_name: str
-    call_site_va: int          # VA of the call instruction
-    function_va: int           # VA of the containing function
-    api_resolution: str        # one of the RESOLUTION_* constants
+    call_site_va: int  # VA of the call instruction
+    function_va: int  # VA of the containing function
+    api_resolution: str  # one of the RESOLUTION_* constants
     calling_convention: Optional[str]  # None when BN can't determine it
-    ordinal: Optional[int] = None      # populated when api_resolution == ordinal
+    ordinal: Optional[int] = None  # populated when api_resolution == ordinal
 
     def to_dict(self) -> dict:
         """Intermediate-JSON form. VAs as 0x-prefixed lowercase hex strings,
@@ -154,8 +156,7 @@ class BNCallSites:
     def schema_emittable(self) -> list[CallSite]:
         """Call sites whose resolution maps onto a v1 schema enum value
         (drops `unknown` indirect calls)."""
-        return [cs for cs in self.call_sites
-                if cs.api_resolution in V1_SCHEMA_RESOLUTIONS]
+        return [cs for cs in self.call_sites if cs.api_resolution in V1_SCHEMA_RESOLUTIONS]
 
     # --- serialization -------------------------------------------------------
 
@@ -180,28 +181,31 @@ class BNCallSites:
         """
         stubs = []
         for cs in self.schema_emittable():
-            stubs.append({
-                "call_site_va": f"0x{cs.call_site_va:08x}",
-                "function_va": f"0x{cs.function_va:08x}",
-                "api_name": cs.api_name,
-                "api_resolution": cs.api_resolution,
-                # everything below is a placeholder filled by Unit 4+:
-                "parameter_index": None,
-                "comparison_operator": "unknown",
-                "evidence": {
-                    "channels": ["bn_xref"],
-                    "string_source": None,
-                    "string_va": None,
-                    "string_function_va": None,
-                    "dataflow_path": [],
-                    "cmp_operand_a": None,
-                    "cmp_operand_b": None,
-                },
-            })
+            stubs.append(
+                {
+                    "call_site_va": f"0x{cs.call_site_va:08x}",
+                    "function_va": f"0x{cs.function_va:08x}",
+                    "api_name": cs.api_name,
+                    "api_resolution": cs.api_resolution,
+                    # everything below is a placeholder filled by Unit 4+:
+                    "parameter_index": None,
+                    "comparison_operator": "unknown",
+                    "evidence": {
+                        "channels": ["bn_xref"],
+                        "string_source": None,
+                        "string_va": None,
+                        "string_function_va": None,
+                        "dataflow_path": [],
+                        "cmp_operand_a": None,
+                        "cmp_operand_b": None,
+                    },
+                }
+            )
         return stubs
 
 
 # --- offline loader (mirror load_floss_results) ------------------------------
+
 
 def load_bn_results(path: str | Path) -> BNCallSites:
     """Load a previously-saved intermediate JSON (the offline-test path —
@@ -216,6 +220,7 @@ def load_bn_results(path: str | Path) -> BNCallSites:
 
 
 # --- the real run (mirror run_floss) -----------------------------------------
+
 
 def run_bn_callsites(
     sample: str | Path,
@@ -300,6 +305,7 @@ def enumerate_with_view(
     """
     import binaryninja
     from binaryninja import MediumLevelILOperation
+
     sites = _collect_call_sites(bv, MediumLevelILOperation)
     return BNCallSites(
         sample_path=sample_path,
@@ -310,6 +316,7 @@ def enumerate_with_view(
 
 
 # --- enumeration internals ---------------------------------------------------
+
 
 def _collect_call_sites(bv, MediumLevelILOperation) -> list[CallSite]:
     """Enumerate API call sites by walking import symbols and their code
@@ -406,8 +413,14 @@ def _classify_import_symbol(sym, SymbolType):
     # Drop the IAT bookkeeping symbols that aren't actual call targets:
     # __import_lookup_table_*, __export_name_ptr_table_*, __import_name_*.
     # These had 0 code refs in testing but guard against name pollution.
-    if clean.startswith(("__import_lookup_table", "__export_name_ptr_table",
-                         "__import_name", "__import_address_table")):
+    if clean.startswith(
+        (
+            "__import_lookup_table",
+            "__export_name_ptr_table",
+            "__import_name",
+            "__import_address_table",
+        )
+    ):
         return ("", RESOLUTION_IMPORT, None)
 
     if ordinal is not None and (not clean or clean.lower().startswith("ordinal")):
@@ -473,14 +486,16 @@ def _getprocaddress_call_sites(bv, MediumLevelILOperation, SymbolType) -> list:
             if not preceding:
                 continue
             api_name = preceding[-1]
-            sites.append(CallSite(
-                api_name=api_name,
-                call_site_va=call.address,
-                function_va=func.start,
-                api_resolution=RESOLUTION_GETPROCADDRESS,
-                calling_convention=_calling_convention_name(func),
-                ordinal=None,
-            ))
+            sites.append(
+                CallSite(
+                    api_name=api_name,
+                    call_site_va=call.address,
+                    function_va=func.start,
+                    api_resolution=RESOLUTION_GETPROCADDRESS,
+                    calling_convention=_calling_convention_name(func),
+                    ordinal=None,
+                )
+            )
 
     return sites
 
@@ -582,7 +597,7 @@ def _clean_symbol_name(name: str) -> str:
     n = name
     for prefix in ("__imp_", "_imp_"):
         if n.startswith(prefix):
-            n = n[len(prefix):]
+            n = n[len(prefix) :]
     # Module-qualified forms like "KERNEL32!IsDebuggerPresent"
     if "!" in n:
         n = n.split("!", 1)[1]
@@ -591,6 +606,7 @@ def _clean_symbol_name(name: str) -> str:
 
 def _sha256(path: Path) -> Optional[str]:
     import hashlib
+
     try:
         h = hashlib.sha256()
         h.update(path.read_bytes())

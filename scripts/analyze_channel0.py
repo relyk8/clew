@@ -3,6 +3,7 @@
 Inputs: malware_results.jsonl, benign_results.jsonl
 Outputs: docs/channel0_at_scale.md, results/channel0_at_scale/*.png, stats.csv
 """
+
 from __future__ import annotations
 
 import argparse
@@ -12,9 +13,9 @@ import statistics
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import matplotlib
+
 matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -23,7 +24,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from clew.tiers import classify  # noqa: E402
-
 
 DERIVATION_STATUS_ORDER = [
     "fully_derivable",
@@ -179,8 +179,14 @@ def render_evasion_histogram(stats: Stats, out: Path) -> None:
     plt.figure(figsize=(8, 5))
     bars = plt.bar(xs, ys, color="#4a7ab8")
     for bar, y in zip(bars, ys):
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(ys) * 0.01,
-                 str(y), ha="center", va="bottom", fontsize=9)
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + max(ys) * 0.01,
+            str(y),
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
     plt.xlabel("Number of anti-analysis rules matched")
     plt.ylabel("Samples")
     plt.title(f"Channel 0 evasion-rule-count distribution (N={stats.n_ok} ok samples)")
@@ -202,8 +208,14 @@ def render_derivation_distribution(stats: Stats, out: Path) -> None:
     bars = plt.bar(labels, counts, color=colors)
     max_c = max(counts) if counts else 1
     for bar, c in zip(bars, counts):
-        plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max_c * 0.01,
-                 str(c), ha="center", va="bottom", fontsize=9)
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + max_c * 0.01,
+            str(c),
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
     plt.xlabel("derivation_status (sample-level, Channel 0)")
     plt.ylabel("Samples")
     plt.title(f"Derivation-status distribution across malware corpus (N={stats.n_total})")
@@ -217,8 +229,7 @@ def render_rule_frequency(stats: Stats, out: Path, top_n: int = 15) -> None:
     top = stats.rule_freq.most_common(top_n)
     if not top:
         plt.figure(figsize=(10, 6))
-        plt.text(0.5, 0.5, "No evasion rules matched on any sample",
-                 ha="center", va="center")
+        plt.text(0.5, 0.5, "No evasion rules matched on any sample", ha="center", va="center")
         plt.savefig(out, dpi=120)
         plt.close()
         return
@@ -242,10 +253,12 @@ def render_runtime_distribution(stats: Stats, out: Path) -> None:
         return
     plt.figure(figsize=(8, 5))
     plt.hist(stats.runtimes_ok, bins=40, color="#6a994e", edgecolor="black", alpha=0.85)
-    plt.axvline(stats.runtime_p50, color="orange", linestyle="--",
-                label=f"P50 = {stats.runtime_p50:.1f}s")
-    plt.axvline(stats.runtime_p95, color="red", linestyle="--",
-                label=f"P95 = {stats.runtime_p95:.1f}s")
+    plt.axvline(
+        stats.runtime_p50, color="orange", linestyle="--", label=f"P50 = {stats.runtime_p50:.1f}s"
+    )
+    plt.axvline(
+        stats.runtime_p95, color="red", linestyle="--", label=f"P95 = {stats.runtime_p95:.1f}s"
+    )
     plt.xlabel("Per-sample runtime (seconds)")
     plt.ylabel("Samples")
     plt.title(f"Channel 0 runtime distribution (N={len(stats.runtimes_ok)} ok)")
@@ -270,6 +283,7 @@ def render_benign_vs_malware(malware: Stats, benign: Stats, out: Path) -> None:
     b_vals = stat_values(benign)
 
     import numpy as np
+
     x = np.arange(len(metrics))
     width = 0.35
     plt.figure(figsize=(9, 5))
@@ -288,8 +302,11 @@ def render_benign_vs_malware(malware: Stats, benign: Stats, out: Path) -> None:
 
 def load_vt_tags(sample_path: Path) -> list[str]:
     """Pull AV-engine detection labels and tags from the companion VT JSON."""
-    vt_json = sample_path.with_suffix(sample_path.suffix + ".json") \
-        if sample_path.suffix else sample_path.parent / (sample_path.name + ".json")
+    vt_json = (
+        sample_path.with_suffix(sample_path.suffix + ".json")
+        if sample_path.suffix
+        else sample_path.parent / (sample_path.name + ".json")
+    )
     if not vt_json.exists():
         return []
     try:
@@ -331,7 +348,11 @@ def pick_spotlights(records: list[dict]) -> tuple[dict | None, dict | None]:
         return None, None
     rich = max(ok, key=lambda r: len(r.get("evasion_rules") or []))
     empty_candidates = [r for r in ok if len(r.get("evasion_rules") or []) == 0]
-    empty = empty_candidates[0] if empty_candidates else min(ok, key=lambda r: len(r.get("evasion_rules") or []))
+    empty = (
+        empty_candidates[0]
+        if empty_candidates
+        else min(ok, key=lambda r: len(r.get("evasion_rules") or []))
+    )
     return rich, empty
 
 
@@ -351,17 +372,25 @@ def write_csv(stats: Stats, out: Path) -> None:
         rows.append({"metric": "runtime_max_sec", "value": round(max(stats.runtimes_ok), 2)})
         rows.append({"metric": "runtime_min_sec", "value": round(min(stats.runtimes_ok), 2)})
     for ds in DERIVATION_STATUS_ORDER:
-        rows.append({"metric": f"derivation_{ds}_count", "value": stats.derivation_counts.get(ds, 0)})
-    rows.append({"metric": "derivation_partition_total", "value": sum(stats.derivation_counts.values())})
+        rows.append(
+            {"metric": f"derivation_{ds}_count", "value": stats.derivation_counts.get(ds, 0)}
+        )
+    rows.append(
+        {"metric": "derivation_partition_total", "value": sum(stats.derivation_counts.values())}
+    )
     if stats.unmapped_rule_counts:
-        rows.append({
-            "metric": "samples_with_unmapped_rules",
-            "value": sum(1 for n in stats.unmapped_rule_counts if n > 0),
-        })
-        rows.append({
-            "metric": "total_unmapped_rule_hits",
-            "value": sum(stats.unmapped_rule_counts),
-        })
+        rows.append(
+            {
+                "metric": "samples_with_unmapped_rules",
+                "value": sum(1 for n in stats.unmapped_rule_counts if n > 0),
+            }
+        )
+        rows.append(
+            {
+                "metric": "total_unmapped_rule_hits",
+                "value": sum(stats.unmapped_rule_counts),
+            }
+        )
     pd.DataFrame(rows).to_csv(out, index=False)
 
 
@@ -378,42 +407,58 @@ def write_report(
     w = lines.append
 
     w("# Channel 0 at scale — 500-sample corpus characterization\n")
-    w(f"_Generated by `scripts/analyze_channel0.py`._\n")
+    w("_Generated by `scripts/analyze_channel0.py`._\n")
 
     w("## 1. Methodology\n")
-    w(f"- **Corpus**: VirusTotal Academic PE32 samples across four archive dates (2017-10-20, 2017-11-20, 2020-05-06, 2021-11-03).")
-    w(f"- **Sampling**: stratified random — `--per-date 125`, seed `42`, validated as 32-bit PE32 via libmagic.")
+    w(
+        "- **Corpus**: VirusTotal Academic PE32 samples across four archive dates (2017-10-20, 2017-11-20, 2020-05-06, 2021-11-03)."
+    )
+    w(
+        "- **Sampling**: stratified random — `--per-date 125`, seed `42`, validated as 32-bit PE32 via libmagic."
+    )
     w(f"- **N (malware)**: {malware.n_total} processed records.")
-    w(f"- **Benign control**: {benign.n_total} binaries from `~/CAPEv2/analyzer/windows/` (signed Microsoft utilities, CAPE analysis tools).")
-    w(f"- **Per-sample timeout**: 120s.")
-    w(f"- **Versions pinned**: flare-capa 9.4.0, capa-rules @ `be59710a`, capa sigs @ `46188228`. (Pin drift will change matches.)")
-    w(f"- **Framing**: this report characterizes **what Channel 0 (capa-wrapper) sees**, not evasion ground truth. Specificity is referenced against the benign control set.")
+    w(
+        f"- **Benign control**: {benign.n_total} binaries from `~/CAPEv2/analyzer/windows/` (signed Microsoft utilities, CAPE analysis tools)."
+    )
+    w("- **Per-sample timeout**: 120s.")
+    w(
+        "- **Versions pinned**: flare-capa 9.4.0, capa-rules @ `be59710a`, capa sigs @ `46188228`. (Pin drift will change matches.)"
+    )
+    w(
+        "- **Framing**: this report characterizes **what Channel 0 (capa-wrapper) sees**, not evasion ground truth. Specificity is referenced against the benign control set."
+    )
     w("")
 
     w("## 2. Execution overhead\n")
-    w(f"| metric | malware | benign |")
-    w(f"|---|---:|---:|")
+    w("| metric | malware | benign |")
+    w("|---|---:|---:|")
     w(f"| samples processed | {malware.n_total} | {benign.n_total} |")
     w(f"| ok | {malware.n_ok} | {benign.n_ok} |")
     w(f"| timeout | {malware.n_timeout} | {benign.n_timeout} |")
     w(f"| capa_error | {malware.n_capa_error} | {benign.n_capa_error} |")
     w(f"| parse_error | {malware.n_parse_error} | {benign.n_parse_error} |")
     w(f"| other_error | {malware.n_other_error} | {benign.n_other_error} |")
-    w(f"| total ok runtime (s) | {malware.total_runtime_sec:.1f} | {benign.total_runtime_sec:.1f} |")
+    w(
+        f"| total ok runtime (s) | {malware.total_runtime_sec:.1f} | {benign.total_runtime_sec:.1f} |"
+    )
     w(f"| P50 runtime (s) | {malware.runtime_p50:.2f} | {benign.runtime_p50:.2f} |")
     w(f"| P95 runtime (s) | {malware.runtime_p95:.2f} | {benign.runtime_p95:.2f} |")
     w(f"| mean runtime (s) | {malware.runtime_mean:.2f} | {benign.runtime_mean:.2f} |")
     if malware.runtimes_ok:
-        w(f"| max runtime (s) | {max(malware.runtimes_ok):.2f} | {max(benign.runtimes_ok or [0]):.2f} |")
+        w(
+            f"| max runtime (s) | {max(malware.runtimes_ok):.2f} | {max(benign.runtimes_ok or [0]):.2f} |"
+        )
     w("")
     # Extrapolation
     if malware.runtime_mean > 0:
         full_corpus = 78515
         est_seconds = full_corpus * malware.runtime_mean
         est_hours = est_seconds / 3600.0
-        w(f"**Extrapolation:** at the observed malware mean of {malware.runtime_mean:.2f}s/sample, "
-          f"processing the full {full_corpus:,}-sample VT corpus would take "
-          f"~{est_hours:.1f} hr single-threaded (~{est_hours/4:.1f} hr at 4-way parallelism).")
+        w(
+            f"**Extrapolation:** at the observed malware mean of {malware.runtime_mean:.2f}s/sample, "
+            f"processing the full {full_corpus:,}-sample VT corpus would take "
+            f"~{est_hours:.1f} hr single-threaded (~{est_hours / 4:.1f} hr at 4-way parallelism)."
+        )
     w("")
     w(f"![runtime distribution]({chart_dir_rel}/runtime_distribution.png)\n")
 
@@ -429,8 +474,10 @@ def write_report(
     w("")
     w(f"![evasion count histogram]({chart_dir_rel}/evasion_count_histogram.png)\n")
 
-    w("Derivation-status mix (sample-level field `derivation_status` from `clew/tiers.py`; "
-      "this is **not** the defeatability tier from the evasion taxonomy):\n")
+    w(
+        "Derivation-status mix (sample-level field `derivation_status` from `clew/tiers.py`; "
+        "this is **not** the defeatability tier from the evasion taxonomy):\n"
+    )
     w("| derivation_status | count | % of N | meaning |")
     w("|---|---:|---:|---|")
     meanings = {
@@ -446,16 +493,20 @@ def write_report(
     w("")
     n_with_unmapped = sum(1 for n in malware.unmapped_rule_counts if n > 0)
     pct_with_unmapped = (100.0 * n_with_unmapped / malware.n_ok) if malware.n_ok else 0.0
-    w(f"**Unmapped-rule backlog (orthogonal to `derivation_status`):** "
-      f"{n_with_unmapped} samples ({pct_with_unmapped:.1f}% of `ok`) had at least one matched capa "
-      f"rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queue work for week-9 derivation "
-      f"and do *not* lower the sample's `derivation_status` — a sample can be `fully_derivable` "
-      f"on its mapped portion while still carrying unmapped rules.\n")
+    w(
+        f"**Unmapped-rule backlog (orthogonal to `derivation_status`):** "
+        f"{n_with_unmapped} samples ({pct_with_unmapped:.1f}% of `ok`) had at least one matched capa "
+        f"rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queue work for week-9 derivation "
+        f"and do *not* lower the sample's `derivation_status` — a sample can be `fully_derivable` "
+        f"on its mapped portion while still carrying unmapped rules.\n"
+    )
     w(f"![derivation status distribution]({chart_dir_rel}/derivation_status_distribution.png)\n")
 
     w("## 4. Top techniques surfaced\n")
-    w("These are the most frequent anti-analysis rules Channel 0 matched across the corpus. "
-      "They're the prioritization input for Channel 1 (FLOSS) and Channel 2 (Binary Ninja):\n")
+    w(
+        "These are the most frequent anti-analysis rules Channel 0 matched across the corpus. "
+        "They're the prioritization input for Channel 1 (FLOSS) and Channel 2 (Binary Ninja):\n"
+    )
     w("| rank | rule | matches | % of ok |")
     w("|---:|---|---:|---:|")
     for rank, (name, count) in enumerate(malware.rule_freq.most_common(15), 1):
@@ -465,19 +516,23 @@ def write_report(
     w(f"![top rule frequency]({chart_dir_rel}/rule_frequency.png)\n")
 
     w("## 5. Specificity floor (benign control)\n")
-    w("**Important framing first.** The benign control set is intentionally a *tools in your "
-      "sandbox* set, not a random benign baseline. The 11 binaries are pulled from "
-      "`~/CAPEv2/analyzer/windows/` — Microsoft-signed utilities **and CAPE's own analysis "
-      "tools**. CAPE analyzer tools *are* analysis tools, so capa's `reference analysis tools "
-      "strings` and related anti-analysis rules firing on them is correct behavior, not a "
-      "false-positive signal against the rules. The table below is therefore not a true "
-      "specificity floor — it characterizes the worst-case adversarial benign population: "
-      "binaries that look like analysis tooling. A proper specificity floor would require a "
-      "random benign baseline (signed third-party utilities, OS components excluded), which "
-      "this run does not have.\n")
-    w("With that caveat: the table reports the rate of anti-analysis rules firing on each "
-      "population. Higher rates on the benign control are *expected* given the construction "
-      "above, and do **not** indicate that capa's anti-analysis rules are broken.\n")
+    w(
+        "**Important framing first.** The benign control set is intentionally a *tools in your "
+        "sandbox* set, not a random benign baseline. The 11 binaries are pulled from "
+        "`~/CAPEv2/analyzer/windows/` — Microsoft-signed utilities **and CAPE's own analysis "
+        "tools**. CAPE analyzer tools *are* analysis tools, so capa's `reference analysis tools "
+        "strings` and related anti-analysis rules firing on them is correct behavior, not a "
+        "false-positive signal against the rules. The table below is therefore not a true "
+        "specificity floor — it characterizes the worst-case adversarial benign population: "
+        "binaries that look like analysis tooling. A proper specificity floor would require a "
+        "random benign baseline (signed third-party utilities, OS components excluded), which "
+        "this run does not have.\n"
+    )
+    w(
+        "With that caveat: the table reports the rate of anti-analysis rules firing on each "
+        "population. Higher rates on the benign control are *expected* given the construction "
+        "above, and do **not** indicate that capa's anti-analysis rules are broken.\n"
+    )
     if benign.n_ok > 0:
         pct_evasive_b = 100.0 * sum(1 for n in benign.evasion_counts if n >= 1) / benign.n_ok
     else:
@@ -486,8 +541,8 @@ def write_report(
         pct_evasive_m = 100.0 * sum(1 for n in malware.evasion_counts if n >= 1) / malware.n_ok
     else:
         pct_evasive_m = 0.0
-    w(f"| population | N (ok) | % with >=1 evasion rule | mean evasion count |")
-    w(f"|---|---:|---:|---:|")
+    w("| population | N (ok) | % with >=1 evasion rule | mean evasion count |")
+    w("|---|---:|---:|---:|")
     mean_b = statistics.mean(benign.evasion_counts) if benign.evasion_counts else 0
     mean_m = statistics.mean(malware.evasion_counts) if malware.evasion_counts else 0
     w(f"| malware corpus | {malware.n_ok} | {pct_evasive_m:.1f}% | {mean_m:.2f} |")
@@ -501,17 +556,21 @@ def write_report(
         w(f"- **SHA-256**: `{rich_sample.get('sha256')}`")
         w(f"- **Archive**: `{rich_sample.get('archive_date')}`")
         w(f"- **Total capa rules matched**: {rich_sample.get('total_rules')}")
-        w(f"- **Anti-analysis rules** ({len(rich_sample.get('evasion_rules') or [])}): "
-          + ", ".join(f"`{r}`" for r in (rich_sample.get('evasion_rules') or [])))
+        w(
+            f"- **Anti-analysis rules** ({len(rich_sample.get('evasion_rules') or [])}): "
+            + ", ".join(f"`{r}`" for r in (rich_sample.get("evasion_rules") or []))
+        )
         w(f"- **derivation_status**: `{derivation_status_for(rich_sample)}`")
         unmapped = rich_sample.get("unmapped_rules") or []
         if unmapped:
-            w(f"- **Unmapped rules (backlog)** ({len(unmapped)}): "
-              + ", ".join(f"`{r}`" for r in unmapped))
+            w(
+                f"- **Unmapped rules (backlog)** ({len(unmapped)}): "
+                + ", ".join(f"`{r}`" for r in unmapped)
+            )
         w(f"- **Runtime**: {rich_sample.get('runtime_sec'):.2f}s")
         vt_tags = load_vt_tags(Path(rich_sample.get("sample_path", "")))
         if vt_tags:
-            w(f"- **VT descriptive tags**: " + ", ".join(f"`{t}`" for t in vt_tags[:10]))
+            w("- **VT descriptive tags**: " + ", ".join(f"`{t}`" for t in vt_tags[:10]))
         w("")
     if empty_sample:
         empty_count = len(empty_sample.get("evasion_rules") or [])
@@ -522,33 +581,46 @@ def write_report(
         w(f"- **Archive**: `{empty_sample.get('archive_date')}`")
         w(f"- **Total capa rules matched**: {empty_sample.get('total_rules')}")
         if is_truly_empty:
-            w(f"- **Anti-analysis rules**: 0 (capa found no evasion signal)")
+            w("- **Anti-analysis rules**: 0 (capa found no evasion signal)")
         else:
             evasion_list = empty_sample.get("evasion_rules") or []
-            w(f"- **Anti-analysis rules** ({empty_count}): " + ", ".join(f"`{r}`" for r in evasion_list))
-            w(f"- _Note: no truly capa-empty sample existed in this run; this is the lowest-coverage `ok` sample available._")
+            w(
+                f"- **Anti-analysis rules** ({empty_count}): "
+                + ", ".join(f"`{r}`" for r in evasion_list)
+            )
+            w(
+                "- _Note: no truly capa-empty sample existed in this run; this is the lowest-coverage `ok` sample available._"
+            )
         w(f"- **derivation_status**: `{derivation_status_for(empty_sample)}`")
         unmapped = empty_sample.get("unmapped_rules") or []
         if unmapped:
-            w(f"- **Unmapped rules (backlog)** ({len(unmapped)}): "
-              + ", ".join(f"`{r}`" for r in unmapped))
+            w(
+                f"- **Unmapped rules (backlog)** ({len(unmapped)}): "
+                + ", ".join(f"`{r}`" for r in unmapped)
+            )
         w(f"- **Runtime**: {empty_sample.get('runtime_sec'):.2f}s")
         vt_tags = load_vt_tags(Path(empty_sample.get("sample_path", "")))
         if vt_tags:
-            w(f"- **VT descriptive tags**: " + ", ".join(f"`{t}`" for t in vt_tags[:10]))
+            w("- **VT descriptive tags**: " + ", ".join(f"`{t}`" for t in vt_tags[:10]))
             if is_truly_empty:
-                w(f"- **Interpretation note**: AV engines (above) report on this sample independently of capa. "
-                  f"If the descriptive tags suggest evasion-flavored behavior but Channel 0 caught nothing, "
-                  f"this sample is a candidate for Channels 1 (FLOSS) and 2 (BN) to fill in. "
-                  f"AV labels are noisy and used here only for context, not as ground truth.")
+                w(
+                    "- **Interpretation note**: AV engines (above) report on this sample independently of capa. "
+                    "If the descriptive tags suggest evasion-flavored behavior but Channel 0 caught nothing, "
+                    "this sample is a candidate for Channels 1 (FLOSS) and 2 (BN) to fill in. "
+                    "AV labels are noisy and used here only for context, not as ground truth."
+                )
             else:
-                w(f"- **Interpretation note**: even Channel 0's lower-coverage samples surface *some* anti-analysis "
-                  f"signal in this corpus, which is itself informative — every `ok` sample matched at least "
-                  f"one rule. The downstream gap is in *depth* (per-call-site detail) rather than *breadth* "
-                  f"(detection of evasion at all).")
+                w(
+                    "- **Interpretation note**: even Channel 0's lower-coverage samples surface *some* anti-analysis "
+                    "signal in this corpus, which is itself informative — every `ok` sample matched at least "
+                    "one rule. The downstream gap is in *depth* (per-call-site detail) rather than *breadth* "
+                    "(detection of evasion at all)."
+                )
         else:
-            w(f"- **Interpretation note**: VT metadata absent; we can't characterize this sample "
-              f"beyond what capa returned.")
+            w(
+                "- **Interpretation note**: VT metadata absent; we can't characterize this sample "
+                "beyond what capa returned."
+            )
         w("")
 
     w("## 7. Implications for Channel 1 (FLOSS) and beyond\n")
@@ -556,68 +628,96 @@ def write_report(
     n_zero = sum(1 for n in malware.evasion_counts if n == 0)
     pct_zero = (100.0 * n_zero / malware.n_ok) if malware.n_ok else 0.0
     if top_rules:
-        w(f"- **Capa's most-frequent anti-analysis hits** ({', '.join(f'`{r}`' for r in top_rules)}) "
-          f"are the high-volume techniques in this corpus. Channel 1 (FLOSS) and Channel 2 (BN) "
-          f"should treat these as priority targets for per-call-site enrichment, since these are "
-          f"where the downstream fuzzer will see the most call sites.")
+        w(
+            f"- **Capa's most-frequent anti-analysis hits** ({', '.join(f'`{r}`' for r in top_rules)}) "
+            f"are the high-volume techniques in this corpus. Channel 1 (FLOSS) and Channel 2 (BN) "
+            f"should treat these as priority targets for per-call-site enrichment, since these are "
+            f"where the downstream fuzzer will see the most call sites."
+        )
     if n_zero > 0:
-        w(f"- **{pct_zero:.1f}% of `ok` samples ({n_zero} samples) matched zero anti-analysis rules.** "
-          f"These are the candidates for Channel 1 to surface evasion that's expressed via "
-          f"decoded/stackstring data capa can't decode statically — the breadth-gap for FLOSS.")
+        w(
+            f"- **{pct_zero:.1f}% of `ok` samples ({n_zero} samples) matched zero anti-analysis rules.** "
+            f"These are the candidates for Channel 1 to surface evasion that's expressed via "
+            f"decoded/stackstring data capa can't decode statically — the breadth-gap for FLOSS."
+        )
     else:
-        w(f"- **No `ok` samples in this run matched zero anti-analysis rules.** Channel 0 surfaced "
-          f"at least one rule on every clean run. The gap is therefore in *depth* (per-call-site "
-          f"precision and concrete candidate values), which is exactly what Channels 1, 2, and 4 "
-          f"add. FLOSS expands the candidate-string pool; BN connects strings to call sites; "
-          f"DRIO captures runtime cmp/test operands.")
+        w(
+            "- **No `ok` samples in this run matched zero anti-analysis rules.** Channel 0 surfaced "
+            "at least one rule on every clean run. The gap is therefore in *depth* (per-call-site "
+            "precision and concrete candidate values), which is exactly what Channels 1, 2, and 4 "
+            "add. FLOSS expands the candidate-string pool; BN connects strings to call sites; "
+            "DRIO captures runtime cmp/test operands."
+        )
     n_total = malware.n_total or 1
     n_fully = malware.derivation_counts.get("fully_derivable", 0)
     if n_fully > 0:
-        w(f"- **{n_fully} samples ({100.0*n_fully/n_total:.1f}%) are `fully_derivable`** — every "
-          f"matched capa rule is actionable. This is the honest \"Clew handles these today\" "
-          f"number.")
+        w(
+            f"- **{n_fully} samples ({100.0 * n_fully / n_total:.1f}%) are `fully_derivable`** — every "
+            f'matched capa rule is actionable. This is the honest "Clew handles these today" '
+            f"number."
+        )
     n_partial = malware.derivation_counts.get("partially_derivable", 0)
     if n_partial > 0:
-        w(f"- **{n_partial} samples ({100.0*n_partial/n_total:.1f}%) are `partially_derivable`** — "
-          f"some matched rules are actionable, others are not (unmapped or APIs outside target). "
-          f"Clew acts on the actionable portion; the rest is derivation backlog.")
+        w(
+            f"- **{n_partial} samples ({100.0 * n_partial / n_total:.1f}%) are `partially_derivable`** — "
+            f"some matched rules are actionable, others are not (unmapped or APIs outside target). "
+            f"Clew acts on the actionable portion; the rest is derivation backlog."
+        )
     n_not_derivable = malware.derivation_counts.get("not_derivable", 0)
     if n_not_derivable > 0:
-        w(f"- **{n_not_derivable} samples ({100.0*n_not_derivable/n_total:.1f}%) are "
-          f"`not_derivable`** — capa surfaced anti-analysis rules but none are actionable yet. "
-          f"Sized derivation work in this module: extend `CAPA_RULE_TO_APIS` and these flip to "
-          f"`fully_derivable` or `partially_derivable`.")
+        w(
+            f"- **{n_not_derivable} samples ({100.0 * n_not_derivable / n_total:.1f}%) are "
+            f"`not_derivable`** — capa surfaced anti-analysis rules but none are actionable yet. "
+            f"Sized derivation work in this module: extend `CAPA_RULE_TO_APIS` and these flip to "
+            f"`fully_derivable` or `partially_derivable`."
+        )
     n_no_signal = malware.derivation_counts.get("no_capa_signal", 0)
     if n_no_signal > 0:
-        w(f"- **{n_no_signal} samples ({100.0*n_no_signal/n_total:.1f}%) are `no_capa_signal`** — "
-          f"capa returned no anti-analysis rules (truly silent, or didn't successfully complete). "
-          f"Channel 0 has nothing on these; FLOSS / BN / DRIO must surface what capa missed.")
+        w(
+            f"- **{n_no_signal} samples ({100.0 * n_no_signal / n_total:.1f}%) are `no_capa_signal`** — "
+            f"capa returned no anti-analysis rules (truly silent, or didn't successfully complete). "
+            f"Channel 0 has nothing on these; FLOSS / BN / DRIO must surface what capa missed."
+        )
     n_timeouts = malware.n_timeout
     if n_timeouts > 0:
         pct_to = 100.0 * n_timeouts / malware.n_total
-        w(f"- **Timeout rate: {pct_to:.1f}% ({n_timeouts} samples)** hit the 120s ceiling. These are "
-          f"capa-pathological samples — likely heavy packers, large overlays, or control-flow "
-          f"obfuscation that defeats capa's analysis budget. **Not automatically Channel 4 territory:** "
-          f"DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't "
-          f"complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. "
-          f"Treat these as scope-limit findings, not as a queue handed to another channel.")
+        w(
+            f"- **Timeout rate: {pct_to:.1f}% ({n_timeouts} samples)** hit the 120s ceiling. These are "
+            f"capa-pathological samples — likely heavy packers, large overlays, or control-flow "
+            f"obfuscation that defeats capa's analysis budget. **Not automatically Channel 4 territory:** "
+            f"DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't "
+            f"complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. "
+            f"Treat these as scope-limit findings, not as a queue handed to another channel."
+        )
     w("")
 
     w("## 8. Honest limitations\n")
-    w(f"- **No ground truth.** Channel 0's spec is \"what capa sees\". This report characterizes that. "
-      f"We did not validate per-sample whether capa was right or wrong.")
-    w(f"- **N=500 isn't \"the malware ecosystem.\"** Stratified random across 4 dates spanning 2017–2021 "
-      f"on VT Academic samples; descriptive only.")
-    w(f"- **Capa is a black box at the pinned versions.** Rule drift in `mandiant/capa-rules` would change these numbers.")
-    w(f"- **Benign control is small (N={benign.n_total}) and biased** toward Microsoft-signed analysis "
-      f"tools; not a representative random benign baseline.")
-    w(f"- **VT metadata is noisy.** AV-engine labels are vendor-dependent and used here only for "
-      f"descriptive context in the spotlight pair, never as a ground-truth label.")
+    w(
+        '- **No ground truth.** Channel 0\'s spec is "what capa sees". This report characterizes that. '
+        "We did not validate per-sample whether capa was right or wrong."
+    )
+    w(
+        '- **N=500 isn\'t "the malware ecosystem."** Stratified random across 4 dates spanning 2017–2021 '
+        "on VT Academic samples; descriptive only."
+    )
+    w(
+        "- **Capa is a black box at the pinned versions.** Rule drift in `mandiant/capa-rules` would change these numbers."
+    )
+    w(
+        f"- **Benign control is small (N={benign.n_total}) and biased** toward Microsoft-signed analysis "
+        f"tools; not a representative random benign baseline."
+    )
+    w(
+        "- **VT metadata is noisy.** AV-engine labels are vendor-dependent and used here only for "
+        "descriptive context in the spotlight pair, never as a ground-truth label."
+    )
     w("")
-    w(f"---")
-    w(f"\n_Source data: `results/channel0_at_scale/malware_results.jsonl` "
-      f"({malware.n_total} records), `results/channel0_at_scale/benign_results.jsonl` "
-      f"({benign.n_total} records). Stats CSV: `results/channel0_at_scale/stats.csv`._")
+    w("---")
+    w(
+        f"\n_Source data: `results/channel0_at_scale/malware_results.jsonl` "
+        f"({malware.n_total} records), `results/channel0_at_scale/benign_results.jsonl` "
+        f"({benign.n_total} records). Stats CSV: `results/channel0_at_scale/stats.csv`._"
+    )
 
     out.write_text("\n".join(lines))
 
@@ -626,8 +726,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--malware-jsonl", type=Path, required=True)
     ap.add_argument("--benign-jsonl", type=Path, required=True)
-    ap.add_argument("--results-dir", type=Path, required=True,
-                    help="dir for PNGs and stats.csv")
+    ap.add_argument("--results-dir", type=Path, required=True, help="dir for PNGs and stats.csv")
     ap.add_argument("--report", type=Path, required=True, help="markdown report output")
     args = ap.parse_args()
 
@@ -640,16 +739,24 @@ def main() -> int:
     benign_stats = compute_stats(benign_records)
 
     print(f"Loaded malware records: {len(malware_records)}; benign records: {len(benign_records)}")
-    print(f"  malware ok/timeout/err = {malware_stats.n_ok}/{malware_stats.n_timeout}/"
-          f"{malware_stats.n_capa_error + malware_stats.n_parse_error + malware_stats.n_other_error}")
-    print(f"  benign ok/timeout/err = {benign_stats.n_ok}/{benign_stats.n_timeout}/"
-          f"{benign_stats.n_capa_error + benign_stats.n_parse_error + benign_stats.n_other_error}")
+    print(
+        f"  malware ok/timeout/err = {malware_stats.n_ok}/{malware_stats.n_timeout}/"
+        f"{malware_stats.n_capa_error + malware_stats.n_parse_error + malware_stats.n_other_error}"
+    )
+    print(
+        f"  benign ok/timeout/err = {benign_stats.n_ok}/{benign_stats.n_timeout}/"
+        f"{benign_stats.n_capa_error + benign_stats.n_parse_error + benign_stats.n_other_error}"
+    )
 
     render_evasion_histogram(malware_stats, args.results_dir / "evasion_count_histogram.png")
-    render_derivation_distribution(malware_stats, args.results_dir / "derivation_status_distribution.png")
+    render_derivation_distribution(
+        malware_stats, args.results_dir / "derivation_status_distribution.png"
+    )
     render_rule_frequency(malware_stats, args.results_dir / "rule_frequency.png")
     render_runtime_distribution(malware_stats, args.results_dir / "runtime_distribution.png")
-    render_benign_vs_malware(malware_stats, benign_stats, args.results_dir / "benign_vs_malware.png")
+    render_benign_vs_malware(
+        malware_stats, benign_stats, args.results_dir / "benign_vs_malware.png"
+    )
     write_csv(malware_stats, args.results_dir / "stats.csv")
 
     rich, empty = pick_spotlights(malware_records)

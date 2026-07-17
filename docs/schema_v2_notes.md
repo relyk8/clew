@@ -65,7 +65,7 @@ drafts under the single name "tier":
 - Per-candidate `evasion_tier` (`tier_1`..`tier_4`) is the
   *defeatability tier* of the evasion technique the candidate
   addresses, drawn from the taxonomy in
-  `docs/context/evasion-taxonomy.md`.
+  `docs/evasion-taxonomy.md`.
 
 `no_capa_signal` is also assigned to samples where capa didn't
 successfully complete (timeouts, capa errors). Operationally same as

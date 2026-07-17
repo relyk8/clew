@@ -1,49 +1,52 @@
 # Binary Ninja Headless Setup (clew / Channel 2)
 
-This document covers running Binary Ninja in **headless mode** on `ml-cluster-01`
-for clew's Channel 2 work (call-site enumeration and the dataflow bridge).
+This document covers running Binary Ninja in **headless mode** for clew's
+Channel 2 work (call-site enumeration and the dataflow bridge). It assumes a
+Binary Ninja Enterprise (floating-license) deployment; adapt the license step if
+you have a standalone license.
 
-The Binary Ninja application, the clew virtual environment, and a shared
-credentials file are **already set up**. Per-researcher setup is just **two
-`source` commands**.
+Clew pins **Binary Ninja core `4.2.6455 Ultimate`** (`BN_PINS` in
+`clew/channels/bn_callsites.py`). Bump on re-validation.
 
 ---
 
-## What's already set up (shared, do not repeat)
+## One-time setup
 
-- **Application:** Binary Ninja 4.2.6455 Ultimate, extracted to
-  `/home/shared/binaryninja/` (group-readable).
-- **Python API wiring:** `install_api.py` has already been run against the shared
-  clew venv, so `import binaryninja` resolves there. You do **not** need to run it
-  again.
-- **Shared venv:** `/home/shared/clew-env/clew/.venv`
-- **Shared environment file:** `/home/shared/clew-env/bn_env.sh` — sets the
-  Enterprise server URL and the shared account credentials.
+1. **Install Binary Ninja** wherever you keep it (the convention is
+   `/opt/binaryninja`; any path works as long as the Python API is pointed at
+   it). Note the install directory — call it `$BN_INSTALL`.
 
-> Note: this is a non-standard install location (convention is `/opt/binaryninja`).
-> It lives under `/home/shared` because that's the large data partition (11 TB)
-> and where the rest of the shared researcher files live. Anything that assumes
-> the default path needs to be pointed at `/home/shared/binaryninja` explicitly.
+2. **Wire the Python API into your environment.** Run Binary Ninja's bundled
+   `install_api.py` against the Python interpreter/venv you'll use for clew, so
+   that `import binaryninja` resolves:
+
+   ```bash
+   python "$BN_INSTALL/scripts/install_api.py"
+   ```
+
+3. **Create a local environment file** (e.g. `bn_env.sh`) that exports your
+   Enterprise server URL and license credentials as environment variables. Keep
+   this file **out of the repository** — it holds credentials. A `.gitignore`
+   entry for it is a good idea.
 
 ---
 
 ## Setup (every session)
 
-Two commands — activate the shared venv, then source the shared environment file:
+Activate the venv that has the API wired in, then source your environment file:
 
 ```bash
-source /home/shared/clew-env/clew/.venv/bin/activate
-source /home/shared/clew-env/bn_env.sh
+source /path/to/venv/bin/activate
+source bn_env.sh
 ```
 
-That's the whole setup. The env file provides the Enterprise server URL and the
-shared school account credentials, so the license checkout works with no further
-configuration.
+The env file supplies the Enterprise server URL and credentials, so the license
+checkout works with no further configuration. Environment variables don't
+survive across separate shells/SSH sessions — re-source `bn_env.sh` in each new
+shell.
 
-> The `bn_env.sh` file contains the shared school account credentials. This is a
-> default account issued to the whole group, so the password is shared by design —
-> there's nothing private to protect here. Keep the file inside `/home/shared`;
-> don't copy credentials into the repo or anywhere public.
+> Never copy license credentials into the repository or anywhere public. Keep
+> them in the local, gitignored env file.
 
 ---
 
@@ -96,19 +99,19 @@ with LicenseCheckout():
 ## Troubleshooting
 
 **`Unknown Enterprise Server URL` (RuntimeError on checkout)**
-You didn't source `bn_env.sh` in this shell (env vars don't survive across separate
-SSH sessions). Re-run `source /home/shared/clew-env/bn_env.sh`.
+You didn't source your env file in this shell (env vars don't survive across
+separate SSH sessions). Re-source `bn_env.sh`.
 
 **`Could not checkout a license: Not authenticated`**
 Same cause — the credentials env vars aren't set in the current shell. Re-source
-`bn_env.sh`. If it still fails, the shared account password may have changed (ask
-the group) or the server may have switched to SSO, which username/password auth
-can't satisfy.
+your env file. If it still fails, the account password may have changed, or the
+server may have switched to SSO, which username/password auth can't satisfy.
 
 **TLS / certificate errors**
-The server (`*.cdn.local`) uses an internal certificate. If the client rejects it,
-the host's CA may need to be added to the system trust store. (A successful
-checkout confirms the cert is trusted; if checkout works, this isn't your problem.)
+If the Enterprise server uses an internal or self-signed certificate and the
+client rejects it, the host's CA may need to be added to the system trust store.
+(A successful checkout confirms the cert is trusted; if checkout works, this
+isn't your problem.)
 
 **`database is locked` (Error while saving database snapshot)**
 Binary Ninja uses SQLite for `.bndb` databases — only one process can open a given
@@ -117,5 +120,5 @@ is touching. Close all instances and retry.
 
 **Wrong/old version picked up**
 Confirm `import binaryninja` reports `4.2.6455 Ultimate`. If it reports something
-else, another Binary Ninja install may be shadowing the shared one in your
+else, another Binary Ninja install may be shadowing the intended one in your
 environment.

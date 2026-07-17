@@ -3,7 +3,7 @@
 `derivation_status` answers: where is Clew's derivation pipeline with this
 sample today? It is **not** a defeatability tier. The defeatability tier (a
 property of an evasion technique) is the taxonomy concept used in
-`docs/context/evasion-taxonomy.md` and surfaces per-candidate via the
+`docs/evasion-taxonomy.md` and surfaces per-candidate via the
 schema's `evasion_tier` field.
 
 Rollup model: per-rule actionability decides the sample's categorical.
@@ -28,10 +28,10 @@ sample space cleanly with no overlap.
 returned alongside the categorical so callers can size derivation
 backlog independently of the sample's classification.
 """
+
 from __future__ import annotations
 
 from typing import Iterable
-
 
 # Empirically derived from Pfuzzer's public dataset (github.com/Sap4Sec/pfuzzer):
 # every API surfaced in the "Mutations applied" section across all 1,078
@@ -63,135 +63,151 @@ from typing import Iterable
 # - GetModuleHandleA/W are added because they are the canonical anti-VM
 #   string-fingerprint APIs that capa's "reference anti-VM strings" rule
 #   family implies, and Pfuzzer-class fuzzers interpose on them.
-PFUZZER_68_APIS: frozenset[str] = frozenset({
-    # Anti-debug (canonical; covered by capa "check for debugger via API")
-    "IsDebuggerPresent",
-    "CheckRemoteDebuggerPresent",
-    "NtQueryInformationProcess",
-    # Module / library lookup (canonical anti-VM string fingerprinting)
-    "GetModuleHandleA",
-    "GetModuleHandleW",
-    # File system
-    "CreateFileA",
-    "CreateFileW",
-    "NtCreateFile",
-    "FindFirstFileA",
-    "FindFirstFileW",
-    "FindNextFileA",
-    "FindNextFileW",
-    "GetFileAttributesA",
-    "GetFileAttributesW",
-    "GetFileAttributesExA",
-    "GetFileAttributesExW",
-    "GetDiskFreeSpaceExA",
-    "GetDiskFreeSpaceExW",
-    "DeviceIoControl",
-    # Module / process image
-    "GetModuleFileNameA",
-    "GetModuleFileNameW",
-    "GetModuleFileNameExA",
-    "GetModuleFileNameExW",
-    "GetProcessImageFileNameA",
-    "GetProcessImageFileNameW",
-    "QueryFullProcessImageNameW",
-    "K32GetModuleBaseNameA",
-    "K32GetModuleBaseNameW",
-    # User / system identity
-    "GetUserNameA",
-    "GetUserNameW",
-    "GetUserNameExW",
-    "GetComputerNameA",
-    "GetComputerNameW",
-    "GetComputerNameExA",
-    "GetComputerNameExW",
-    # Process enumeration
-    "Process32First",
-    "Process32FirstW",
-    "Process32Next",
-    "Process32NextW",
-    # Window enumeration / fingerprinting
-    "FindWindowA",
-    "FindWindowW",
-    "FindWindowExA",
-    "FindWindowExW",
-    "GetWindowTextA",
-    "GetWindowTextW",
-    "GetForegroundWindow",
-    "GetCursorPos",
-    # Registry
-    "NtOpenKey",
-    "NtQueryValueKey",
-    "RegOpenKeyA",
-    "RegOpenKeyW",
-    "RegOpenKeyExA",
-    "RegOpenKeyExW",
-    "RegEnumKeyA",
-    "RegEnumKeyW",
-    "RegEnumKeyExA",
-    "RegEnumKeyExW",
-    "RegQueryValueExA",
-    "RegQueryValueExW",
-    "NtQueryDirectoryObject",
-    "NtQuerySystemInformation",
-    # Locale
-    "GetSystemDefaultLCID",
-    "GetUserDefaultLCID",
-    "GetKeyboardLayout",
-    # Hardware / system info
-    "GetSystemInfo",
-    "GetNativeSystemInfo",
-    "GetSystemFirmwareTable",
-    "GlobalMemoryStatusEx",
-    "IsNativeVhdBoot",
-    "SetupDiGetDeviceRegistryPropertyW",
-    "EnumDisplayDevicesW",
-    "IsProcessorFeaturePresent",
-    "GetVolumeInformationA",
-    "GetVolumeInformationW",
-    # Networking / adapter info
-    "GetAdaptersAddresses",
-    "GetAdaptersInfo",
-    "InternetGetConnectedState",
-    "WNetGetProviderNameA",
-    # Synchronization (used as VM/sandbox fingerprints via named mutexes)
-    "CreateMutexA",
-    "CreateMutexW",
-    # Time query / delay (Pfuzzer trace label: TimeQueryAPIs / TimeDelayAPIs)
-    "GetTickCount",
-    "GetTickCount64",
-    "QueryPerformanceCounter",
-    "timeGetTime",
-    "GetLocalTime",
-    "GetSystemTime",
-    "Sleep",
-    "SleepEx",
-})
-
-
-CAPA_RULE_TO_APIS: dict[str, frozenset[str]] = {
-    "check for debugger via API": frozenset({
+PFUZZER_68_APIS: frozenset[str] = frozenset(
+    {
+        # Anti-debug (canonical; covered by capa "check for debugger via API")
         "IsDebuggerPresent",
         "CheckRemoteDebuggerPresent",
         "NtQueryInformationProcess",
-    }),
-    "check for time delay via GetTickCount": frozenset({
-        "GetTickCount",
-        "GetTickCount64",
-    }),
-    "find graphical window": frozenset({
+        # Module / library lookup (canonical anti-VM string fingerprinting)
+        "GetModuleHandleA",
+        "GetModuleHandleW",
+        # File system
+        "CreateFileA",
+        "CreateFileW",
+        "NtCreateFile",
+        "FindFirstFileA",
+        "FindFirstFileW",
+        "FindNextFileA",
+        "FindNextFileW",
+        "GetFileAttributesA",
+        "GetFileAttributesW",
+        "GetFileAttributesExA",
+        "GetFileAttributesExW",
+        "GetDiskFreeSpaceExA",
+        "GetDiskFreeSpaceExW",
+        "DeviceIoControl",
+        # Module / process image
+        "GetModuleFileNameA",
+        "GetModuleFileNameW",
+        "GetModuleFileNameExA",
+        "GetModuleFileNameExW",
+        "GetProcessImageFileNameA",
+        "GetProcessImageFileNameW",
+        "QueryFullProcessImageNameW",
+        "K32GetModuleBaseNameA",
+        "K32GetModuleBaseNameW",
+        # User / system identity
+        "GetUserNameA",
+        "GetUserNameW",
+        "GetUserNameExW",
+        "GetComputerNameA",
+        "GetComputerNameW",
+        "GetComputerNameExA",
+        "GetComputerNameExW",
+        # Process enumeration
+        "Process32First",
+        "Process32FirstW",
+        "Process32Next",
+        "Process32NextW",
+        # Window enumeration / fingerprinting
         "FindWindowA",
         "FindWindowW",
         "FindWindowExA",
         "FindWindowExW",
-    }),
+        "GetWindowTextA",
+        "GetWindowTextW",
+        "GetForegroundWindow",
+        "GetCursorPos",
+        # Registry
+        "NtOpenKey",
+        "NtQueryValueKey",
+        "RegOpenKeyA",
+        "RegOpenKeyW",
+        "RegOpenKeyExA",
+        "RegOpenKeyExW",
+        "RegEnumKeyA",
+        "RegEnumKeyW",
+        "RegEnumKeyExA",
+        "RegEnumKeyExW",
+        "RegQueryValueExA",
+        "RegQueryValueExW",
+        "NtQueryDirectoryObject",
+        "NtQuerySystemInformation",
+        # Locale
+        "GetSystemDefaultLCID",
+        "GetUserDefaultLCID",
+        "GetKeyboardLayout",
+        # Hardware / system info
+        "GetSystemInfo",
+        "GetNativeSystemInfo",
+        "GetSystemFirmwareTable",
+        "GlobalMemoryStatusEx",
+        "IsNativeVhdBoot",
+        "SetupDiGetDeviceRegistryPropertyW",
+        "EnumDisplayDevicesW",
+        "IsProcessorFeaturePresent",
+        "GetVolumeInformationA",
+        "GetVolumeInformationW",
+        # Networking / adapter info
+        "GetAdaptersAddresses",
+        "GetAdaptersInfo",
+        "InternetGetConnectedState",
+        "WNetGetProviderNameA",
+        # Synchronization (used as VM/sandbox fingerprints via named mutexes)
+        "CreateMutexA",
+        "CreateMutexW",
+        # Time query / delay (Pfuzzer trace label: TimeQueryAPIs / TimeDelayAPIs)
+        "GetTickCount",
+        "GetTickCount64",
+        "QueryPerformanceCounter",
+        "timeGetTime",
+        "GetLocalTime",
+        "GetSystemTime",
+        "Sleep",
+        "SleepEx",
+    }
+)
+
+
+CAPA_RULE_TO_APIS: dict[str, frozenset[str]] = {
+    "check for debugger via API": frozenset(
+        {
+            "IsDebuggerPresent",
+            "CheckRemoteDebuggerPresent",
+            "NtQueryInformationProcess",
+        }
+    ),
+    "check for time delay via GetTickCount": frozenset(
+        {
+            "GetTickCount",
+            "GetTickCount64",
+        }
+    ),
+    "find graphical window": frozenset(
+        {
+            "FindWindowA",
+            "FindWindowW",
+            "FindWindowExA",
+            "FindWindowExW",
+        }
+    ),
     "reference analysis tools strings": frozenset(),
     "reference anti-VM strings": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
-    "reference anti-VM strings targeting VMWare": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
-    "reference anti-VM strings targeting VirtualBox": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
+    "reference anti-VM strings targeting VMWare": frozenset(
+        {"GetModuleHandleA", "GetModuleHandleW"}
+    ),
+    "reference anti-VM strings targeting VirtualBox": frozenset(
+        {"GetModuleHandleA", "GetModuleHandleW"}
+    ),
     "reference anti-VM strings targeting Qemu": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
-    "reference anti-VM strings targeting Parallels": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
+    "reference anti-VM strings targeting Parallels": frozenset(
+        {"GetModuleHandleA", "GetModuleHandleW"}
+    ),
     "reference anti-VM strings targeting Xen": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
-    "reference anti-VM strings targeting VirtualPC": frozenset({"GetModuleHandleA", "GetModuleHandleW"}),
+    "reference anti-VM strings targeting VirtualPC": frozenset(
+        {"GetModuleHandleA", "GetModuleHandleW"}
+    ),
     # TODO: map remaining rules from canonical list. Unmapped rules surface
     # via the second return value of classify(); they no longer override the
     # categorical.

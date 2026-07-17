@@ -38,12 +38,12 @@ Version pinning: FLOSS bundles its own signatures (separate from capa's),
 defaulting to floss.get_default_root()/"sigs". FLOSS_PINS records the
 currently-validated version; bump when re-validating.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-
 
 # Validated pin from the Channel 1 pilot (docs/pilot_results.md).
 # FLOSS ships its signatures inside the package, so unlike capa there is
@@ -88,6 +88,7 @@ class FlossString:
 
     Fields not applicable to a category are None.
     """
+
     value: str
     source: str
     encoding: str
@@ -129,6 +130,7 @@ class FlossResult:
 # --- category adapters: floss.results.* dataclass -> FlossString --------------
 # Kept independently testable (mirrors capa._parse_capa_json's separation),
 # so unit tests can adapt a loaded fixture without running FLOSS.
+
 
 def _adapt_static(s) -> FlossString:
     return FlossString(
@@ -227,7 +229,6 @@ def run_floss(
     """
     try:
         import floss.main as fm
-        import floss.results as fr
         from floss.results import Analysis, Metadata, ResultDocument
     except ImportError as e:
         raise FlossImportError("flare-floss is not installed") from e
