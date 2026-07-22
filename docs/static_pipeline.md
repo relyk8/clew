@@ -47,7 +47,7 @@ pipeline instead opens one view inside one Enterprise license checkout, analyses
 it once, and runs both units on that shared view via their `*_with_view`
 entry points:
 
-- `bn_callsites.enumerate_with_view(bv, ...)` -- Unit 3 against an
+- `binaryninja.callsites.enumerate_with_view(bv, ...)` -- Unit 3 against an
   already-analysed view (the shared-view companion to `run_bn_callsites`).
 - `dataflow.bridge_with_view(bv, call_sites, floss_index)` -- Unit 4 against the
   same view.
@@ -175,7 +175,7 @@ one view, wraps the result in a `BNDataflow`, and returns
 (CLI `--no-license-checkout`) assumes a license is already checked out for the
 process. Binary Ninja is the core channel, not enrichment, so its errors
 propagate rather than degrading to an empty result. The BN core version is
-pinned at `4.2.6455 Ultimate` (`BN_PINS` in `bn_callsites.py`); on al-khaser the
+pinned at `4.2.6455 Ultimate` (`BN_PINS` in `callsites.py`); on al-khaser the
 stage finds 884 call sites.
 
 `include_unresolved` defaults to `True`. The unresolved call sites -- API calls
@@ -275,7 +275,7 @@ the oracles via `tests/test_oracle_grade.py` (BN-gated).
 
 The static pipeline's reproducibility rests on pinning every input:
 
-- Binary Ninja core `4.2.6455 Ultimate` (`BN_PINS`, `bn_callsites.py`).
+- Binary Ninja core `4.2.6455 Ultimate` (`BN_PINS`, `callsites.py`).
 - capa `9.4.0`; capa-rules `be59710a` (`v9.4.0+2`, 2026-05-07;
   `CAPA_PINS["capa_rules_tag"]`, `capa.py`), verifiable via `git rev-parse`.
 - capa sigs from the capa `9.4.0` source tree.

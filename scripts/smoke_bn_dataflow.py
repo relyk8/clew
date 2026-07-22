@@ -28,9 +28,9 @@ from __future__ import annotations
 
 import sys
 
-from clew.analysis import dataflow
-from clew.channels import bn_callsites
-from clew.channels.bn_callsites import BN_PINS
+from clew.channels.binaryninja import callsites as bn_callsites
+from clew.channels.binaryninja import dataflow
+from clew.channels.binaryninja.callsites import BN_PINS
 
 
 def _hexpath(vas) -> str:

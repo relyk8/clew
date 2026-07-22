@@ -15,7 +15,7 @@ import pathlib
 
 import pytest
 
-from clew.analysis import oracle_grade as og
+from clew.eval import oracle_grade as og
 
 # --- synthetic candidate builders --------------------------------------------
 
@@ -249,8 +249,8 @@ def bridge_candidates():
         import binaryninja  # noqa: F401
     except Exception:
         pytest.skip("binaryninja not available")
-    from clew.analysis import dataflow
-    from clew.channels import bn_callsites
+    from clew.channels.binaryninja import callsites as bn_callsites
+    from clew.channels.binaryninja import dataflow
 
     cs = bn_callsites.run_bn_callsites(str(SAMPLE), run_license_checkout=True)
     fi = dataflow.FlossIndex.from_floss_json(FLOSS) if FLOSS.exists() else None

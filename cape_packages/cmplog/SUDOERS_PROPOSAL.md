@@ -37,7 +37,7 @@ Drop-in file `/etc/sudoers.d/relyk8-clew-ch3`, mode `0440`, validated with
 # Let relyk8 deploy exactly the cmplog analyzer package, and reload CAPE.
 # Scope is deliberately narrow. Review every path before installing.
 relyk8 ALL=(root) NOPASSWD: /usr/bin/install -m 0644 -o cape -g cape \
-    /home/relyk8/clew/docs/cape_integration/exe_cmplog.py \
+    /home/relyk8/clew/cape_packages/exe_cmplog.py \
     /opt/CAPEv2/analyzer/windows/modules/packages/exe_cmplog.py
 relyk8 ALL=(root) NOPASSWD: /usr/bin/systemctl restart cape.service
 ```

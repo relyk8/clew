@@ -387,7 +387,7 @@ def _run_floss_stage(
     refresh=False,
     quiet=True,
 ):
-    from clew.analysis.dataflow import FlossIndex
+    from clew.channels.binaryninja.dataflow import FlossIndex
     from clew.channels import floss
 
     # cache lookup (a stale entry raises FlossCacheStale -> halts the run by design)
@@ -419,8 +419,8 @@ def _run_floss_stage(
 def _run_bn_stage(sample, sha, floss_index, include_unresolved, run_license_checkout):
     import binaryninja
 
-    from clew.analysis.dataflow import BNDataflow, bridge_with_view
-    from clew.channels.bn_callsites import BNError, enumerate_with_view
+    from clew.channels.binaryninja.callsites import BNError, enumerate_with_view
+    from clew.channels.binaryninja.dataflow import BNDataflow, bridge_with_view
 
     def _work():
         bv = binaryninja.load(str(sample))

@@ -1,6 +1,6 @@
 # Channel 2 / Unit 4: MLIL-SSA Dataflow Bridge
 
-Implementation record for `clew/analysis/dataflow.py` and
+Implementation record for `clew/channels/binaryninja/dataflow.py` and
 `tests/test_bn_dataflow.py`. Companion to `bn_callsites.md` (Unit 3)
 and `floss.md` (Channel 1). Like those, this captures not just what the
 code does but the design decisions and the debugging path that produced it,
@@ -327,7 +327,7 @@ to `0.9`, confirming the FLOSS-json adapter against real output.
 The strongest check is not self-consistency but agreement with an independently
 written oracle. `tests/fixtures/1fe91674eb8d_0{1,2}.expected.json` are hand-built
 *full* schema records for two al-khaser candidates — `_01` an `IsDebuggerPresent`
-return-value check, `_02` the 12-DLL indicator loop. `clew/analysis/oracle_grade.py`
+return-value check, `_02` the 12-DLL indicator loop. `clew/eval/oracle_grade.py`
 grades the bridge's `to_partial_candidates(include_unresolved=True)` output against
 them, and `tests/test_oracle_grade.py` runs it (BN-gated live; the grading logic
 itself is covered by eight offline tests).

@@ -20,7 +20,7 @@ import pathlib
 import pytest
 
 from clew import pipeline
-from clew.analysis.dataflow import (
+from clew.channels.binaryninja.dataflow import (
     CHANNEL_BN,
     CHANNEL_FLOSS,
     CONF_STATIC_CORROBORATED,

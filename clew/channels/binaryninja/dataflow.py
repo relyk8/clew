@@ -59,7 +59,7 @@ re-opens the sample (offline tests use `load_dataflow_results` and never
 touch BN at all).
 
 BN API surface used (re-validate on BN bumps; companions BN_PINS in
-bn_callsites.py):
+callsites.py):
     func.mlil.ssa_form ; block/insn iteration ; insn.operation/.address
     MLIL_CALL_SSA / MLIL_TAILCALL_SSA / *_UNTYPED_SSA / MLIL_SYSCALL_SSA
     call.params ; MLIL_VAR_SSA.src ; MLIL_VAR_PHI.src/.dest
@@ -76,10 +76,10 @@ from pathlib import Path
 from typing import NamedTuple, Optional
 
 # Reuse Unit 3's types and error hierarchy so the channel stays one family
-# (mirrors capa.py / floss.py). Dual import: package layout in the repo,
-# flat layout for standalone tests.
+# (mirrors capa.py / floss.py). Dual import: package layout in the repo (the
+# sibling `callsites` module), flat layout for standalone tests.
 try:  # pragma: no cover - trivial import shim
-    from clew.channels.bn_callsites import (
+    from clew.channels.binaryninja.callsites import (
         BNAnalysisError,
         BNCallSites,
         BNError,
@@ -87,7 +87,7 @@ try:  # pragma: no cover - trivial import shim
         CallSite,
     )
 except ImportError:  # pragma: no cover
-    from bn_callsites import (  # type: ignore
+    from callsites import (  # type: ignore
         BNAnalysisError,
         BNCallSites,
         BNError,
@@ -1110,4 +1110,4 @@ def _read_string_at(bv, addr):
 def _warn(msg: str) -> None:
     import logging
 
-    logging.getLogger("clew.analysis.dataflow").warning(msg)
+    logging.getLogger("clew.channels.binaryninja.dataflow").warning(msg)

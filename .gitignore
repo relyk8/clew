@@ -211,6 +211,13 @@ __marimo__/
 tests/fixtures/*.exe
 tests/fixtures/*.bin
 
+# Generated pipeline output — regenerable batch results, and embeds local machine
+# paths / sample provenance; reproduce via scripts/. See docs/channel0_at_scale.md.
+results/
+
+# Stray clew record dumps
+*.clew.json
+
 # Local Claude Code working instructions (internal; not for public release)
 CLAUDE.md
 
