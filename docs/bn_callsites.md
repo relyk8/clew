@@ -1,6 +1,6 @@
 # Channel 2 / Unit 3: Binary Ninja Call-Site Enumeration
 
-Implementation record for `clew/channels/bn_callsites.py` and
+Implementation record for `clew/channels/binaryninja/callsites.py` and
 `tests/test_bn_callsites.py`. Companion to `floss.md` (Channel 1).
 
 ## What Unit 3 produces

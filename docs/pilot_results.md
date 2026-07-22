@@ -31,7 +31,7 @@ The README's pre-proposal characterization was right: this is the riskiest chann
 End-to-end flow proven on task ID 47:
 
 1. Sample submitted to CAPE via REST API with `package=exe_drcov`.
-2. CAPE's analyzer loads the custom `exe_drcov.py` package (committed at `docs/cape_integration/exe_drcov.py`).
+2. CAPE's analyzer loads the custom `exe_drcov.py` package (committed at `cape_packages/exe_drcov.py`).
 3. Package invokes `C:\dynamorio\bin32\drrun.exe -c "C:\dynamorio\tools\lib32\release\drcov.dll" -logdir "C:\drcov_logs" -- <sample>` inside the guest.
 4. drrun spawns the sample as a child process under drcov instrumentation. CAPE's resultserver observes both processes (`drrun.exe` parent, sample child).
 5. Sample executes; drcov writes coverage logs to `C:\drcov_logs\drcov.<image>.<pid>.<thread>.proc.log`.
@@ -102,7 +102,7 @@ The proposal can now make the contribution claim — "Clew automates per-sample 
 
 ## Artifacts
 
-- `docs/cape_integration/exe_drcov.py` — working CAPE analysis package (committed alongside this writeup).
+- `cape_packages/exe_drcov.py` — working CAPE analysis package (committed under `cape_packages/`).
 - `docs/cape_integration/sample_drcov.log` — sample drcov v3 log retrieved from a CAPE run; 999 KB; preserved for format-validation reference.
 - `tests/fixtures/al-khaser_x86.capa.json` and `tests/fixtures/al-khaser_x86.capa_techniques.json` — Channel 0 artifacts (committed during week 2).
 

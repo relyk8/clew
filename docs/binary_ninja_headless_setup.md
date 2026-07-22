@@ -6,7 +6,7 @@ Binary Ninja Enterprise (floating-license) deployment; adapt the license step if
 you have a standalone license.
 
 Clew pins **Binary Ninja core `4.2.6455 Ultimate`** (`BN_PINS` in
-`clew/channels/bn_callsites.py`). Bump on re-validation.
+`clew/channels/binaryninja/callsites.py`). Bump on re-validation.
 
 ---
 
