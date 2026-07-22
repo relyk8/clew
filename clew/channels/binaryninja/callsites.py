@@ -6,7 +6,7 @@ sample. Channel 2 is the *call-site* channel: it contributes the
 `evidence.channels == ["bn_xref"]` half of a clew record — *where* an API
 is called and *how* it was resolved — never the string values that flow
 into those calls (that is Channel 1 / FLOSS) and never the dataflow that
-joins the two (that is Unit 4, `clew/analysis/dataflow.py`).
+joins the two (that is Unit 4, `clew/channels/binaryninja/dataflow.py`).
 
 See docs/schema_v2_notes.md (findings #2 and #4) for the architectural
 split between value channels and call-site channels.
@@ -295,7 +295,7 @@ def enumerate_with_view(
     """Unit 3 against an already-open, already-analysed BinaryView.
 
     The single-analysis orchestrator entry point, mirroring
-    clew.analysis.dataflow.bridge_with_view. The orchestrator opens the view
+    clew.channels.binaryninja.dataflow.bridge_with_view. The orchestrator opens the view
     once (one update_analysis_and_wait, inside one LicenseCheckout), calls this
     to enumerate call sites, then bridge_with_view() to trace them -- avoiding a
     second full analysis. `bv` MUST already be analysed; unlike run_bn_callsites

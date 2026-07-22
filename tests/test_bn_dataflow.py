@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-import clew.analysis.dataflow as bd
-from clew.analysis.dataflow import (
+import clew.channels.binaryninja.dataflow as bd
+from clew.channels.binaryninja.dataflow import (
     CHANNEL_BN,
     CHANNEL_FLOSS,
     CONF_STATIC_BN_ONLY,
@@ -27,7 +27,7 @@ from clew.analysis.dataflow import (
     BridgedCallSite,
     FlossIndex,
 )
-from clew.channels.bn_callsites import BNCallSites, CallSite
+from clew.channels.binaryninja.callsites import BNCallSites, CallSite
 
 # --- fixtures ----------------------------------------------------------------
 

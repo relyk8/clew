@@ -9,7 +9,7 @@ slow, needs the sample on disk, and needs a checked-out Enterprise license
 -- source bn_env.sh first; see docs/binary_ninja_headless_setup.md).
 Generate the offline fixture once with the real run:
 
-    BN_INTEGRATION=1 python -c "from clew.channels.bn_callsites import \
+    BN_INTEGRATION=1 python -c "from clew.channels.binaryninja.callsites import \
         run_bn_callsites; run_bn_callsites('tests/fixtures/al-khaser_x86.exe')\
         .write_json('tests/fixtures/al-khaser_x86.bn_callsites.json')"
 """
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from clew.channels.bn_callsites import (
+from clew.channels.binaryninja.callsites import (
     RESOLUTION_GETPROCADDRESS,
     RESOLUTION_IMPORT,
     RESOLUTION_ORDINAL,
