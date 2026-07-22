@@ -15,7 +15,7 @@ import pathlib
 
 import pytest
 
-from clew.analysis import oracle_grade as og
+from clew.eval import oracle_grade as og
 
 # --- synthetic candidate builders --------------------------------------------
 
