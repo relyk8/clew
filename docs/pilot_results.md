@@ -103,7 +103,6 @@ The proposal can now make the contribution claim — "Clew automates per-sample 
 ## Artifacts
 
 - `cape_packages/exe_drcov.py` — working CAPE analysis package (committed under `cape_packages/`).
-- `docs/cape_integration/sample_drcov.log` — sample drcov v3 log retrieved from a CAPE run; 999 KB; preserved for format-validation reference.
 - `tests/fixtures/al-khaser_x86.capa.json` and `tests/fixtures/al-khaser_x86.capa_techniques.json` — Channel 0 artifacts (committed during week 2).
 
 The FLOSS output JSON is not committed — week 3's FLOSS implementation will produce its own canonical fixture in the same shape that `al-khaser_x86.capa.json` plays for Channel 0.
