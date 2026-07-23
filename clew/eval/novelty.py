@@ -10,7 +10,7 @@ novelty.py — CAPE IoC extraction and novelty scoring.
 Reusable for validating that Clew-extracted candidates actually unlock hidden
 behavior when fed back to a fuzzer. Both functions are pure (no I/O).
 
-Migrated from ariadneX.
+Adapted from a prior project.
 """
 
 import re

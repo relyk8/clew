@@ -69,7 +69,7 @@
     "DerivationStatus": {
       "type": "string",
       "enum": ["fully_derivable", "partially_derivable", "not_derivable", "no_capa_signal"],
-      "description": "Sample-level derivation-pipeline status, rolled up from per-rule actionability. fully_derivable: every matched capa rule is actionable (mapped in CAPA_RULE_TO_APIS AND all implied APIs in PFUZZER_68_APIS). partially_derivable: at least one matched rule is actionable AND at least one is not. not_derivable: no matched rules are actionable (all unmapped, all-outside-target, or mix of those failure modes). no_capa_signal: no matched anti-analysis rules at all (also assigned to samples where capa didn't successfully complete — timeouts, capa errors)."
+      "description": "Sample-level derivation-pipeline status, rolled up from per-rule actionability. fully_derivable: every matched capa rule is actionable (mapped in CAPA_RULE_TO_APIS AND all implied APIs in TARGET_ENV_APIS). partially_derivable: at least one matched rule is actionable AND at least one is not. not_derivable: no matched rules are actionable (all unmapped, all-outside-target, or mix of those failure modes). no_capa_signal: no matched anti-analysis rules at all (also assigned to samples where capa didn't successfully complete — timeouts, capa errors)."
     },
 
     "Channel": {

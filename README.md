@@ -3,8 +3,8 @@
 Clew is a per-sample candidate-extraction pipeline for environment-sensitive
 malware analysis. It runs once over a PE32 sample and emits a structured JSON
 record of candidate API return/argument values that a downstream fuzzer
-(Pfuzzer) uses as seeds to reach evasion-gated execution paths. It replaces
-Pfuzzer's hand-coded, sample-agnostic retarget lists with candidates derived
+uses as seeds to reach evasion-gated execution paths. It replaces the fuzzer's
+hand-coded, sample-agnostic retarget lists with candidates derived
 from the binary itself.
 
 ## The channel model
@@ -63,7 +63,7 @@ Not re-opened without cause.
 |---|---|
 | LLM enrichment | Out of v1 |
 | capa preprocessing | In as explicit stage |
-| Target API list | Pfuzzer's 68 for v1 |
+| Target API list | reference set of 68 for v1 |
 | Packaging | Standalone Clew CLI; Channel 3 uses CAPE via REST API |
 | Dataflow enrichment | Merged into Channel 2 (no separate channel) |
 | Iterative mode | Deferred to v2; schema and orchestration built iteration-ready |
