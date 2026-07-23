@@ -316,5 +316,78 @@ def test_correlate_source_is_required_and_exclusive():
         )
 
 
+# ---------- detonate ----------
+
+
+def test_detonate_no_wait_prints_task_id_and_submits_free_mode(monkeypatch, capsys):
+    # Guards the critical free-mode requirement: without options={"free":"yes"}
+    # and package="exe_cmplog", capemon corrupts DynamoRIO and 0 logs land.
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+
+    def fake_submit(self, sample_path, **kwargs):
+        seen["sample_path"] = sample_path
+        seen.update(kwargs)
+        return 42
+
+    monkeypatch.setattr(cape_client.CapeClient, "submit", fake_submit)
+    assert cli.main(["detonate", "x.exe"]) == 0
+    assert capsys.readouterr().out.strip() == json.dumps({"task_id": 42})
+    assert seen["package"] == "exe_cmplog"
+    assert seen["options"] == {"free": "yes"}
+
+
+def test_detonate_wait_reported_returns_0(monkeypatch, capsys):
+    from clew.channels.cape import client as cape_client
+
+    monkeypatch.setattr(cape_client.CapeClient, "submit", lambda self, s, **k: 42)
+    monkeypatch.setattr(cape_client.CapeClient, "poll", lambda self, tid, **k: "reported")
+    assert cli.main(["detonate", "x.exe", "--wait"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out == {"task_id": 42, "status": "reported"}
+
+
+def test_detonate_wait_failed_returns_2(monkeypatch, capsys):
+    from clew.channels.cape import client as cape_client
+
+    monkeypatch.setattr(cape_client.CapeClient, "submit", lambda self, s, **k: 42)
+    monkeypatch.setattr(cape_client.CapeClient, "poll", lambda self, tid, **k: "failed_analysis")
+    assert cli.main(["detonate", "x.exe", "--wait"]) == 2
+    out = json.loads(capsys.readouterr().out)
+    assert out["status"] == "failed_analysis"
+
+
+def test_detonate_missing_sample_returns_1(monkeypatch):
+    from clew.channels.cape import client as cape_client
+
+    def boom(self, sample_path, **kwargs):
+        raise FileNotFoundError(sample_path)
+
+    monkeypatch.setattr(cape_client.CapeClient, "submit", boom)
+    assert cli.main(["detonate", "x.exe"]) == 1
+
+
+def test_detonate_cape_error_returns_2(monkeypatch):
+    from clew.channels.cape import client as cape_client
+
+    def boom(self, sample_path, **kwargs):
+        raise cape_client.CapeError("submit error")
+
+    monkeypatch.setattr(cape_client.CapeClient, "submit", boom)
+    assert cli.main(["detonate", "x.exe"]) == 2
+
+
+def test_detonate_output_flag_writes_file(monkeypatch, capsys, tmp_path):
+    from clew.channels.cape import client as cape_client
+
+    monkeypatch.setattr(cape_client.CapeClient, "submit", lambda self, s, **k: 42)
+    out = tmp_path / "task.json"
+    assert cli.main(["detonate", "x.exe", "-o", str(out)]) == 0
+    assert json.loads(out.read_text()) == {"task_id": 42}
+    # With -o, stdout carries no task JSON.
+    assert capsys.readouterr().out == ""
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

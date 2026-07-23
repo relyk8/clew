@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import requests
 
@@ -111,10 +111,14 @@ class CapeClient:
         task_id: int,
         poll_interval: float = 2.0,
         max_wait: float = 600.0,
+        progress: Callable[[str], None] | None = None,
     ) -> str:
         """
         Block until task reaches a terminal state. Returns the final status.
         Terminal states: 'reported', 'failed_analysis', 'failed_processing'.
+
+        On each status change, call progress(status) if given (so a CLI caller
+        can route it to stderr), else print to stdout (the __main__ harness).
         """
         terminal = {"reported", "failed_analysis", "failed_processing"}
         deadline = time.monotonic() + max_wait
@@ -123,7 +127,10 @@ class CapeClient:
             info = self.view(task_id)
             status = info.get("status", "unknown")
             if status != last:
-                print(f"[task {task_id}] status: {status}")
+                if progress is not None:
+                    progress(status)
+                else:
+                    print(f"[task {task_id}] status: {status}")
                 last = status
             if status in terminal:
                 return status

@@ -149,6 +149,54 @@ def _add_correlate_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_correlate)
 
 
+def _add_detonate_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "detonate",
+        parents=[parent],
+        help="submit a sample to CAPE for DynamoRIO comparison logging (Channel 3)",
+        description="Submit a PE32 sample to CAPE under the exe_cmplog package and emit "
+        "the task id (with --wait, block for the terminal status).",
+    )
+    s.add_argument("sample", help="path to the PE32 sample")
+    s.add_argument(
+        "--package",
+        default="exe_cmplog",
+        help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
+    )
+    s.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="guest analysis timeout in seconds (default: 120)",
+    )
+    s.add_argument(
+        "--wait",
+        action="store_true",
+        help="block until the task reaches a terminal state and report the status",
+    )
+    # enforce_timeout defaults True: sleepy anti-analysis samples otherwise hang
+    # the guest. BooleanOptionalAction gives the --enforce-timeout/--no-* pair.
+    s.add_argument(
+        "--enforce-timeout",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+    )
+    s.add_argument(
+        "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
+    )
+    s.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=None,
+        help="write the result JSON here (default: stdout)",
+    )
+    s.set_defaults(func=_cmd_detonate)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -184,6 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command")
     _add_static_subparser(sub, parent)
     _add_correlate_subparser(sub, parent)
+    _add_detonate_subparser(sub, parent)
     return p
 
 
@@ -318,6 +367,50 @@ def _cmd_correlate(args) -> int:
         print(text)
     log.info("done")
     return 0
+
+
+def _cmd_detonate(args) -> int:
+    # Lazy import: keep the CAPE client (which pulls requests) out of `clew
+    # static` and the offline suite.
+    from clew.channels.cape.client import CapeClient, CapeError
+
+    log = logging.getLogger("clew.cli")
+
+    c = CapeClient(args.cape_url)
+    try:
+        # free=yes is mandatory: capemon otherwise corrupts DynamoRIO and the
+        # run yields 0 logs. It rides inside the options string via submit().
+        tid = c.submit(
+            args.sample,
+            package=args.package,
+            timeout=args.timeout,
+            enforce_timeout=args.enforce_timeout,
+            options={"free": "yes"},
+        )
+    except FileNotFoundError:
+        log.error("sample not found: %s", args.sample)
+        return 1
+    except CapeError as e:
+        log.error("submit failed: %s", e)
+        return 2
+
+    log.info("submitted task %s (package=%s)", tid, args.package)
+
+    if args.wait:
+        status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+        result = {"task_id": tid, "status": status}
+        rc = 0 if status == "reported" else 2
+    else:
+        result = {"task_id": tid}
+        rc = 0
+
+    text = json.dumps(result)
+    if args.output:
+        args.output.write_text(text)
+        log.info("wrote %s", args.output)
+    else:
+        print(text)
+    return rc
 
 
 def main(argv=None) -> int:

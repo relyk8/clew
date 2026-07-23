@@ -150,3 +150,20 @@ def test_count_cmplog_lines_unreadable_returns_none(client, tmp_path, monkeypatc
 
     monkeypatch.setattr("pathlib.Path.glob", boom)
     assert client.count_cmplog_lines(7, storage_root=tmp_path) is None
+
+
+# ---------- poll ----------
+
+
+def test_poll_progress_callback_no_stdout(client, monkeypatch, capsys):
+    # view yields running then reported; a progress callback receives each status
+    # change and nothing leaks to stdout (the CLI stdout=artifact contract).
+    statuses = iter(["running", "reported"])
+    monkeypatch.setattr(client, "view", lambda task_id: {"status": next(statuses)})
+
+    seen = []
+    out = client.poll(7, poll_interval=0, progress=seen.append)
+
+    assert out == "reported"
+    assert seen == ["running", "reported"]
+    assert capsys.readouterr().out == ""
