@@ -63,20 +63,35 @@ def test_bare_filenotfound_propagates(monkeypatch):
         cli.main(["whatever.exe"])
 
 
-def test_success_returns_0_and_prints_json(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: _RECORD)
+def test_success_returns_0_and_writes_default_file(monkeypatch, capsys, tmp_path):
+    # No -o: the record lands in results/<sha>.clew.json (relative to cwd), not
+    # stdout. chdir into a temp dir so the write is isolated.
+    rec = dict(_RECORD, sample_sha256="deadbeef")
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
+    monkeypatch.chdir(tmp_path)
     assert cli.main(["whatever.exe"]) == 0
+    out = tmp_path / "results" / "deadbeef.clew.json"
+    assert out.exists() and '"derivation_status"' in out.read_text()
+    # stdout stays clean (the summary is logged to stderr).
+    assert capsys.readouterr().out == ""
+
+
+def test_dash_output_prints_json_to_stdout(monkeypatch, capsys):
+    # `-o -` is the pipe escape hatch: the record JSON goes to stdout.
+    rec = dict(_RECORD, sample_sha256="deadbeef")
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
+    assert cli.main(["whatever.exe", "-o", "-"]) == 0
     assert '"derivation_status"' in capsys.readouterr().out
 
 
 def test_output_flag_writes_file_and_summarizes(monkeypatch, capsys, tmp_path):
-    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: _RECORD)
+    rec = dict(_RECORD, sample_sha256="deadbeef")
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
     out = tmp_path / "rec.json"
     assert cli.main(["whatever.exe", "-o", str(out)]) == 0
     assert out.exists() and '"derivation_status"' in out.read_text()
-    # With -o, stdout gets the one-line summary, not the JSON.
-    captured = capsys.readouterr().out
-    assert captured.startswith("wrote ")
+    # With -o <path>, stdout stays clean; the summary is logged to stderr.
+    assert capsys.readouterr().out == ""
 
 
 def test_parser_defaults():
@@ -102,7 +117,8 @@ def test_main_wires_inverted_flags_into_pipeline(monkeypatch):
 
     monkeypatch.setattr(cli, "run_static_pipeline", capture)
 
-    assert cli.main(["s.exe"]) == 0
+    # -o - keeps these arg-capture runs from writing a results/ file.
+    assert cli.main(["s.exe", "-o", "-"]) == 0
     assert seen["include_unresolved"] is True
     assert seen["run_license_checkout"] is True
     assert seen["quiet_floss"] is True
@@ -118,6 +134,8 @@ def test_main_wires_inverted_flags_into_pipeline(monkeypatch):
                 "--verbose-floss",
                 "--no-cache",
                 "--refresh-floss-cache",
+                "-o",
+                "-",
             ]
         )
         == 0
@@ -130,10 +148,12 @@ def test_main_wires_inverted_flags_into_pipeline(monkeypatch):
 
 
 def test_output_summary_counts_resolved_candidates(monkeypatch, capsys, tmp_path):
-    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: _RECORD_WITH_VALUES)
+    rec = dict(_RECORD_WITH_VALUES, sample_sha256="deadbeef")
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
     out = tmp_path / "rec.json"
     assert cli.main(["s.exe", "-o", str(out)]) == 0
-    summary = capsys.readouterr().out
+    # The summary rides the "wrote" log line to stderr, not stdout.
+    summary = capsys.readouterr().err
     assert "2 candidates" in summary and "(1 with values)" in summary
 
 
@@ -176,7 +196,7 @@ def test_static_requires_sample():
 def test_back_compat_bare_sample_routes_to_static(monkeypatch):
     # `clew x.exe` (no verb) must still run the static pipeline.
     monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: _RECORD)
-    assert cli.main(["x.exe"]) == 0
+    assert cli.main(["x.exe", "-o", "-"]) == 0
 
 
 def test_inject_default_verb():
@@ -228,9 +248,53 @@ def test_correlate_cmplog_dir_happy_path(tmp_path, capsys):
         ]
     )
     assert rc == 0
-    assert capsys.readouterr().out.startswith("wrote ")
+    # With -o <path>, stdout stays clean; the summary is logged to stderr.
+    assert capsys.readouterr().out == ""
     enriched = json.loads(out.read_text())
     assert _has_filled_comparison(enriched)
+
+
+def test_correlate_default_writes_results_file(tmp_path, monkeypatch, capsys):
+    # No -o: the enriched record lands in results/<sha>.clew.json under cwd.
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    shutil.copy(FIXTURES / "cmplog_synth_01.log", log_dir / "cmplog.1.log")
+    monkeypatch.chdir(tmp_path)
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(FIXTURES / "correlate_input_01.json"),
+            "--cmplog-dir",
+            str(log_dir),
+        ]
+    )
+    assert rc == 0
+    assert capsys.readouterr().out == ""
+    sha = json.loads((FIXTURES / "correlate_input_01.json").read_text())["sample_sha256"]
+    out = tmp_path / "results" / f"{sha}.clew.json"
+    assert out.exists()
+    assert _has_filled_comparison(json.loads(out.read_text()))
+
+
+def test_correlate_dash_output_prints_json(tmp_path, capsys):
+    # `-o -` streams the enriched record to stdout for piping.
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    shutil.copy(FIXTURES / "cmplog_synth_01.log", log_dir / "cmplog.1.log")
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(FIXTURES / "correlate_input_01.json"),
+            "--cmplog-dir",
+            str(log_dir),
+            "-o",
+            "-",
+        ]
+    )
+    assert rc == 0
+    assert _has_filled_comparison(json.loads(capsys.readouterr().out))
 
 
 def test_correlate_missing_record_returns_1(tmp_path):
@@ -281,6 +345,8 @@ def test_correlate_task_path_reads_and_enriches(monkeypatch, capsys):
             str(FIXTURES / "correlate_input_01.json"),
             "--task",
             "10",
+            "-o",
+            "-",
         ]
     )
     assert rc == 0
@@ -551,7 +617,8 @@ def _patch_run_stages(monkeypatch, poll_status="reported"):
 
 def test_run_happy_path_emits_enriched_record(monkeypatch, capsys):
     _patch_run_stages(monkeypatch)
-    assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 0
+    # -o - streams the enriched record to stdout so the test can read it.
+    assert cli.main(["run", "sample.exe", "--no-license-checkout", "-o", "-"]) == 0
     enriched = json.loads(capsys.readouterr().out)
     # The matching candidate carries proximity comparisons and mirrored legacy fields.
     first = enriched["candidates"][0]

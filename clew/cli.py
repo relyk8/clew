@@ -3,9 +3,11 @@
 Both the `clew` console script and `python -m clew.pipeline` dispatch here. This
 module owns argument parsing and logging setup; the analysis itself lives in
 `clew.pipeline.run_static_pipeline`. Runtime progress is emitted through the
-`logging` module (per-stage lines to stderr); stdout carries only the output --
-the record JSON (default) or, with `-o`, a one-line summary -- so stdout stays
-clean for piping.
+`logging` module (per-stage lines to stderr). The record-producing verbs
+(`static`, `correlate`, `run`) default their output to a durable
+`results/<sha256>.clew.json` file and log a one-line summary to stderr, so a
+multi-megabyte record never floods stdout by accident. Pass `-o <path>` to
+redirect, or `-o -` to stream the JSON to stdout for piping.
 
 The surface is a subcommand dispatcher (`clew <verb> ...`): `static`,
 `correlate`, `detonate`, `tasks`, and `run` (which chains static -> detonate
@@ -103,7 +105,7 @@ def _add_static_subparser(sub, parent) -> None:
         "--output",
         type=Path,
         default=None,
-        help="write the record JSON here (default: stdout)",
+        help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
     s.set_defaults(func=_cmd_static)
 
@@ -154,7 +156,7 @@ def _add_correlate_subparser(sub, parent) -> None:
         "--output",
         type=Path,
         default=None,
-        help="write the enriched record JSON here (default: stdout)",
+        help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
     s.set_defaults(func=_cmd_correlate)
 
@@ -300,7 +302,7 @@ def _add_run_subparser(sub, parent) -> None:
         "--output",
         type=Path,
         default=None,
-        help="write the enriched record JSON here (default: stdout)",
+        help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
     s.set_defaults(func=_cmd_run)
 
@@ -383,6 +385,30 @@ def _configure_logging(verbose: int, quiet: bool) -> None:
     )
 
 
+def _default_record_path(record) -> Path:
+    # The record is the tool's durable product, keyed by sample hash so reruns
+    # of the same sample land on the same file.
+    return Path("results") / f"{record['sample_sha256']}.clew.json"
+
+
+def _emit_record(record, output, summary: str) -> None:
+    # Resolve where a record-producing verb writes its output. The record is
+    # MB-scale, so a bare stdout dump is a footgun: default to a durable file and
+    # log the summary to stderr. `-o -` is the escape hatch for piping.
+    text = json.dumps(record, indent=2)
+    if output == Path("-"):
+        # Pipe mode: JSON to stdout, nothing else on stdout.
+        print(text)
+        return
+    if output is None:
+        path = _default_record_path(record)
+        path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        path = output
+    path.write_text(text)
+    logging.getLogger("clew.cli").info("wrote %s: %s", path, summary)
+
+
 def _cmd_static(args) -> int:
     log = logging.getLogger("clew.cli")
     log.info("clew %s starting", CLEW_VERSION)
@@ -408,22 +434,17 @@ def _cmd_static(args) -> int:
         log.error("%s", e)
         return 1
 
-    text = json.dumps(record, indent=2)
-    if args.output:
-        args.output.write_text(text)
-        resolved = sum(
-            1
-            for c in record["candidates"]
-            if any(v.get("value") is not None for v in c["candidate_values"])
-        )
-        print(
-            f"wrote {args.output}: {len(record['candidates'])} candidates "
-            f"({resolved} with values), "
-            f"derivation_status={record['derivation_status']}, "
-            f"{len(record['capa_techniques'])} capa techniques"
-        )
-    else:
-        print(text)
+    resolved = sum(
+        1
+        for c in record["candidates"]
+        if any(v.get("value") is not None for v in c["candidate_values"])
+    )
+    summary = (
+        f"{len(record['candidates'])} candidates ({resolved} with values), "
+        f"derivation_status={record['derivation_status']}, "
+        f"{len(record['capa_techniques'])} capa techniques"
+    )
+    _emit_record(record, args.output, summary)
     log.info("done")
     return 0
 
@@ -464,17 +485,13 @@ def _cmd_correlate(args) -> int:
     log.info("parsed %d comparison records from %d log(s)", len(cmp_records), len(logs))
     enriched = correlate_record(record, cmp_records, module_base=args.module_base)
 
-    text = json.dumps(enriched, indent=2)
-    if args.output:
-        args.output.write_text(text)
-        with_cmps = [c for c in enriched["candidates"] if c.get("comparison_candidates")]
-        total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
-        print(
-            f"wrote {args.output}: {len(enriched['candidates'])} candidates, "
-            f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
-        )
-    else:
-        print(text)
+    with_cmps = [c for c in enriched["candidates"] if c.get("comparison_candidates")]
+    total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
+    summary = (
+        f"{len(enriched['candidates'])} candidates, "
+        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
+    )
+    _emit_record(enriched, args.output, summary)
     log.info("done")
     return 0
 
@@ -739,16 +756,12 @@ def _cmd_run(args) -> int:
     with_cmps = [cand for cand in enriched["candidates"] if cand.get("comparison_candidates")]
     log.info("stage 3/3 correlate: %d candidates with comparisons", len(with_cmps))
 
-    text = json.dumps(enriched, indent=2)
-    if args.output:
-        args.output.write_text(text)
-        total_cmps = sum(len(cand["comparison_candidates"]) for cand in with_cmps)
-        print(
-            f"wrote {args.output}: {len(enriched['candidates'])} candidates, "
-            f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
-        )
-    else:
-        print(text)
+    total_cmps = sum(len(cand["comparison_candidates"]) for cand in with_cmps)
+    summary = (
+        f"{len(enriched['candidates'])} candidates, "
+        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
+    )
+    _emit_record(enriched, args.output, summary)
     log.info("done")
     return 0
 

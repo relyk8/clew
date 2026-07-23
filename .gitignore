@@ -213,7 +213,8 @@ tests/fixtures/*.bin
 
 # Generated pipeline output — regenerable batch results, and embeds local machine
 # paths / sample provenance; reproduce via scripts/.
-results/
+results/*
+!results/.gitkeep
 
 # Stray clew record dumps
 *.clew.json
