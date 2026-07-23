@@ -648,7 +648,7 @@ def _bridge_call_site(bv, cs: CallSite, floss: FlossIndex, MLILOps) -> list[Brid
     func = bv.get_function_at(cs.function_va)
     if func is None:
         return [_unresolved(cs, parameter_index=-1)]
-    ssa = getattr(func.mlil, "ssa_form", None)
+    ssa = getattr(func.mlil_if_available, "ssa_form", None)  # non-raising: skip funcs w/o MLIL
     if ssa is None:
         return [_unresolved(cs, parameter_index=-1)]
 
