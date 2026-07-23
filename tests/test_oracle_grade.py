@@ -252,9 +252,16 @@ def bridge_candidates():
     from clew.channels.binaryninja import callsites as bn_callsites
     from clew.channels.binaryninja import dataflow
 
-    cs = bn_callsites.run_bn_callsites(str(SAMPLE), run_license_checkout=True)
-    fi = dataflow.FlossIndex.from_floss_json(FLOSS) if FLOSS.exists() else None
-    df = dataflow.run_bn_dataflow(cs, str(SAMPLE), floss_index=fi, run_license_checkout=True)
+    # BN may be importable while no license can be checked out (a partial-BN
+    # box with no Enterprise server configured). That is an environment gap,
+    # not a test failure, so skip rather than error. Real analysis failures
+    # (BNAnalysisError) still propagate.
+    try:
+        cs = bn_callsites.run_bn_callsites(str(SAMPLE), run_license_checkout=True)
+        fi = dataflow.FlossIndex.from_floss_json(FLOSS) if FLOSS.exists() else None
+        df = dataflow.run_bn_dataflow(cs, str(SAMPLE), floss_index=fi, run_license_checkout=True)
+    except bn_callsites.BNNotAvailableError as e:
+        pytest.skip(f"Binary Ninja license not available: {e}")
     return df.to_partial_candidates(include_unresolved=True)
 
 
