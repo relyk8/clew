@@ -7,10 +7,10 @@ module owns argument parsing and logging setup; the analysis itself lives in
 the record JSON (default) or, with `-o`, a one-line summary -- so stdout stays
 clean for piping.
 
-The surface is a subcommand dispatcher (`clew <verb> ...`). `static`,
-`correlate`, `detonate`, and `tasks` are registered today; `run` lands in a
-later commit. Bare `clew <sample>` stays a back-compat alias for `clew static
-<sample>`.
+The surface is a subcommand dispatcher (`clew <verb> ...`): `static`,
+`correlate`, `detonate`, `tasks`, and `run` (which chains static -> detonate
+--wait -> correlate for one sample). Bare `clew <sample>` stays a back-compat
+alias for `clew static <sample>`.
 """
 
 from __future__ import annotations
@@ -37,6 +37,57 @@ from clew.pipeline import (
 )
 
 
+def _add_static_flags(parser) -> None:
+    # The static-stage flags, shared by the `static` and `run` verbs. Factored so
+    # the two surfaces cannot drift on defaults. Excludes the `sample` positional
+    # and `-o` (each verb owns those with its own help text).
+    parser.add_argument(
+        "--capa-rules",
+        type=Path,
+        default=Path(_default_capa_rules()),
+        help=f"capa rules dir (default: $CLEW_CAPA_RULES or {DEFAULT_CAPA_RULES})",
+    )
+    parser.add_argument(
+        "--capa-sigs",
+        type=Path,
+        default=Path(_default_capa_sigs()),
+        help=f"capa signatures dir (default: $CLEW_CAPA_SIGS or {DEFAULT_CAPA_SIGS})",
+    )
+    parser.add_argument("--floss-sigs", type=Path, default=None)
+    parser.add_argument("--capa-bin", default="capa")
+    parser.add_argument(
+        "--no-license-checkout",
+        action="store_true",
+        help="assume a license is already checked out for this process",
+    )
+    parser.add_argument(
+        "--exclude-unresolved",
+        action="store_true",
+        help="omit located-but-unresolved call sites (the Channel 3 work list)",
+    )
+    parser.add_argument(
+        "--verbose-floss",
+        action="store_true",
+        help="don't suppress vivisect/FLOSS emulator logging (debugging FLOSS)",
+    )
+    parser.add_argument(
+        "--floss-cache",
+        type=Path,
+        default=None,
+        help=f"FLOSS result cache directory (default: {DEFAULT_FLOSS_CACHE}/)",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="disable the FLOSS result cache (always re-run FLOSS, don't read/write)",
+    )
+    parser.add_argument(
+        "--refresh-floss-cache",
+        action="store_true",
+        help="force a FLOSS re-run and overwrite the cache entry (use after a FLOSS/sigs change)",
+    )
+
+
 def _add_static_subparser(sub, parent) -> None:
     s = sub.add_parser(
         "static",
@@ -46,51 +97,7 @@ def _add_static_subparser(sub, parent) -> None:
         "intermediate clew record.",
     )
     s.add_argument("sample", help="path to the PE32 sample")
-    s.add_argument(
-        "--capa-rules",
-        type=Path,
-        default=Path(_default_capa_rules()),
-        help=f"capa rules dir (default: $CLEW_CAPA_RULES or {DEFAULT_CAPA_RULES})",
-    )
-    s.add_argument(
-        "--capa-sigs",
-        type=Path,
-        default=Path(_default_capa_sigs()),
-        help=f"capa signatures dir (default: $CLEW_CAPA_SIGS or {DEFAULT_CAPA_SIGS})",
-    )
-    s.add_argument("--floss-sigs", type=Path, default=None)
-    s.add_argument("--capa-bin", default="capa")
-    s.add_argument(
-        "--no-license-checkout",
-        action="store_true",
-        help="assume a license is already checked out for this process",
-    )
-    s.add_argument(
-        "--exclude-unresolved",
-        action="store_true",
-        help="omit located-but-unresolved call sites (the Channel 3 work list)",
-    )
-    s.add_argument(
-        "--verbose-floss",
-        action="store_true",
-        help="don't suppress vivisect/FLOSS emulator logging (debugging FLOSS)",
-    )
-    s.add_argument(
-        "--floss-cache",
-        type=Path,
-        default=None,
-        help=f"FLOSS result cache directory (default: {DEFAULT_FLOSS_CACHE}/)",
-    )
-    s.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="disable the FLOSS result cache (always re-run FLOSS, don't read/write)",
-    )
-    s.add_argument(
-        "--refresh-floss-cache",
-        action="store_true",
-        help="force a FLOSS re-run and overwrite the cache entry (use after a FLOSS/sigs change)",
-    )
+    _add_static_flags(s)
     s.add_argument(
         "-o",
         "--output",
@@ -248,6 +255,56 @@ def _add_tasks_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_tasks)
 
 
+def _add_run_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "run",
+        parents=[parent],
+        help="run static -> detonate --wait -> correlate end to end for one sample",
+        description="Chain the static pipeline, a CAPE cmplog detonation, and proximity "
+        "correlation into one enriched clew record for a single sample.",
+    )
+    s.add_argument("sample", help="path to the PE32 sample")
+    # Static stage (shared with the `static` verb, same defaults).
+    _add_static_flags(s)
+    # Detonate stage.
+    s.add_argument(
+        "--package",
+        default="exe_cmplog",
+        help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
+    )
+    s.add_argument(
+        "--timeout",
+        type=int,
+        default=120,
+        help="guest analysis timeout in seconds (default: 120)",
+    )
+    s.add_argument(
+        "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
+    )
+    # Correlate stage.
+    s.add_argument(
+        "--module-base",
+        type=lambda v: int(v, 0),
+        default=None,
+        help="runtime load base to rebase PCs into static VA space (0x... accepted)",
+    )
+    s.add_argument(
+        "--storage-root",
+        default="/opt/CAPEv2/storage/analyses",
+        help="CAPE analyses storage root (read for the cmplog logs)",
+    )
+    s.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=None,
+        help="write the enriched record JSON here (default: stdout)",
+    )
+    s.set_defaults(func=_cmd_run)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -285,6 +342,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_correlate_subparser(sub, parent)
     _add_detonate_subparser(sub, parent)
     _add_tasks_subparser(sub, parent)
+    _add_run_subparser(sub, parent)
     return p
 
 
@@ -606,6 +664,92 @@ def _cmd_tasks(args) -> int:
     except (CapeError, _requests_exc()) as e:
         log.error("cannot reach CAPE at %s: %s", args.cape_url, e)
         return 2
+    return 0
+
+
+def _cmd_run(args) -> int:
+    # Lazy import: keep the CAPE client (which pulls requests) and the correlator
+    # out of `clew static` and the offline suite.
+    from clew.channels.cape.client import CapeClient, CapeError
+    from clew.channels.cape.cmplog_parse import parse_cmplog_files
+    from clew.channels.cape.correlate import correlate_record
+
+    log = logging.getLogger("clew.cli")
+    log.info("clew %s run starting", CLEW_VERSION)
+
+    # Stage 1/3 static: the fast local pipeline (same inverted flags as `static`).
+    try:
+        record = run_static_pipeline(
+            args.sample,
+            capa_rules_path=args.capa_rules,
+            capa_sigs_path=args.capa_sigs,
+            floss_sigs_path=args.floss_sigs,
+            capa_bin=args.capa_bin,
+            include_unresolved=not args.exclude_unresolved,
+            run_license_checkout=not args.no_license_checkout,
+            quiet_floss=not args.verbose_floss,
+            floss_cache_dir=args.floss_cache,
+            use_floss_cache=not args.no_cache,
+            refresh_floss_cache=args.refresh_floss_cache,
+        )
+    except FlossCacheStale as e:
+        log.error("%s", e)
+        return 2
+    except SampleNotFoundError as e:
+        log.error("%s", e)
+        return 1
+    log.info("stage 1/3 static: %d candidates", len(record["candidates"]))
+
+    # Stage 2/3 detonate: submit under cmplog + free mode and block for terminal.
+    c = CapeClient(args.cape_url)
+    try:
+        # free=yes is mandatory: capemon otherwise corrupts DynamoRIO and the run
+        # yields 0 logs. It rides inside the options string via submit().
+        tid = c.submit(
+            args.sample,
+            package=args.package,
+            timeout=args.timeout,
+            options={"free": "yes"},
+        )
+    except FileNotFoundError:
+        log.error("sample not found: %s", args.sample)
+        return 1
+    except CapeError as e:
+        log.error("submit failed: %s", e)
+        return 2
+    log.info("submitted task %s (package=%s)", tid, args.package)
+
+    status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+    if status != "reported":
+        # A failed detonation has no logs to correlate against.
+        log.error("task %s did not report (status=%s), cannot correlate", tid, status)
+        return 2
+    log.info("stage 2/3 detonate: task %s reported", tid)
+
+    # Stage 3/3 correlate: join the runtime comparisons onto the static record. An
+    # empty log set is honest, not a failure -- some samples defeat DynamoRIO and
+    # legitimately yield zero comparisons.
+    try:
+        logs = c.fetch_cmplog_logs(tid, args.storage_root)
+    except CapeError as e:
+        log.error("%s", e)
+        return 2
+    cmp_records = parse_cmplog_files(logs)
+    enriched = correlate_record(record, cmp_records, module_base=args.module_base)
+    with_cmps = [cand for cand in enriched["candidates"] if cand.get("comparison_candidates")]
+    log.info("stage 3/3 correlate: %d candidates with comparisons", len(with_cmps))
+
+    text = json.dumps(enriched, indent=2)
+    if args.output:
+        args.output.write_text(text)
+        total_cmps = sum(len(cand["comparison_candidates"]) for cand in with_cmps)
+        print(
+            f"wrote {args.output}: {len(enriched['candidates'])} candidates, "
+            f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
+        )
+    else:
+        print(text)
+    log.info("done")
     return 0
 
 

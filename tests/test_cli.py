@@ -6,6 +6,7 @@ heavy import, and the stale-cache / success paths monkeypatch
 run_static_pipeline so main()'s contract is tested in isolation.
 """
 
+import copy
 import json
 import logging
 import shutil
@@ -497,6 +498,103 @@ def test_tasks_cape_error_returns_2(monkeypatch):
 
     monkeypatch.setattr(cape_client.CapeClient, "list_tasks", boom)
     assert cli.main(["tasks"]) == 2
+
+
+# ---------- run (static -> detonate --wait -> correlate) ----------
+
+
+# A minimal intermediate record whose call sites align with PC windows in the
+# synth cmplog log, so correlate lands at least one comparison. The first
+# candidate (0x00401000) sits just before the 0x0040100x/0x0040102x comparisons.
+_RUN_RECORD = {
+    "candidates": [
+        {
+            "call_site_va": "0x00401000",
+            "function_va": "0x00400f00",
+            "api_name": "IsDebuggerPresent",
+            "parameter_index": 0,
+            "comparison_operator": "unknown",
+            "candidate_values": [{"value": None}],
+            "evidence": {"cmp_operand_a": None, "cmp_operand_b": None},
+        },
+        {
+            "call_site_va": "0x0040f000",
+            "function_va": "0x0040ef00",
+            "api_name": "GetModuleHandleA",
+            "parameter_index": 0,
+            "comparison_operator": "unknown",
+            "candidate_values": [{"value": None}],
+            "evidence": {"cmp_operand_a": None, "cmp_operand_b": None},
+        },
+    ],
+    "derivation_status": "fully_derivable",
+    "capa_techniques": [],
+}
+
+
+def _patch_run_stages(monkeypatch, poll_status="reported"):
+    from clew.channels.cape import client as cape_client
+
+    # Deep-copy per call: correlate_record mutates the record in place.
+    def fresh_record(*a, **k):
+        return copy.deepcopy(_RUN_RECORD)
+
+    monkeypatch.setattr(cli, "run_static_pipeline", fresh_record)
+    monkeypatch.setattr(cape_client.CapeClient, "submit", lambda self, s, **k: 77)
+    monkeypatch.setattr(cape_client.CapeClient, "poll", lambda self, tid, **k: poll_status)
+    monkeypatch.setattr(
+        cape_client.CapeClient,
+        "fetch_cmplog_logs",
+        lambda self, task_id, storage_root: [FIXTURES / "cmplog_synth_01.log"],
+    )
+
+
+def test_run_happy_path_emits_enriched_record(monkeypatch, capsys):
+    _patch_run_stages(monkeypatch)
+    assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 0
+    enriched = json.loads(capsys.readouterr().out)
+    # The matching candidate carries proximity comparisons and mirrored legacy fields.
+    first = enriched["candidates"][0]
+    assert first["comparison_candidates"]
+    assert first["evidence"]["cmp_operand_a"] is not None
+    # The out-of-window candidate stays empty.
+    assert enriched["candidates"][1]["comparison_candidates"] == []
+
+
+def test_run_detonation_failed_returns_2_without_correlating(monkeypatch):
+    from clew.channels.cape import client as cape_client
+
+    _patch_run_stages(monkeypatch, poll_status="failed_analysis")
+
+    def boom(self, task_id, storage_root):
+        raise AssertionError("correlate must not run after a failed detonation")
+
+    monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
+    assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 2
+
+
+def test_run_static_not_found_returns_1(monkeypatch):
+    def boom(*a, **k):
+        raise cli.SampleNotFoundError("no such sample")
+
+    monkeypatch.setattr(cli, "run_static_pipeline", boom)
+    assert cli.main(["run", "/nonexistent/nope.exe", "--no-license-checkout"]) == 1
+
+
+def test_run_parser_carries_merged_flags():
+    ns = cli.build_parser().parse_args(["run", "x.exe"])
+    assert ns.func is cli._cmd_run
+    assert ns.sample == "x.exe"
+    # Detonate stage defaults.
+    assert ns.package == "exe_cmplog"
+    assert ns.timeout == 120
+    # Correlate stage defaults.
+    assert ns.module_base is None
+    assert ns.storage_root == "/opt/CAPEv2/storage/analyses"
+    # Static stage flags merged in.
+    assert ns.exclude_unresolved is False
+    assert ns.no_cache is False
+    assert ns.no_license_checkout is False
 
 
 if __name__ == "__main__":
