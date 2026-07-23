@@ -1,107 +1,115 @@
 # Clew
 
-Clew is a per-sample candidate-extraction pipeline for environment-sensitive
-malware analysis. It runs once over a PE32 sample and emits a structured JSON
-record of candidate API return/argument values that a downstream fuzzer
-uses as seeds to reach evasion-gated execution paths. It replaces the fuzzer's
-hand-coded, sample-agnostic retarget lists with candidates derived
-from the binary itself.
+Clew reads a single PE32 malware sample once and emits a per-sample seed corpus
+that an environmental fuzzer uses to reach the code paths a sample hides behind
+its environment checks. It derives, statically, the concrete values those checks
+are keyed on and ties each candidate to the API call site that consumes it. Clew
+does not defeat evasion itself. It produces the per-sample seed data that lets a
+fuzzer do so, and it matters most for run-on-match checks, where a sample proceeds
+only on a specific value that no generic default can supply.
 
-## The channel model
+## Why
 
-Work is organized as numbered **channels**, each owning a disjoint slice of the
-output record:
+Environment-sensitive malware gates its payload behind checks against the machine
+it runs on, and one survey of over 180,000 samples found 68% of families contain
+at least one evasive sample. Some of those checks hide on a match, like sandbox or
+debugger detection, and a generic default that never matches already defeats them.
+Others run only on a match. A binary that reads a username with `GetUserNameA` and
+compares it against `"JohnDoe"` exits on every other name, so the only way to
+unlock that path is the exact value the sample expects. That value lives in the
+binary, and recovering it is what Clew does. See [docs/theory.md](docs/theory.md)
+for the full argument.
 
-| # | Channel | Produces | Status |
-|---|---|---|---|
-| 0 | capa | sample-level technique detection, derivation status | static |
-| 1 | FLOSS | string values (static, stackstring, tightstring, decoded) | static |
-| 2 | Binary Ninja | API call sites + MLIL-SSA dataflow joining sites to values | static |
-| 3 | DynamoRIO cmp-logging (in CAPE) | comparison operands after API returns | dynamic (not yet integrated) |
-| 4 | CAPE config extractors | family-specific config (C2, keys) | dynamic (not yet integrated) |
+## What it recovers
 
-The output contract lives in `docs/schema.md` (human-readable) and
-`schema/clew_record.schema.json` (machine-checkable).
+Clew recovers the values these checks compare against, among them DLL and device
+names, registry paths, mutexes, usernames, and the numeric constants the checks
+test. Each candidate is an API call site plus the value(s) that flow into it, a
+provenance record, and a confidence score the downstream fuzzer uses to rank what
+to try first.
 
-## Prerequisites
+Running Clew over a sample and reading one candidate from the record:
 
-- **Core channel (Binary Ninja):** Binary Ninja `4.2.6455 Ultimate` with an
-  Enterprise license is required to run the pipeline over a real sample.
-- **capa rules/sigs:** supply paths via `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS`.
-  Copy `.env.example` to `.env`, fill in your paths, and load it
-  (`set -a; source .env; set +a`). The built-in defaults are placeholders and
-  will not exist on a fresh checkout.
-- **Without a license:** the offline, fixture-driven test suite runs clean on a
-  bare checkout — see [Running tests](#running-tests). This is the recommended
-  way to explore Clew's behavior without BN or capa.
+```bash
+clew suspicious.exe          # writes results/<sha256>.clew.json
+```
 
-## Install
+```json
+{
+  "call_site_va": "0x0046e2b9",
+  "api_name": "LookupPrivilegeValueW",
+  "parameter_index": 1,
+  "candidate_values": [
+    { "value": "SeDebugPrivilege", "confidence": 0.9,
+      "source_channels": ["bn_xref", "floss"] }
+  ],
+  "evidence": { "string_source": "static" }
+}
+```
+
+The sample looks up `SeDebugPrivilege` at `0x46e2b9`, recovered from a static
+string that Binary Ninja and FLOSS both confirm (confidence 0.9). A fuzzer that
+reaches this call site now knows the exact argument to supply. Fields are abridged
+here. The full contract is in [docs/schema.md](docs/schema.md).
+
+## Quickstart
+
+Install:
 
 ```bash
 pip install -e '.[dev,analysis]'
 ```
 
-## Quickstart
+Run the static pipeline over a sample. A Binary Ninja license and capa rules/sigs
+are required:
 
 ```bash
-# Full static pipeline over a sample (BN license + capa rules/sigs required)
 export CLEW_CAPA_RULES=/path/to/capa-rules
 export CLEW_CAPA_SIGS=/path/to/capa-src/sigs
-clew tests/fixtures/al-khaser_x86.exe -o /tmp/al.clew.json
+clew suspicious.exe
 ```
 
-Installing the package provides the `clew` console command (entry point
-`clew.cli:main`); `python -m clew.pipeline` is an equivalent alias. The pipeline
-logs per-stage progress to stderr as it runs — add `-v` for debug detail or `-q`
-to quiet it to warnings/errors. `clew --help` lists all options.
-
-## Locked design decisions
-
-Not re-opened without cause.
-
-| Decision | Choice |
-|---|---|
-| LLM enrichment | Out of v1 |
-| capa preprocessing | In as explicit stage |
-| Target API list | reference set of 68 for v1 |
-| Packaging | Standalone Clew CLI; Channel 3 uses CAPE via REST API |
-| Dataflow enrichment | Merged into Channel 2 (no separate channel) |
-| Iterative mode | Deferred to v2; schema and orchestration built iteration-ready |
-| Scope tiers | Tier 1 full, Tier 2 partial, Tier 3–4 triage-only |
-
-## Running tests
+The record is written to `results/<sha256>.clew.json` by default. Pass `-o <path>`
+to choose a location, or `-o -` to write to stdout. To add the dynamic comparison
+operands, Clew detonates the sample under DynamoRIO in CAPE and correlates the
+runtime comparisons back onto the record:
 
 ```bash
-# Offline suite (no BN license, no capa rules — the default CI-able set)
-pytest
+clew run suspicious.exe      # static, then detonate, then correlate
 ```
 
-Expensive/licensed tests are opt-in via environment variables:
+`clew --help` lists the commands. See [docs/usage.md](docs/usage.md) for the full
+command reference and the end-to-end workflow.
 
-- `BN_INTEGRATION=1` — enables the licensed real Binary Ninja analysis tests
-  (needs a BN Enterprise license and the fixture `.exe` present).
-- `CAPA_RULES_PATH` + `CAPA_SIGS_PATH` — enables capa integration tests.
+## Prerequisites
 
-Tests also skip when a required fixture hasn't been generated, so a clean
-checkout runs a reduced-but-green suite.
+- Binary Ninja 4.2.6455 Ultimate with an Enterprise license, for the core static
+  analysis.
+- capa rules and signatures, via `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS` (copy
+  `.env.example` to `.env` and load it with `set -a; source .env; set +a`).
+- A CAPE instance with the cmplog DynamoRIO package, for the dynamic step
+  (`detonate`, `run`). The static pipeline runs without it.
 
-## Reading guide
+Without a Binary Ninja license, the offline test suite still runs clean on a bare
+checkout (see Tests).
 
-**Start here:**
+## Documentation
 
-- `docs/schema.md` — the record contract (read first).
-- `docs/static_pipeline.md` — the orchestrator in depth (canonical architecture doc).
+- [docs/theory.md](docs/theory.md) — the problem and Clew's approach (read first).
+- [docs/usage.md](docs/usage.md) — the command reference and end-to-end workflow.
+- [docs/schema.md](docs/schema.md) — the record contract. The machine-checkable
+  version is `schema/clew_record.schema.json`.
+- [docs/binary_ninja_headless_setup.md](docs/binary_ninja_headless_setup.md) —
+  headless Binary Ninja setup notes.
 
-**Per channel:**
+## Tests
 
-- `docs/floss.md` — Channel 1: FLOSS string extraction.
-- `docs/bn_callsites.md` — Channel 2 / Unit 3: Binary Ninja call-site enumeration.
-- `docs/bn_dataflow.md` — Channel 2 / Unit 4: the dataflow bridge internals and reproducibility investigation.
+```bash
+pytest        # offline, fixture-driven; no BN license or capa rules needed
+```
 
-**Reference:**
-
-- `docs/evasion-taxonomy.md` — the defeatability-tier taxonomy.
-- `docs/schema_v2_notes.md` — known limits of the v1 schema (read before proposing schema changes).
-- `docs/pilot_results.md` — pre-proposal channel pilots (FLOSS, DynamoRIO-in-CAPE).
-- `docs/channel0_at_scale.md` — capa (Channel 0) characterized over a 500-sample corpus.
-- `docs/binary_ninja_headless_setup.md` — headless Binary Ninja setup notes (environment-specific).
+Expensive and licensed tests are opt-in via environment variables. `BN_INTEGRATION=1`
+enables the licensed Binary Ninja analysis tests (needs a BN Enterprise license and
+the fixture `.exe`), and `CAPA_RULES_PATH` with `CAPA_SIGS_PATH` enables the capa
+integration tests. Tests skip when a required fixture is absent, so a clean checkout
+runs a reduced but green suite.
