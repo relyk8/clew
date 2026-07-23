@@ -73,7 +73,7 @@ def test_output_flag_writes_file_and_summarizes(monkeypatch, capsys, tmp_path):
 
 
 def test_parser_defaults():
-    ns = cli.build_parser().parse_args(["x.exe"])
+    ns = cli.build_parser().parse_args(["static", "x.exe"])
     assert ns.sample == "x.exe"
     assert ns.exclude_unresolved is False
     assert ns.no_cache is False
@@ -133,9 +133,9 @@ def test_output_summary_counts_resolved_candidates(monkeypatch, capsys, tmp_path
 @pytest.mark.parametrize(
     "argv,expected",
     [
-        (["s.exe"], logging.INFO),
-        (["s.exe", "-v"], logging.DEBUG),
-        (["s.exe", "-q"], logging.WARNING),
+        (["static", "s.exe"], logging.INFO),
+        (["static", "s.exe", "-v"], logging.DEBUG),
+        (["static", "s.exe", "-q"], logging.WARNING),
     ],
 )
 def test_log_level_selection(argv, expected, monkeypatch):
@@ -148,12 +148,36 @@ def test_log_level_selection(argv, expected, monkeypatch):
 
 def test_verbose_quiet_mutually_exclusive():
     with pytest.raises(SystemExit):
-        cli.build_parser().parse_args(["x.exe", "-v", "-q"])
+        cli.build_parser().parse_args(["static", "x.exe", "-v", "-q"])
 
 
-def test_sample_is_required():
+def test_bare_invocation_shows_menu(capsys):
+    # Bare `clew` no longer errors on a missing sample: subparsers are not
+    # required, so it prints the verb menu to stderr and returns 2.
+    assert cli.main([]) == 2
+    err = capsys.readouterr().err
+    assert "static" in err
+
+
+def test_static_requires_sample():
+    # `clew static` with no sample still errors (the static subparser's
+    # positional is required).
     with pytest.raises(SystemExit):
-        cli.build_parser().parse_args([])
+        cli.build_parser().parse_args(["static"])
+
+
+def test_back_compat_bare_sample_routes_to_static(monkeypatch):
+    # `clew x.exe` (no verb) must still run the static pipeline.
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: _RECORD)
+    assert cli.main(["x.exe"]) == 0
+
+
+def test_inject_default_verb():
+    verbs = {"static"}
+    assert cli._inject_default_verb(["x.exe"], verbs) == ["static", "x.exe"]
+    assert cli._inject_default_verb(["static", "x.exe"], verbs) == ["static", "x.exe"]
+    assert cli._inject_default_verb(["--version"], verbs) == ["--version"]
+    assert cli._inject_default_verb([], verbs) == []
 
 
 def test_pipeline_has_no_rival_parser():
