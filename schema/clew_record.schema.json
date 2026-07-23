@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://clew.local/schemas/clew_record-0.3.0.json",
+  "$id": "https://clew.local/schemas/clew_record-0.4.0.json",
   "title": "Clew Record",
-  "description": "Per-sample candidate extraction record produced by Clew v0.3.x. See docs/schema.md for the human-readable specification.",
+  "description": "Per-sample candidate extraction record produced by Clew v0.4.x. See docs/schema.md for the human-readable specification.",
   "type": "object",
   "additionalProperties": false,
   "required": [

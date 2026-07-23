@@ -38,7 +38,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-CLEW_VERSION = "0.3.0"
+CLEW_VERSION = "0.4.0"
 
 _log = logging.getLogger("clew.pipeline")
 
