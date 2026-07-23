@@ -74,7 +74,7 @@
 
     "Channel": {
       "type": "string",
-      "enum": ["capa", "floss", "bn_xref", "drio", "cape_config"]
+      "enum": ["capa", "floss", "bn_xref", "drio"]
     },
 
     "ApiResolution": {

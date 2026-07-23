@@ -57,7 +57,7 @@ touch BN at all).
 
 BN API surface used (re-validate on BN bumps; companions BN_PINS in
 callsites.py):
-    func.mlil.ssa_form ; block/insn iteration ; insn.operation/.address
+    func.mlil_if_available.ssa_form ; block/insn iteration ; insn.operation/.address
     MLIL_CALL_SSA / MLIL_TAILCALL_SSA / *_UNTYPED_SSA / MLIL_SYSCALL_SSA
     call.params ; MLIL_VAR_SSA.src ; MLIL_VAR_PHI.src/.dest
     MLIL_CONST(_PTR)/MLIL_IMPORT.constant ; MLIL_ADDRESS_OF.src (stack var)
