@@ -13,9 +13,6 @@ bridge attaches the value, the dataflow path, and the string's provenance
 to the call-site stub -- turning `evidence.channels == ["bn_xref"]` into
 `["bn_xref", "floss"]` and producing a candidate with a value on it.
 
-See docs/schema_v2_notes.md (findings #2 and #4) for the value-channel vs
-call-site-channel split, and docs/evasion-taxonomy.md for tiers.
-
 Scope (v1) -- what the bridge DOES:
     * locate the MLIL-SSA call at each Unit-3 call_site_va
     * for each parameter, walk the def-use chain (through phi nodes) to a

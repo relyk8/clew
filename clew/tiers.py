@@ -2,13 +2,12 @@
 
 `derivation_status` answers: where is Clew's derivation pipeline with this
 sample today? It is **not** a defeatability tier. The defeatability tier (a
-property of an evasion technique) is the taxonomy concept used in
-`docs/evasion-taxonomy.md` and surfaces per-candidate via the
-schema's `evasion_tier` field.
+property of an evasion technique) is the taxonomy concept that surfaces
+per-candidate via the schema's `evasion_tier` field.
 
 Rollup model: per-rule actionability decides the sample's categorical.
 A rule is "actionable" iff it is in CAPA_RULE_TO_APIS AND all its implied
-APIs are in PFUZZER_68_APIS. Sample-level rollup:
+APIs are in TARGET_ENV_APIS. Sample-level rollup:
 
 - `fully_derivable`     ≥1 matched rule, every matched rule is actionable
 - `partially_derivable` ≥1 matched rule is actionable AND ≥1 is not
@@ -33,37 +32,34 @@ from __future__ import annotations
 
 from typing import Iterable
 
-# Empirically derived from Pfuzzer's public dataset (github.com/Sap4Sec/pfuzzer):
-# every API surfaced in the "Mutations applied" section across all 1,078
-# annotated samples, plus the canonical Windows-API members of the
-# TimeDelayAPIs / TimeQueryAPIs meta-labels that Pfuzzer's trace output
-# bundles. The paper (Sec 3.4) claims "a selection of 68 APIs counting
-# A/E/ExA/ExW variants as one" — the literal symbol list is naturally
-# larger when variants are split out.
+# Empirically derived from a public environmental-fuzzing dataset: every API
+# surfaced in the "Mutations applied" section across all 1,078 annotated
+# samples, plus the canonical Windows-API members of the TimeDelayAPIs /
+# TimeQueryAPIs meta-labels that the source's trace output bundles. The source
+# work claims "a selection of 68 APIs counting A/E/ExA/ExW variants as one".
+# The literal symbol list is naturally larger when variants are split out.
 #
-# Coverage note: this set has 55 base APIs (counting variants as one)
-# vs. the paper's claimed 68. The 13-API gap is unrecoverable from
-# public Pfuzzer materials — the implementation source isn't in the
-# public repo and the paper sources the 68 from prior work
-# ([6] BluePill / D'Elia 2020, [7] Enviral / Gorter 2023) without
-# enumerating the list inline. The dataset can only surface APIs that
-# at least one sample actually called; APIs hooked but never triggered
-# in the 1,078 samples won't appear here. Closing the gap is deferred
-# work — see BluePill / Enviral papers or PFuzzer's gated implementation
-# repo if needed for a future v2 expansion.
+# Coverage note: this set has 55 base APIs (counting variants as one) vs. the
+# source's claimed 68. The 13-API gap is unrecoverable from the public
+# materials, since the implementation source is not published and the 68 trace
+# to prior work (BluePill / D'Elia 2020, Enviral / Gorter 2023) without an
+# inline list. The dataset can only surface APIs that at least one sample
+# actually called. APIs hooked but never triggered in the 1,078 samples will
+# not appear here. Closing the gap is deferred v2 work. See the BluePill /
+# Enviral papers if needed.
 #
 # Notes:
-# - CPUID and RDTSC are instructions, not APIs. Pfuzzer instruments them
-#   via DBI but they don't belong in an API-name set.
+# - CPUID and RDTSC are instructions, not APIs. The source tool instruments
+#   them via DBI but they don't belong in an API-name set.
 # - IsDebuggerPresent / CheckRemoteDebuggerPresent / NtQueryInformationProcess
 #   are added because they are canonical anti-debug APIs covered by capa's
 #   "check for debugger via API" rule and are routinely interposed by
-#   Pfuzzer-class fuzzers (BluePill, Enviral) even when they don't show up
+#   environmental fuzzers (BluePill, Enviral) even when they don't show up
 #   in this particular dataset's mutation logs.
 # - GetModuleHandleA/W are added because they are the canonical anti-VM
 #   string-fingerprint APIs that capa's "reference anti-VM strings" rule
-#   family implies, and Pfuzzer-class fuzzers interpose on them.
-PFUZZER_68_APIS: frozenset[str] = frozenset(
+#   family implies, and environmental fuzzers interpose on them.
+TARGET_ENV_APIS: frozenset[str] = frozenset(
     {
         # Anti-debug (canonical; covered by capa "check for debugger via API")
         "IsDebuggerPresent",
@@ -157,7 +153,7 @@ PFUZZER_68_APIS: frozenset[str] = frozenset(
         # Synchronization (used as VM/sandbox fingerprints via named mutexes)
         "CreateMutexA",
         "CreateMutexW",
-        # Time query / delay (Pfuzzer trace label: TimeQueryAPIs / TimeDelayAPIs)
+        # Time query / delay (source trace label: TimeQueryAPIs / TimeDelayAPIs)
         "GetTickCount",
         "GetTickCount64",
         "QueryPerformanceCounter",
@@ -218,15 +214,15 @@ def _rule_is_actionable(rule: str) -> bool:
     """True iff the rule is mapped to ≥1 API AND all implied APIs are in target list.
 
     An empty mapping (e.g. ``reference analysis tools strings``) means the
-    rule fires on static features with no specific API to fuzz — Clew has
-    nothing to emit for AriadneX, so the rule is not actionable.
+    rule fires on static features with no specific API to fuzz, so there is
+    nothing to emit for the downstream fuzzer and the rule is not actionable.
     """
     if rule not in CAPA_RULE_TO_APIS:
         return False
     implied = CAPA_RULE_TO_APIS[rule]
     if not implied:
         return False
-    return not (implied - PFUZZER_68_APIS)
+    return not (implied - TARGET_ENV_APIS)
 
 
 def classify(rule_names: Iterable[str]) -> tuple[str, list[str]]:
@@ -240,7 +236,7 @@ def classify(rule_names: Iterable[str]) -> tuple[str, list[str]]:
 
     The unmapped-rule list is returned alongside the categorical for
     sizing derivation backlog. Note: a rule can be not-actionable for two
-    reasons (unmapped, or mapped with APIs outside PFUZZER_68_APIS); only
+    reasons (unmapped, or mapped with APIs outside TARGET_ENV_APIS); only
     the unmapped subset is reported here.
     """
     rule_names = list(rule_names)

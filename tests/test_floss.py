@@ -27,8 +27,7 @@ from clew.channels.floss import (
 
 # The 12 DLL fingerprints in al-khaser's loaded_dlls candidate (record #2).
 # capa's `reference anti-VM strings` rule covers 8 and misses 4; FLOSS must
-# recover all 12 — that gap is Channel 1's reason to exist
-# (docs/schema_v2_notes.md finding #2).
+# recover all 12 — that gap is Channel 1's reason to exist.
 #
 # The full set of 12 is loaded from the record's candidate_values so it has a
 # single source of truth -- do not copy those values here.

@@ -7,7 +7,7 @@
   no_capa_signal     — no rules at all
 
 A rule is actionable iff it's mapped in CAPA_RULE_TO_APIS AND every
-implied API is in PFUZZER_68_APIS.
+implied API is in TARGET_ENV_APIS.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from clew import tiers
 
 
 def test_classify_fully_derivable():
-    # "check for debugger via API" maps to APIs all in Pfuzzer 68.
+    # "check for debugger via API" maps to APIs all in the target set.
     status, unmapped = tiers.classify(["check for debugger via API"])
     assert status == "fully_derivable"
     assert unmapped == []
@@ -41,7 +41,7 @@ def test_classify_partially_derivable_outside_target(monkeypatch):
     # rule. Sample should be partially_derivable.
     outside_rule = "fake outside-target rule"
     new_map = dict(tiers.CAPA_RULE_TO_APIS)
-    new_map[outside_rule] = frozenset({"NotInPfuzzer68_xyz"})
+    new_map[outside_rule] = frozenset({"NotInTargetSet_xyz"})
     monkeypatch.setattr(tiers, "CAPA_RULE_TO_APIS", new_map)
 
     status, unmapped = tiers.classify(
@@ -65,7 +65,7 @@ def test_classify_not_derivable_all_outside_target(monkeypatch):
     # All rules mapped, but every implied API is outside the target list.
     outside_rule = "fake outside-only rule"
     new_map = dict(tiers.CAPA_RULE_TO_APIS)
-    new_map[outside_rule] = frozenset({"NotInPfuzzer68_xyz"})
+    new_map[outside_rule] = frozenset({"NotInTargetSet_xyz"})
     monkeypatch.setattr(tiers, "CAPA_RULE_TO_APIS", new_map)
 
     status, unmapped = tiers.classify([outside_rule])

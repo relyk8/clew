@@ -20,9 +20,9 @@ Samples evaluated as candidates and not used. Logged here as audit trail and to 
 
 ### `b6a3b9630a6ed8f626b7fdc083c73a03c57923c1055314bacaa49031c5fa6ae3`
 
-- **Identity**: NSIS dropper, 2022 corpus, Pfuzzer "fully evasive" sample
+- **Identity**: NSIS dropper, 2022 corpus, "fully evasive" sample from the reference corpus
 - **Status**: rejected
-- **Reason**: NSIS wrapper containing Salvity polymorphic file infector as inner payload. Inner PE has runtime-mutating code, so Pfuzzer's static offsets do not correspond to stable static-analysis addresses. Polymorphic file infectors are out of scope for v1 fixtures regardless of wrapper.
+- **Reason**: NSIS wrapper containing Salvity polymorphic file infector as inner payload. Inner PE has runtime-mutating code, so the reference fuzzer's static offsets do not correspond to stable static-analysis addresses. Polymorphic file infectors are out of scope for v1 fixtures regardless of wrapper.
 - **Source**: VX Underground (sample no longer browsable by SHA-256 lookup; was sourced via direct hash query before the site reorganization)
 
 ### `269aff53e58f71f5893d6d4bb552e57ab3f56d8b797259f8ed9a3ffc18a295b4`
@@ -51,7 +51,7 @@ These are documented here rather than in the schema or README because they're ab
 
 ### v1 fixtures are al-khaser, not real malware
 
-Originally planned for 3-5 Pfuzzer-corpus fixtures. Three real-malware sourcing attempts (above) revealed that hand-built ground-truth oracles are not tractable for samples with wrapper-router patterns (Delphi RTL, NSIS extraction, Pony dispatch). Real malware aggressively wraps API calls in helpers, so the call site and the comparison site are typically in different functions, requiring multi-frame manual RE per fixture.
+Originally planned for 3-5 reference-corpus fixtures. Three real-malware sourcing attempts (above) revealed that hand-built ground-truth oracles are not tractable for samples with wrapper-router patterns (Delphi RTL, NSIS extraction, Pony dispatch). Real malware aggressively wraps API calls in helpers, so the call site and the comparison site are typically in different functions, requiring multi-frame manual RE per fixture.
 
 The schema does not need real malware to be validated. al-khaser provides:
 - Open-source ground truth (the C++ source code is the answer key)
@@ -68,4 +68,4 @@ If real-malware fixtures are added later, the triage order to avoid wasted effor
 1. **Confirm availability** before evaluating analytical fit. Check MalwareBazaar (free auth-key) first, then Hybrid Analysis, then VirusTotal Academic if available. If the SHA-256 doesn't return a downloadable hit on any free or already-credentialed source, skip the sample.
 2. **Reject family classes outright** without analysis: Salvity, Virut, Sality, Ramnit, Expiro, Polip, Neshta (polymorphic file infectors). Reject NSIS-wrapped samples unless the inner PE is what's being analyzed and its hash is recorded separately.
 3. **In Binary Ninja, run the four-check triage** before any address work: section names (no `.ndata`/`UPX`/`.aspack`), import count (30+ across multiple DLLs), strings density (200+ readable), `_start` shape (MSVC C runtime, not Delphi RTL with `NtTib.ExceptionList` / `TObject`).
-4. **For Pfuzzer-cited samples, verify offsets land in code, not data.** Pfuzzer's `@ XXXX` is a return-address relative to PE base. Adding the image base (typically `0x00400000`) and looking at the instruction one line above the result should reveal a recognizable IAT call to the named API. If it doesn't, either the sample is packed/wrapped (and Pfuzzer's offsets are from a runtime memory image that doesn't match the static binary) or BN didn't auto-disassemble the region.
+4. **For reference-corpus samples, verify offsets land in code, not data.** The reference fuzzer's `@ XXXX` is a return-address relative to PE base. Adding the image base (typically `0x00400000`) and looking at the instruction one line above the result should reveal a recognizable IAT call to the named API. If it doesn't, either the sample is packed/wrapped (and those offsets are from a runtime memory image that doesn't match the static binary) or BN didn't auto-disassemble the region.

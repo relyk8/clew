@@ -8,9 +8,6 @@ is called and *how* it was resolved — never the string values that flow
 into those calls (that is Channel 1 / FLOSS) and never the dataflow that
 joins the two (that is Unit 4, `clew/channels/binaryninja/dataflow.py`).
 
-See docs/schema_v2_notes.md (findings #2 and #4) for the architectural
-split between value channels and call-site channels.
-
 Resolution modes detected in v1 (maps onto the schema `api_resolution`
 enum):
 

@@ -3,7 +3,7 @@ Minimal CAPE REST client for Clew's Channel 3 (DynamoRIO comparison logging).
 Targets CAPEv2 apiv2 endpoints. Tested against the services-based layout
 (cape, cape-web, cape-processor, cape-rooter).
 
-Migrated from ariadneX; originally written for RL-guided mutation submission.
+Adapted from a prior project, originally written for RL-guided mutation submission.
 """
 
 from __future__ import annotations
@@ -60,8 +60,8 @@ class CapeClient:
     ) -> int:
         """
         Submit a file. Returns the task_id (int).
-        Always passes enforce_timeout=1 by default — required for ariadneX
-        because sleepy anti-analysis samples will otherwise hang the guest.
+        Always passes enforce_timeout=1 by default, required because sleepy
+        anti-analysis samples will otherwise hang the guest.
         """
         sample_path = Path(sample_path)
         if not sample_path.is_file():
