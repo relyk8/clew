@@ -7,8 +7,8 @@ module owns argument parsing and logging setup; the analysis itself lives in
 the record JSON (default) or, with `-o`, a one-line summary -- so stdout stays
 clean for piping.
 
-The surface is a subcommand dispatcher (`clew <verb> ...`). Only `static` is
-registered today; detonate/correlate/tasks/run land in later commits. Bare
+The surface is a subcommand dispatcher (`clew <verb> ...`). `static` and
+`correlate` are registered today; detonate/tasks/run land in later commits. Bare
 `clew <sample>` stays a back-compat alias for `clew static <sample>`.
 """
 
@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -97,6 +98,57 @@ def _add_static_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_static)
 
 
+def _add_correlate_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "correlate",
+        parents=[parent],
+        help="join runtime cmp/test operands (Channel 3) onto a static clew record",
+        description="Enrich a static clew record with proximity-correlated comparison "
+        "operands from DynamoRIO cmplog logs.",
+    )
+    s.add_argument(
+        "--record",
+        required=True,
+        help="path to the intermediate record JSON to enrich",
+    )
+    # Exactly one log source is required: a local dir of logs (offline primary
+    # path) or a CAPE task id (reads logs from CAPE storage on this host).
+    source = s.add_mutually_exclusive_group(required=True)
+    source.add_argument(
+        "--cmplog-dir",
+        help="dir of cmplog.*.log files (offline; no CAPE needed)",
+    )
+    source.add_argument(
+        "--task",
+        type=int,
+        help="CAPE task id; reads cmplog.*.log from CAPE storage",
+    )
+    s.add_argument(
+        "--module-base",
+        type=lambda v: int(v, 0),
+        default=None,
+        help="runtime load base to rebase PCs into static VA space (0x... accepted)",
+    )
+    s.add_argument(
+        "--storage-root",
+        default="/opt/CAPEv2/storage/analyses",
+        help="CAPE analyses storage root (only used with --task)",
+    )
+    s.add_argument(
+        "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL (only used with --task; default $CAPE_BASE_URL)",
+    )
+    s.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=None,
+        help="write the enriched record JSON here (default: stdout)",
+    )
+    s.set_defaults(func=_cmd_correlate)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -131,6 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = p.add_subparsers(dest="command")
     _add_static_subparser(sub, parent)
+    _add_correlate_subparser(sub, parent)
     return p
 
 
@@ -209,6 +262,57 @@ def _cmd_static(args) -> int:
             f"({resolved} with values), "
             f"derivation_status={record['derivation_status']}, "
             f"{len(record['capa_techniques'])} capa techniques"
+        )
+    else:
+        print(text)
+    log.info("done")
+    return 0
+
+
+def _cmd_correlate(args) -> int:
+    # Lazy imports: keep `clew static` and the offline suite free of the CAPE
+    # client (which pulls requests) and the correlator.
+    from clew.channels.cape.cmplog_parse import parse_cmplog_files
+    from clew.channels.cape.correlate import correlate_record
+
+    log = logging.getLogger("clew.cli")
+
+    record_path = Path(args.record)
+    try:
+        record = json.loads(record_path.read_text())
+    except FileNotFoundError:
+        log.error("record not found: %s", record_path)
+        return 1
+
+    if args.cmplog_dir is not None:
+        cmplog_dir = Path(args.cmplog_dir)
+        if not cmplog_dir.is_dir():
+            log.error("cmplog dir not found: %s", cmplog_dir)
+            return 1
+        logs = sorted(cmplog_dir.glob("cmplog.*.log"))
+        if not logs:
+            log.warning("no cmplog.*.log files in %s (comparisons will be empty)", cmplog_dir)
+    else:
+        from clew.channels.cape.client import CapeClient, CapeError
+
+        try:
+            logs = CapeClient(args.cape_url).fetch_cmplog_logs(args.task, args.storage_root)
+        except CapeError as e:
+            log.error("%s", e)
+            return 2
+
+    cmp_records = parse_cmplog_files(logs)
+    log.info("parsed %d comparison records from %d log(s)", len(cmp_records), len(logs))
+    enriched = correlate_record(record, cmp_records, module_base=args.module_base)
+
+    text = json.dumps(enriched, indent=2)
+    if args.output:
+        args.output.write_text(text)
+        with_cmps = [c for c in enriched["candidates"] if c.get("comparison_candidates")]
+        total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
+        print(
+            f"wrote {args.output}: {len(enriched['candidates'])} candidates, "
+            f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
         )
     else:
         print(text)

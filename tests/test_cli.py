@@ -6,11 +6,16 @@ heavy import, and the stale-cache / success paths monkeypatch
 run_static_pipeline so main()'s contract is tested in isolation.
 """
 
+import json
 import logging
+import shutil
+from pathlib import Path
 
 import pytest
 
 import clew.cli as cli
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 _RECORD = {
     "candidates": [],
@@ -191,6 +196,124 @@ def test_pipeline_has_no_rival_parser():
     assert not hasattr(pipeline, "build_parser")
     assert not hasattr(pipeline, "main")
     assert "from clew.cli import main" in inspect.getsource(pipeline)
+
+
+def _has_filled_comparison(record):
+    # A candidate whose correlator output is non-empty and whose legacy operand
+    # fields were mirrored (non-null) from the top comparison.
+    for c in record["candidates"]:
+        if c.get("comparison_candidates") and c["evidence"]["cmp_operand_a"] is not None:
+            return True
+    return False
+
+
+def test_correlate_cmplog_dir_happy_path(tmp_path, capsys):
+    # Pure offline path: copy the synth log into a dir, correlate the fixture
+    # record against it, assert exit 0 and a filled comparison in the output.
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    shutil.copy(FIXTURES / "cmplog_synth_01.log", log_dir / "cmplog.1.log")
+    out = tmp_path / "enriched.json"
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(FIXTURES / "correlate_input_01.json"),
+            "--cmplog-dir",
+            str(log_dir),
+            "-o",
+            str(out),
+        ]
+    )
+    assert rc == 0
+    assert capsys.readouterr().out.startswith("wrote ")
+    enriched = json.loads(out.read_text())
+    assert _has_filled_comparison(enriched)
+
+
+def test_correlate_missing_record_returns_1(tmp_path):
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(tmp_path / "nope.json"),
+            "--cmplog-dir",
+            str(tmp_path),
+        ]
+    )
+    assert rc == 1
+
+
+def test_correlate_empty_cmplog_dir_warns_and_succeeds(tmp_path, capsys):
+    # A readable dir with no logs is not an error: correlation just yields empty
+    # comparison_candidates.
+    out = tmp_path / "enriched.json"
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(FIXTURES / "correlate_input_01.json"),
+            "--cmplog-dir",
+            str(tmp_path),
+            "-o",
+            str(out),
+        ]
+    )
+    assert rc == 0
+    enriched = json.loads(out.read_text())
+    assert all(c["comparison_candidates"] == [] for c in enriched["candidates"])
+
+
+def test_correlate_task_path_reads_and_enriches(monkeypatch, capsys):
+    from clew.channels.cape import client as cape_client
+
+    monkeypatch.setattr(
+        cape_client.CapeClient,
+        "fetch_cmplog_logs",
+        lambda self, task_id, storage_root: [FIXTURES / "cmplog_synth_01.log"],
+    )
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(FIXTURES / "correlate_input_01.json"),
+            "--task",
+            "10",
+        ]
+    )
+    assert rc == 0
+    enriched = json.loads(capsys.readouterr().out)
+    assert _has_filled_comparison(enriched)
+
+
+def test_correlate_task_cape_error_returns_2(monkeypatch):
+    from clew.channels.cape import client as cape_client
+
+    def boom(self, task_id, storage_root):
+        raise cape_client.CapeError("cannot read cmplog logs")
+
+    monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
+    rc = cli.main(
+        [
+            "correlate",
+            "--record",
+            str(FIXTURES / "correlate_input_01.json"),
+            "--task",
+            "10",
+        ]
+    )
+    assert rc == 2
+
+
+def test_correlate_source_is_required_and_exclusive():
+    # Neither --cmplog-dir nor --task -> the required group errors.
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["correlate", "--record", "r.json"])
+    # Both at once -> mutually exclusive.
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(
+            ["correlate", "--record", "r.json", "--cmplog-dir", "d", "--task", "1"]
+        )
 
 
 if __name__ == "__main__":
