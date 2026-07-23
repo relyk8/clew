@@ -55,8 +55,17 @@ def _add_static_flags(parser) -> None:
         default=Path(_default_capa_sigs()),
         help=f"capa signatures dir (default: $CLEW_CAPA_SIGS or {DEFAULT_CAPA_SIGS})",
     )
-    parser.add_argument("--floss-sigs", type=Path, default=None)
-    parser.add_argument("--capa-bin", default="capa")
+    parser.add_argument(
+        "--floss-sigs",
+        type=Path,
+        default=None,
+        help="FLOSS signature file for decoding-routine identification (default: FLOSS built-in)",
+    )
+    parser.add_argument(
+        "--capa-bin",
+        default="capa",
+        help="capa executable to invoke (default: capa on PATH)",
+    )
     parser.add_argument(
         "--no-license-checkout",
         action="store_true",
