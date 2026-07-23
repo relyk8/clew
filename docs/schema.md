@@ -2,13 +2,13 @@
 
 ## Purpose
 
-A Clew record is the structured output of running Clew against a single PE32 sample. It enumerates the environment-sensitive API call sites Clew identified in the binary, and for each call site, the candidate values a downstream fuzzer can use to bypass the check. The record is consumed by Pfuzzer-style retargeting fuzzers as input — replacing their hand-coded retarget value lists with per-sample candidates derived from the binary itself.
+A Clew record is the structured output of running Clew against a single PE32 sample. It enumerates the environment-sensitive API call sites Clew identified in the binary, and for each call site, the candidate values a downstream fuzzer can use to bypass the check. The record is consumed by environmental retargeting fuzzers as input, replacing their hand-coded retarget value lists with per-sample candidates derived from the binary itself.
 
 The schema is deliberately narrow. It does not describe the full behavior of the binary, only the retargeting candidates. Behavioral signatures, family attribution, and execution traces belong in separate artifacts.
 
 ## Versioning
 
-The schema version lives in two places. The `$id` URL of the JSON Schema is the canonical version of the schema itself. Each record carries `clew_version` — the version of the Clew tool that produced it. A consumer that supports `clew_version >= X` can rely on the fields documented for that version being present and behaving as specified.
+The schema version lives in two places. The `$id` URL of the JSON Schema is the canonical version of the schema itself. Each record carries `clew_version`, the version of the Clew tool that produced it. A consumer that supports `clew_version >= X` can rely on the fields documented for that version being present and behaving as specified.
 
 v1 of the schema is single-shot: every record carries `total_iterations: 1` and every candidate carries `iteration_number: 0`. v2 will support iterative refinement. The fields exist in v1 specifically so that v2 consumers do not break on v1 records, and v1 producers do not break on v2 schemas.
 
@@ -16,7 +16,7 @@ Breaking changes (removed fields, narrowed types, new required fields) bump the 
 
 ## Top-level fields
 
-Every Clew record is a JSON object with exactly the following top-level keys. `additionalProperties: false` is set; unknown fields are an error.
+Every Clew record is a JSON object with exactly the following top-level keys. `additionalProperties: false` is set, and unknown fields are an error.
 
 ### `sample_sha256` (required, string)
 
@@ -24,7 +24,7 @@ The SHA-256 hash of the analyzed binary as 64 lowercase hex characters with no `
 
 ### `sample_path` (required, string or null)
 
-The path to the binary on the analyst's machine at the time of analysis. Nullable because corpora often redact paths. When present, it is informational only — the schema does not constrain its format.
+The path to the binary on the analyst's machine at the time of analysis. Nullable because corpora often redact paths. When present, it is informational only, and the schema does not constrain its format.
 
 ### `clew_version` (required, string)
 
@@ -38,22 +38,22 @@ This field exists primarily to support tier classification and to give analysts 
 
 ### `derivation_status` (required, string enum or null)
 
-Clew's derivation-pipeline status for the sample, computed by rolling up per-rule actionability. A rule is **actionable** iff it is mapped in `CAPA_RULE_TO_APIS` AND all its implied APIs are in `PFUZZER_68_APIS`. Sample-level rollup:
+Clew's derivation-pipeline status for the sample, computed by rolling up per-rule actionability. A rule is **actionable** iff it is mapped in `CAPA_RULE_TO_APIS` AND all its implied APIs are in the pipeline's target API set. Sample-level rollup:
 
 - `fully_derivable` — every matched rule is actionable. Clew can act on the sample today with no caveats.
 - `partially_derivable` — mix: at least one matched rule is actionable, at least one is not. Clew can act on the actionable portion; the rest is either unmapped or its implied APIs sit outside the target list.
 - `not_derivable` — no matched rules are actionable. All matched rules are either unmapped or their implied APIs are outside the target list (or some combination). Clew has signal it can't act on.
 - `no_capa_signal` — no matched anti-analysis rules at all. Either the sample is non-evasive from capa's perspective, or capa didn't successfully complete (timeout / capa error). Same operational outcome: no usable capa signal.
 
-The four values partition the sample space — every sample lands in exactly one bucket.
+The four values partition the sample space, and every sample lands in exactly one bucket.
 
 Note: `not_capa_detectable` was a reserved value in earlier schema versions but was never populated. Removed in v0.3.0.
 
 Null if classification was skipped (e.g. capa was disabled).
 
-**This field is *not* a defeatability tier.** It describes the state of Clew's derivation pipeline for the sample, not the structural difficulty of the techniques. The defeatability tier of each candidate's underlying technique lives in the per-candidate `evasion_tier` field below, drawn from the taxonomy in `docs/evasion-taxonomy.md`.
+**This field is *not* a defeatability tier.** It describes the state of Clew's derivation pipeline for the sample, not the structural difficulty of the techniques. The defeatability tier of each candidate's underlying technique lives in the per-candidate `evasion_tier` field below.
 
-A sample with `derivation_status == fully_derivable` may still carry a non-empty backlog of unmapped capa rules — those don't change the categorical, but they do represent future derivation work and surface separately in producer outputs (e.g. `scripts/batch_channel0.py` emits an `unmapped_rules` field per record).
+A sample with `derivation_status == fully_derivable` may still carry a non-empty backlog of unmapped capa rules. Those do not change the categorical, but they represent future derivation work and surface separately in producer outputs (e.g. `scripts/batch_channel0.py` emits an `unmapped_rules` field per record).
 
 ### `total_iterations` (required, integer)
 
@@ -61,7 +61,7 @@ Always `1` in v1. v2 will set this to the total number of iterations the Clew ru
 
 ### `candidates` (required, array)
 
-The list of candidate records, each describing one API call site and its associated candidate values. An empty array is valid: it means Clew ran successfully but found no extractable environment checks. The fuzzer should treat an empty `candidates` array as "fall back to Pfuzzer's default value lists for this sample."
+The list of candidate records, each describing one API call site and its associated candidate values. An empty array is valid: it means Clew ran successfully but found no extractable environment checks. The fuzzer should treat an empty `candidates` array as "fall back to the fuzzer's default value lists for this sample."
 
 ## Candidate fields
 
@@ -94,11 +94,11 @@ The zero-indexed parameter of the API whose value is the fingerprint of the envi
 
 For `GetModuleHandleW(L"SbieDll.dll")`, the parameter at index 0 (`lpModuleName`) carries the fingerprint string, so `parameter_index = 0`. For `IsDebuggerPresent()`, which has no parameters and is checked solely by its return, `parameter_index = -1`.
 
-For APIs that write to output parameters (`GetSystemInfo` writing into a `SYSTEM_INFO` struct), `parameter_index` is the index of that output parameter. Sub-field selection within compound structs is handled by `clew/api_knowledge/` in the producer, not by the schema; this is a documented v1 limitation.
+For APIs that write to output parameters (`GetSystemInfo` writing into a `SYSTEM_INFO` struct), `parameter_index` is the index of that output parameter. Sub-field selection within compound structs is handled by `clew/api_knowledge/` in the producer, not by the schema. This is a documented v1 limitation.
 
 ### `comparison_operator` (required, string enum)
 
-The semantic operator of the environment check — how the API's effective output (return, output parameter, or relevant subfield) is compared against detection criteria. One of:
+The semantic operator of the environment check, meaning how the API's effective output (return, output parameter, or relevant subfield) is compared against detection criteria. One of:
 
 - `equality` — `==` or string equality
 - `inequality` — `!=`
@@ -109,11 +109,11 @@ The semantic operator of the environment check — how the API's effective outpu
 
 A single call site that performs multiple comparisons of the same parameter should be split into multiple candidate records, one per operator.
 
-When the API has no parameters and the check is on the return value (parameter_index == -1), the comparison_operator describes how a consumer should interpret the return: equality means "consider the check fired when the return matches value." The physical test/cmp/jz instruction implementing this comparison may live in the caller of the API-wrapping function rather than at call_site_va itself.
+When the API has no parameters and the check is on the return value (parameter_index == -1), the comparison_operator describes how a consumer should interpret the return. Equality means "consider the check fired when the return matches value." The physical test/cmp/jz instruction implementing this comparison may live in the caller of the API-wrapping function rather than at call_site_va itself.
 
 ### `evasion_tier` (required, string enum)
 
-The **defeatability tier** of the evasion technique this candidate addresses, drawn from the taxonomy in `docs/evasion-taxonomy.md`. One of:
+The **defeatability tier** of the evasion technique this candidate addresses. One of:
 
 - `tier_1` — single-call defeatable; hooking one API and returning a crafted value bypasses the check (e.g. `IsDebuggerPresent` returning FALSE)
 - `tier_2` — multi-call coordination; 2–5 calls with consistent state required to bypass (e.g. querying several VM-related registry keys and proceeding only if all are absent)
@@ -146,7 +146,7 @@ Each entry describes one specific value the fuzzer should consider feeding back.
 
 The value at the location indicated by `parameter_index`. Type matches the parameter's natural type: a string for path or module name comparisons, a number for thresholds, a boolean for flag checks. `null` is permitted for cases where the check is "value is null/zero" without a meaningful constant.
 
-When `parameter_index >= 0`, this is the input value passed to the API at that parameter. When `parameter_index == -1`, this is the return value the API would produce in the *detected* state — the value the malware compares against and acts on.
+When `parameter_index >= 0`, this is the input value passed to the API at that parameter. When `parameter_index == -1`, this is the return value the API would produce in the *detected* state, the value the malware compares against and acts on.
 
 ### `represents` (required, string enum)
 
@@ -170,13 +170,13 @@ Clew's confidence that this candidate is real and correctly characterized. The n
 
 ### `source_channels` (required, array, min length 1)
 
-Which channels contributed to this specific value. Each entry is one of: `capa`, `floss`, `bn_xref`, `drio`, `cape_config`. Multiple channels for the same value increase confidence.
+Which channels contributed to this specific value. Each entry is one of `capa`, `floss`, `bn_xref`, `drio`, or `cape_config`. Multiple channels for the same value increase confidence.
 
 ## `coordination_constraint`
 
 ### `gate_group_id` (required, string or null)
 
-A string identifier shared by candidates AND-gated together in the binary. The fuzzer interprets this as: "all candidates with the same `gate_group_id` must be flipped together; flipping one without the others does not bypass the check."
+A string identifier shared by candidates AND-gated together in the binary. The fuzzer reads it as a requirement that all candidates with the same `gate_group_id` be flipped together, since flipping one without the others does not bypass the check.
 
 In v1 this field is always `null`. v1 does not detect gate groups statically. v2 will populate them.
 
@@ -188,7 +188,7 @@ A human-readable description of the gate, for analyst review. Always `null` in v
 
 ### `channels` (required, array, min length 1)
 
-Which channels contributed to identifying the *call site* (as opposed to which channels recovered specific values). Same enumeration as `source_channels`. The distinction matters: Binary Ninja may identify a call site to `GetModuleHandleW` taking some string, while FLOSS recovers what that string actually is — the call site's `channels` is `["bn_xref"]` while a candidate value's `source_channels` is `["floss"]`.
+Which channels contributed to identifying the *call site* (as opposed to which channels recovered specific values). Same enumeration as `source_channels`. The distinction matters. Binary Ninja may identify a call site to `GetModuleHandleW` taking some string, while FLOSS recovers what that string actually is. The call site's `channels` is `["bn_xref"]` while a candidate value's `source_channels` is `["floss"]`.
 
 ### `string_source` (required, string enum or null)
 
@@ -207,11 +207,11 @@ The VA where the string lives. Populated when `string_source == "static"`. `null
 
 ### `string_function_va` (required, string or null)
 
-The VA of the function whose stack frame constructs the string. Populated when `string_source` is `stackstring` or `tightstring`. `null` otherwise. This field exists because stackstrings have no global VA but are anchored to a specific function context — `string_va` alone cannot distinguish "no string" from "string with no global address."
+The VA of the function whose stack frame constructs the string. Populated when `string_source` is `stackstring` or `tightstring`. `null` otherwise. This field exists because stackstrings have no global VA but are anchored to a specific function context, and `string_va` alone cannot distinguish "no string" from "string with no global address."
 
 ### `dataflow_path` (required, array of strings)
 
-The sequence of instruction VAs Clew traced from the value's source (string reference, API return, or constant load) to the comparison site. Each entry is a VA string. May be empty for candidates derived from FLOSS-only evidence where no dataflow analysis was performed. The path is informational; the fuzzer does not act on it directly, but it is invaluable for analyst debugging when a candidate looks wrong.
+The sequence of instruction VAs Clew traced from the value's source (string reference, API return, or constant load) to the comparison site. Each entry is a VA string. May be empty for candidates derived from FLOSS-only evidence where no dataflow analysis was performed. The path is informational. The fuzzer does not act on it directly, but it is invaluable for analyst debugging when a candidate looks wrong.
 
 ### `cmp_operand_a`, `cmp_operand_b` (required, string or null)
 
@@ -237,7 +237,7 @@ For quick reference:
 
 These examples are normative. Any change to the schema that breaks them is a breaking change and requires bumping the major version.
 
-### Example 1 — `GetModuleHandleW("SbieDll.dll")` Sandboxie check
+### Example 1: `GetModuleHandleW("SbieDll.dll")` Sandboxie check
 
 A standard Sandboxie detection: the sample calls `GetModuleHandleW` with `"SbieDll.dll"` and treats a non-NULL return as "I'm in Sandboxie." The string is in `.rdata`, found by both FLOSS and Binary Ninja's xref analysis.
 
@@ -288,7 +288,7 @@ A standard Sandboxie detection: the sample calls `GetModuleHandleW` with `"SbieD
 
 `comparison_operator: inequality` because the malware tests `GetModuleHandleW(...) != NULL`. `retarget_to: null` because returning NULL makes the malware believe Sandboxie is not loaded. `parameter_index: 0` because parameter 0 (`lpModuleName`) carries the fingerprint string `"SbieDll.dll"`.
 
-### Example 2 — `GetProcAddress`-resolved `IsDebuggerPresent` via stackstring
+### Example 2: `GetProcAddress`-resolved `IsDebuggerPresent` via stackstring
 
 A more sophisticated sample resolves `IsDebuggerPresent` at runtime by passing a stack-constructed string to `GetProcAddress`. The string `"IsDebuggerPresent"` is built byte-by-byte on the stack rather than living in `.rdata`. FLOSS's stackstring recovery finds it; static xref analysis alone would have missed it.
 
@@ -337,7 +337,7 @@ A more sophisticated sample resolves `IsDebuggerPresent` at runtime by passing a
 }
 ```
 
-`parameter_index: -1` because `IsDebuggerPresent` takes no parameters; the check is on the return value. `value: true` is the dirty-state return (debugger detected). `retarget_to: false` is the clean-state return. `string_source: stackstring`, `string_va: null`, `string_function_va: "0x00401850"` because the string `"IsDebuggerPresent"` is constructed on the stack of the function at `0x00401850` and has no global VA.
+`parameter_index: -1` because `IsDebuggerPresent` takes no parameters, so the check is on the return value. `value: true` is the dirty-state return (debugger detected). `retarget_to: false` is the clean-state return. `string_source: stackstring`, `string_va: null`, `string_function_va: "0x00401850"` because the string `"IsDebuggerPresent"` is constructed on the stack of the function at `0x00401850` and has no global VA.
 
 ## Validation
 
@@ -362,6 +362,6 @@ Both example records above must validate against the schema. They function as th
 - **Static gate group detection.** `coordination_constraint` fields are always null in v1.
 - **Iterative refinement.** `iteration_number` and `total_iterations` are scaffolding-only.
 - **Compound output parameters.** Sub-field selection within structs (e.g. `SYSTEM_INFO.dwNumberOfProcessors`) is handled in `clew/api_knowledge/` rather than the schema. v2 may introduce a `parameter_path` field.
-- **Multi-comparison call sites.** v1 splits these into multiple candidate records; v2 may introduce a more compact representation.
+- **Multi-comparison call sites.** v1 splits these into multiple candidate records, and v2 may introduce a more compact representation.
 - **Confidence calibration.** v1's `confidence` is heuristic and uncalibrated.
-- **Per-value provenance fields.** v1 places string_source, string_va, and string_function_va in the per-candidate evidence block, which cannot represent multi-value candidates where each value's literal lives at a different address. Record #2 (al-khaser loaded_dlls) surfaces this: 12 wide-string values, 12 distinct .rdata addresses, one schema field. v2 should move these three fields into each candidate_values entry. The homogeneous case (record #1, where there's no string at all) still works — each entry just sets the field to null or "static" as appropriate.
+- **Per-value provenance fields.** v1 places string_source, string_va, and string_function_va in the per-candidate evidence block, which cannot represent multi-value candidates where each value's literal lives at a different address. Record #2 (al-khaser loaded_dlls) surfaces this, with 12 wide-string values, 12 distinct .rdata addresses, and one schema field. v2 should move these three fields into each candidate_values entry. The homogeneous case (record #1, where there is no string at all) still works, and each entry just sets the field to null or "static" as appropriate.
