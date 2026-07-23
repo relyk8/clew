@@ -448,7 +448,7 @@ def _getprocaddress_call_sites(bv, MediumLevelILOperation, SymbolType) -> list:
     for func in bv.functions:
         if _is_import_thunk(bv, func, SymbolType):
             continue
-        mlil = func.mlil
+        mlil = func.mlil_if_available  # func.mlil raises ILException when MLIL was skipped
         if mlil is None:
             continue
 

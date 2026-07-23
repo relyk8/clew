@@ -1,0 +1,108 @@
+{
+  "sample_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "sample_path": "tests/fixtures/synthetic_pe32.exe",
+  "clew_version": "0.3.0",
+  "capa_techniques": [
+    "check for debugger via API"
+  ],
+  "derivation_status": "fully_derivable",
+  "total_iterations": 1,
+  "candidates": [
+    {
+      "call_site_va": "0x00401000",
+      "function_va": "0x00400f00",
+      "api_name": "IsDebuggerPresent",
+      "api_resolution": "import",
+      "parameter_index": 0,
+      "comparison_operator": "unknown",
+      "evasion_tier": "tier_1",
+      "iteration_number": 0,
+      "candidate_values": [
+        {
+          "value": null,
+          "represents": "unknown",
+          "retarget_to": null,
+          "confidence": 0.5,
+          "source_channels": ["bn_xref"]
+        }
+      ],
+      "coordination_constraint": {
+        "gate_group_id": null,
+        "description": null
+      },
+      "evidence": {
+        "channels": ["bn_xref"],
+        "string_source": null,
+        "string_va": null,
+        "string_function_va": null,
+        "dataflow_path": ["0x00400f00", "0x00401000"],
+        "cmp_operand_a": null,
+        "cmp_operand_b": null
+      }
+    },
+    {
+      "call_site_va": "0x00402000",
+      "function_va": "0x00401f00",
+      "api_name": "GetTickCount",
+      "api_resolution": "import",
+      "parameter_index": -1,
+      "comparison_operator": "unknown",
+      "evasion_tier": "tier_1",
+      "iteration_number": 0,
+      "candidate_values": [
+        {
+          "value": null,
+          "represents": "threshold_value",
+          "retarget_to": null,
+          "confidence": 0.5,
+          "source_channels": ["bn_xref"]
+        }
+      ],
+      "coordination_constraint": {
+        "gate_group_id": null,
+        "description": null
+      },
+      "evidence": {
+        "channels": ["bn_xref"],
+        "string_source": null,
+        "string_va": null,
+        "string_function_va": null,
+        "dataflow_path": ["0x00401f00", "0x00402000"],
+        "cmp_operand_a": null,
+        "cmp_operand_b": null
+      }
+    },
+    {
+      "call_site_va": "0x0040f000",
+      "function_va": "0x0040ef00",
+      "api_name": "GetModuleHandleA",
+      "api_resolution": "import",
+      "parameter_index": 0,
+      "comparison_operator": "unknown",
+      "evasion_tier": "tier_1",
+      "iteration_number": 0,
+      "candidate_values": [
+        {
+          "value": "kernel32.dll",
+          "represents": "unknown",
+          "retarget_to": null,
+          "confidence": 0.7,
+          "source_channels": ["bn_xref"]
+        }
+      ],
+      "coordination_constraint": {
+        "gate_group_id": null,
+        "description": null
+      },
+      "evidence": {
+        "channels": ["bn_xref"],
+        "string_source": "static",
+        "string_va": "0x0040ef80",
+        "string_function_va": "0x0040ef00",
+        "dataflow_path": ["0x0040ef00", "0x0040f000"],
+        "cmp_operand_a": null,
+        "cmp_operand_b": null
+      }
+    }
+  ]
+}

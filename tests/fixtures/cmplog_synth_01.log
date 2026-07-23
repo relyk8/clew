@@ -1,0 +1,11 @@
+# clew cmplog thread=1 pid=4242
+# fields: T<tid> pc=<app_pc> <opcode> src[i]=<kind>:<hexval>...
+T1 pc=0x00401008 cmp src0=reg:eax=0x1 src1=imm=0x2
+T1 pc=0x00401010 test src0=reg:eax=0x2a src1=reg:eax=0x2a
+T1 pc=0x00401020 cmp src0=reg:ebx=0x5 src1=imm=0xff
+T1 pc=0x00401020 cmp src0=reg:ebx=0x5 src1=imm=0xff
+T1 pc=0x00401020 cmp src0=reg:ebx=0x5 src1=imm=0xff
+T1 pc=0x00401030 cmp src0=mem[0x0012ff40]=<unreadable> src1=imm=0x0
+T1 pc=0x00402008 cmp src0=reg:edx=0x7 src1=imm=0x7
+T1 pc=0x00402300 test src0=reg:ecx=0x8 src1=reg:ecx=0x8
+T1 pc=0x00409999 cmp src0=reg:esi=0xa src1=imm=0xb

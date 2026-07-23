@@ -107,9 +107,17 @@ The semantic operator of the environment check, meaning how the API's effective 
 - `contains` — substring or pattern containment (e.g. a registry value contains "VirtualBox")
 - `unknown` — Clew identified the call but could not classify the operator
 
-A single call site that performs multiple comparisons of the same parameter should be split into multiple candidate records, one per operator.
+A single call site that performs multiple comparisons of the same parameter records them all in the candidate's `comparison_candidates` array (documented below) rather than splitting into separate candidate records. The candidate-level `comparison_operator` then mirrors the top-ranked entry, `comparison_candidates[0]`.
 
 When the API has no parameters and the check is on the return value (parameter_index == -1), the comparison_operator describes how a consumer should interpret the return. Equality means "consider the check fired when the return matches value." The physical test/cmp/jz instruction implementing this comparison may live in the caller of the API-wrapping function rather than at call_site_va itself.
+
+### `comparison_candidates` (optional, array)
+
+Channel 3 correlates the DynamoRIO comparison trace back to a static candidate and attaches the results here, a list ranked confidence-descending of every plausible runtime `cmp` or `test` observed near the candidate's call site. Each entry carries `comparison_operator`, `cmp_operand_a`, `cmp_operand_b`, `confidence` (0.0 to 1.0), and `source_channels` (always `["drio"]` today, since the correlation reuses the existing `drio` token). The array is high-recall by design, so many low-confidence entries are expected and the downstream fuzzer ranks and prunes them rather than Clew thresholding here.
+
+The operator is best-effort for the proximity first cut. A `test` maps to `bitwise_and`, and a `cmp` stays `unknown` until a later pass reads the following branch instruction to recover the concrete relation. Entries are sorted by `confidence`, so `comparison_candidates[0]` is the top-ranked comparison and the candidate-level `comparison_operator` and `evidence.cmp_operand_a`/`cmp_operand_b` mirror it for back-compat.
+
+The field is optional and absent on pre-correlation intermediate records. When present it may be an empty array, meaning correlation ran but found no runtime comparison near the call site.
 
 ### `evasion_tier` (required, string enum)
 
@@ -217,7 +225,7 @@ The sequence of instruction VAs Clew traced from the value's source (string refe
 
 Populated by Channel 3. When DynamoRIO observes a `cmp` or `test` instruction following an API return at the call site, both operand values at the time of comparison are logged here as hex strings. `null` for candidates not observed dynamically.
 
-When both are populated, the relation `cmp_operand_a <comparison_operator> cmp_operand_b` should hold true at runtime.
+When both are populated, the relation `cmp_operand_a <comparison_operator> cmp_operand_b` should hold true at runtime. These two fields mirror the top-ranked entry, `comparison_candidates[0]`, and are kept for consumers that read a single comparison. The full ranked set of runtime comparisons lives in the candidate's `comparison_candidates` array.
 
 ## Enumerations summary
 
@@ -362,6 +370,6 @@ Both example records above must validate against the schema. They function as th
 - **Static gate group detection.** `coordination_constraint` fields are always null in v1.
 - **Iterative refinement.** `iteration_number` and `total_iterations` are scaffolding-only.
 - **Compound output parameters.** Sub-field selection within structs (e.g. `SYSTEM_INFO.dwNumberOfProcessors`) is handled in `clew/api_knowledge/` rather than the schema. v2 may introduce a `parameter_path` field.
-- **Multi-comparison call sites.** v1 splits these into multiple candidate records, and v2 may introduce a more compact representation.
+- **Multi-comparison call sites.** Delivered by the candidate-level `comparison_candidates` array, which holds all runtime comparisons for a call site in one candidate ranked by confidence, retiring the earlier split-into-multiple-records approach.
 - **Confidence calibration.** v1's `confidence` is heuristic and uncalibrated.
 - **Per-value provenance fields.** v1 places string_source, string_va, and string_function_va in the per-candidate evidence block, which cannot represent multi-value candidates where each value's literal lives at a different address. Record #2 (al-khaser loaded_dlls) surfaces this, with 12 wide-string values, 12 distinct .rdata addresses, and one schema field. v2 should move these three fields into each candidate_values entry. The homogeneous case (record #1, where there is no string at all) still works, and each entry just sets the field to null or "static" as appropriate.
