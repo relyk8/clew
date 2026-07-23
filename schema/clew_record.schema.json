@@ -145,6 +145,24 @@
       }
     },
 
+    "ComparisonCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["comparison_operator", "cmp_operand_a", "cmp_operand_b", "confidence", "source_channels"],
+      "properties": {
+        "comparison_operator": { "$ref": "#/$defs/ComparisonOperator" },
+        "cmp_operand_a": { "type": ["string", "null"] },
+        "cmp_operand_b": { "type": ["string", "null"] },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "source_channels": { "$ref": "#/$defs/ChannelArray" }
+      },
+      "description": "One Channel-3-correlated runtime comparison for a candidate. Ranked entries collect in the candidate's comparison_candidates array."
+    },
+
     "CoordinationConstraint": {
       "type": "object",
       "additionalProperties": false,
@@ -226,6 +244,11 @@
           "description": "-1 means the check is on the return value; >= 0 is a parameter index."
         },
         "comparison_operator": { "$ref": "#/$defs/ComparisonOperator" },
+        "comparison_candidates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ComparisonCandidate" },
+          "description": "Optional. Channel-3-correlated runtime comparisons for this candidate, ranked confidence-descending. Absent on pre-correlation intermediate records; the legacy comparison_operator and evidence.cmp_operand_a/_b mirror element [0]."
+        },
         "evasion_tier": { "$ref": "#/$defs/Tier" },
         "iteration_number": {
           "type": "integer",
