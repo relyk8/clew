@@ -7,9 +7,10 @@ module owns argument parsing and logging setup; the analysis itself lives in
 the record JSON (default) or, with `-o`, a one-line summary -- so stdout stays
 clean for piping.
 
-The surface is a subcommand dispatcher (`clew <verb> ...`). `static` and
-`correlate` are registered today; detonate/tasks/run land in later commits. Bare
-`clew <sample>` stays a back-compat alias for `clew static <sample>`.
+The surface is a subcommand dispatcher (`clew <verb> ...`). `static`,
+`correlate`, `detonate`, and `tasks` are registered today; `run` lands in a
+later commit. Bare `clew <sample>` stays a back-compat alias for `clew static
+<sample>`.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ import json
 import logging
 import os
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 
 from clew.pipeline import (
@@ -197,6 +200,54 @@ def _add_detonate_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_detonate)
 
 
+def _add_tasks_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "tasks",
+        parents=[parent],
+        help="list CAPE tasks with a cmplog RECORDS column (a dashboard for Channel 3)",
+        description="List CAPE analysis tasks as a table (or JSON), showing the cmplog "
+        "record count for terminal tasks. With --watch, refresh in place.",
+    )
+    s.add_argument(
+        "--status",
+        default=None,
+        help="only show tasks with this status (e.g. reported, failed_analysis)",
+    )
+    s.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="show at most this many tasks (newest first)",
+    )
+    s.add_argument(
+        "--json",
+        action="store_true",
+        help="emit the rows as JSON instead of a table (for piping)",
+    )
+    s.add_argument(
+        "--watch",
+        action="store_true",
+        help="refresh continuously until interrupted (Ctrl-C to exit)",
+    )
+    s.add_argument(
+        "--interval",
+        type=float,
+        default=2.0,
+        help="seconds between refreshes when --watch is set (default: 2.0)",
+    )
+    s.add_argument(
+        "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
+    )
+    s.add_argument(
+        "--storage-root",
+        default="/opt/CAPEv2/storage/analyses",
+        help="CAPE analyses storage root (read for the RECORDS column)",
+    )
+    s.set_defaults(func=_cmd_tasks)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -233,6 +284,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_static_subparser(sub, parent)
     _add_correlate_subparser(sub, parent)
     _add_detonate_subparser(sub, parent)
+    _add_tasks_subparser(sub, parent)
     return p
 
 
@@ -411,6 +463,150 @@ def _cmd_detonate(args) -> int:
     else:
         print(text)
     return rc
+
+
+def _humanize_age(added_on: str | None) -> str:
+    # Parse the CAPE added_on timestamp and return a compact age relative to
+    # now (12s / 4m / 2h / 3d). Real wall-clock is fine here, this runs in the
+    # user's CLI process. Unparseable or missing -> "-".
+    if not added_on:
+        return "-"
+    parsed = None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            parsed = datetime.strptime(added_on, fmt)
+            break
+        except (ValueError, TypeError):
+            continue
+    if parsed is None:
+        try:
+            # ISO 8601 with fractional seconds or offset.
+            parsed = datetime.fromisoformat(added_on)
+        except (ValueError, TypeError):
+            return "-"
+    # A tz-aware timestamp cannot be subtracted from a naive now(); drop the
+    # tzinfo and compare in wall-clock terms (good enough for an age column).
+    if parsed.tzinfo is not None:
+        parsed = parsed.replace(tzinfo=None)
+    seconds = int((datetime.now() - parsed).total_seconds())
+    if seconds < 0:
+        seconds = 0
+    if seconds < 60:
+        return f"{seconds}s"
+    if seconds < 3600:
+        return f"{seconds // 60}m"
+    if seconds < 86400:
+        return f"{seconds // 3600}h"
+    return f"{seconds // 86400}d"
+
+
+def _build_display_rows(tasks, client, storage_root) -> list[dict]:
+    # Map raw CAPE task dicts to the display rows the table/JSON consume. The
+    # real payload carries the on-disk path in `target` (a string) and `sample`
+    # as a metadata dict, so prefer target and fall back defensively.
+    rows = []
+    for t in tasks:
+        target = t.get("target")
+        sample_field = t.get("sample")
+        name = None
+        for candidate in (target, sample_field):
+            if isinstance(candidate, str) and candidate:
+                name = os.path.basename(candidate)
+                break
+        status = t.get("status", "unknown")
+        task_id = t.get("id")
+        # RECORDS only makes sense once the task is terminal and its logs are
+        # written; for anything else, or an unreadable/missing log, show "-".
+        records = "-"
+        if status == "reported" and task_id is not None:
+            n = client.count_cmplog_lines(task_id, storage_root)
+            if n is not None:
+                records = str(n)
+        rows.append(
+            {
+                "task": str(task_id) if task_id is not None else "-",
+                "sample": name or "-",
+                "pkg": t.get("package") or "-",
+                "status": status,
+                "records": records,
+                "age": _humanize_age(t.get("added_on")),
+            }
+        )
+    return rows
+
+
+def _format_tasks_table(display_rows: list[dict]) -> str:
+    # Fixed-width, right-padded table. Columns size to the widest cell so the
+    # header and values line up regardless of content.
+    columns = [
+        ("TASK", "task"),
+        ("SAMPLE", "sample"),
+        ("PKG", "pkg"),
+        ("STATUS", "status"),
+        ("RECORDS", "records"),
+        ("AGE", "age"),
+    ]
+    widths = {}
+    for header, key in columns:
+        widest = max([len(header)] + [len(str(r.get(key, ""))) for r in display_rows])
+        widths[key] = widest
+
+    def render(cells) -> str:
+        return "  ".join(
+            str(value).ljust(widths[key]) for (_, key), value in zip(columns, cells)
+        ).rstrip()
+
+    lines = [render([header for header, _ in columns])]
+    for r in display_rows:
+        lines.append(render([r.get(key, "") for _, key in columns]))
+    return "\n".join(lines)
+
+
+def _requests_exc():
+    # The requests base exception, resolved lazily so requests (a Channel-3-only
+    # dep) stays out of the module-top imports. Falls back to a never-matching
+    # empty tuple if requests is somehow absent, so the CapeError branch still works.
+    try:
+        import requests
+
+        return requests.RequestException
+    except ImportError:  # pragma: no cover
+        return ()
+
+
+def _cmd_tasks(args) -> int:
+    # Lazy import: keep the CAPE client (which pulls requests) out of `clew
+    # static` and the offline suite.
+    from clew.channels.cape.client import CapeClient, CapeError
+
+    log = logging.getLogger("clew.cli")
+    c = CapeClient(args.cape_url)
+
+    def render() -> None:
+        tasks = c.list_tasks(limit=args.limit, status=args.status)
+        rows = _build_display_rows(tasks, c, args.storage_root)
+        if args.json:
+            print(json.dumps(rows, indent=2))
+        else:
+            print(_format_tasks_table(rows))
+
+    try:
+        if args.watch:
+            try:
+                while True:
+                    # A timestamp header each redraw marks the refresh without
+                    # aggressively clearing the screen (progress lands on stderr).
+                    print(f"# clew tasks @ {datetime.now():%H:%M:%S} (Ctrl-C to exit)")
+                    render()
+                    time.sleep(args.interval)
+            except KeyboardInterrupt:
+                return 0
+        else:
+            render()
+    except (CapeError, _requests_exc()) as e:
+        log.error("cannot reach CAPE at %s: %s", args.cape_url, e)
+        return 2
+    return 0
 
 
 def main(argv=None) -> int:

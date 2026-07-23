@@ -9,6 +9,7 @@ run_static_pipeline so main()'s contract is tested in isolation.
 import json
 import logging
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -387,6 +388,115 @@ def test_detonate_output_flag_writes_file(monkeypatch, capsys, tmp_path):
     assert json.loads(out.read_text()) == {"task_id": 42}
     # With -o, stdout carries no task JSON.
     assert capsys.readouterr().out == ""
+
+
+# ---------- tasks ----------
+
+
+def test_format_tasks_table_headers_and_values():
+    rows = [
+        {"task": "10", "sample": "signtool.exe", "pkg": "exe_cmplog",
+         "status": "reported", "records": "24429", "age": "2h"},
+        {"task": "9", "sample": "al-khaser_x86.exe", "pkg": "exe_cmplog",
+         "status": "reported", "records": "0", "age": "3h"},
+        {"task": "3", "sample": "clew_smoke.exe", "pkg": "exe",
+         "status": "failed_analysis", "records": "-", "age": "3d"},
+    ]
+    table = cli._format_tasks_table(rows)
+    # Header present with the fixed column order.
+    assert "TASK  SAMPLE" in table
+    assert "RECORDS" in table and "AGE" in table
+    # Values line up in the body (incl a "-" RECORDS cell).
+    assert "signtool.exe" in table
+    assert "24429" in table
+    lines = table.splitlines()
+    # The failed task's row carries a "-" in the RECORDS column.
+    smoke_line = next(line for line in lines if "clew_smoke.exe" in line)
+    assert "-" in smoke_line
+
+
+def test_humanize_age_buckets():
+    from datetime import timedelta
+
+    now = datetime.now()
+
+    def fmt(delta):
+        return (now - delta).strftime("%Y-%m-%d %H:%M:%S")
+
+    assert cli._humanize_age(fmt(timedelta(seconds=12))).endswith("s")
+    assert cli._humanize_age(fmt(timedelta(minutes=4))).endswith("m")
+    assert cli._humanize_age(fmt(timedelta(hours=2))).endswith("h")
+    assert cli._humanize_age(fmt(timedelta(days=3))) == "3d"
+
+
+def test_humanize_age_garbage_returns_dash():
+    assert cli._humanize_age("not a timestamp") == "-"
+    assert cli._humanize_age(None) == "-"
+
+
+_RAW_TASKS = [
+    {
+        "id": 10,
+        "target": "/tmp/cuckoo-tmp/upload_h0nz812e/signtool.exe",
+        "sample": {"id": 5, "sha256": "abc"},
+        "package": "exe_cmplog",
+        "status": "reported",
+        "added_on": "2026-07-22 15:43:41",
+    },
+    {
+        "id": 3,
+        "target": "/tmp/cuckoo-tmp/upload_1uq71ey_/clew_smoke.exe",
+        "sample": {"id": 2},
+        "package": "exe",
+        "status": "failed_analysis",
+        "added_on": "2026-07-20 20:10:40",
+    },
+]
+
+
+def _patch_tasks(monkeypatch, records=24429):
+    from clew.channels.cape import client as cape_client
+
+    monkeypatch.setattr(
+        cape_client.CapeClient, "list_tasks", lambda self, limit=None, status=None: _RAW_TASKS
+    )
+    monkeypatch.setattr(
+        cape_client.CapeClient,
+        "count_cmplog_lines",
+        lambda self, task_id, storage_root: records,
+    )
+
+
+def test_tasks_table_shows_sample_basename_and_record_count(monkeypatch, capsys):
+    _patch_tasks(monkeypatch)
+    assert cli.main(["tasks"]) == 0
+    out = capsys.readouterr().out
+    # Basename taken from the string `target`, not the `sample` metadata dict.
+    assert "signtool.exe" in out
+    assert "clew_smoke.exe" in out
+    # RECORDS filled for the reported task, "-" for the non-terminal one.
+    assert "24429" in out
+
+
+def test_tasks_json_includes_records(monkeypatch, capsys):
+    _patch_tasks(monkeypatch)
+    assert cli.main(["tasks", "--json"]) == 0
+    rows = json.loads(capsys.readouterr().out)
+    assert isinstance(rows, list) and rows
+    assert rows[0]["sample"] == "signtool.exe"
+    assert rows[0]["records"] == "24429"
+    # The non-terminal task shows "-" RECORDS.
+    assert rows[1]["records"] == "-"
+
+
+def test_tasks_cape_error_returns_2(monkeypatch):
+    from clew.channels.cape import client as cape_client
+
+    def boom(self, limit=None, status=None):
+        raise cape_client.CapeError("connection refused")
+
+    monkeypatch.setattr(cape_client.CapeClient, "list_tasks", boom)
+    assert cli.main(["tasks"]) == 2
 
 
 if __name__ == "__main__":
