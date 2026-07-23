@@ -1,8 +1,7 @@
 """Channel 0: capa preprocessing.
 
 Wraps the capa CLI (flare-capa) and parses its JSON output. capa is a
-sample-level / feature-level signal, not a per-call-site signal. See
-docs/schema_v2_notes.md for the full architectural note.
+sample-level / feature-level signal, not a per-call-site signal.
 
 Version pinning: this module assumes a coordinated set of (flare-capa,
 capa-rules tag, capa sigs commit) — `CAPA_PINS` below records the
@@ -19,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-# Validated pin set from the 500-sample scale test (docs/channel0_at_scale.md).
+# Validated pin set from the 500-sample scale test.
 # Bump all three together when re-validating.
 CAPA_PINS: dict[str, str] = {
     "flare_capa": "9.4.0",

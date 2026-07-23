@@ -63,7 +63,7 @@
     "Tier": {
       "type": "string",
       "enum": ["tier_1", "tier_2", "tier_3", "tier_4"],
-      "description": "Defeatability tier of an evasion technique. tier_1: single-call defeatable; tier_2: multi-call coordination; tier_3-4: crypto/timing/infeasible. Source: docs/evasion-taxonomy.md. Used per-candidate as `evasion_tier`."
+      "description": "Defeatability tier of an evasion technique. tier_1: single-call defeatable; tier_2: multi-call coordination; tier_3-4: crypto/timing/infeasible. Used per-candidate as `evasion_tier`."
     },
 
     "DerivationStatus": {

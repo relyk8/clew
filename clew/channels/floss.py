@@ -4,8 +4,7 @@ Wraps flare-floss (called in-process, not via subprocess) and adapts its
 typed result objects into a FlossResult. FLOSS is a value channel: it
 contributes candidate *values* (DLL names, registry paths, VM-artifact
 strings), never call-site matches. Channel 2 (BN/Ghidra xref) is what
-maps these values to their API call sites. See docs/schema_v2_notes.md
-(findings #2 and #4) for the architectural note.
+maps these values to their API call sites.
 
 FLOSS emits four string categories that map 1:1 to the schema's
 `string_source` enum:
@@ -17,8 +16,7 @@ FLOSS emits four string categories that map 1:1 to the schema's
 
 FLOSS additionally emits `language_strings` / `language_strings_missed`
 (Go/Rust/.NET language-specific extraction); these are outside the
-current schema enum and are deliberately dropped here. Tracked in
-docs/schema_v2_notes.md as v2 item #16.
+current schema enum and are deliberately dropped here. Tracked as v2 item #16.
 
 This channel does no semantic/regex filtering: it preserves every string
 FLOSS returns, tagged by source category and its native location fields,
@@ -45,7 +43,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-# Validated pin from the Channel 1 pilot (docs/pilot_results.md).
+# Validated pin from the Channel 1 pilot.
 # FLOSS ships its signatures inside the package, so unlike capa there is
 # no separate rules/sigs repo to pin — only the flare-floss version.
 FLOSS_PINS: dict[str, str] = {

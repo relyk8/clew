@@ -2,9 +2,8 @@
 
 `derivation_status` answers: where is Clew's derivation pipeline with this
 sample today? It is **not** a defeatability tier. The defeatability tier (a
-property of an evasion technique) is the taxonomy concept used in
-`docs/evasion-taxonomy.md` and surfaces per-candidate via the
-schema's `evasion_tier` field.
+property of an evasion technique) is the taxonomy concept that surfaces
+per-candidate via the schema's `evasion_tier` field.
 
 Rollup model: per-rule actionability decides the sample's categorical.
 A rule is "actionable" iff it is in CAPA_RULE_TO_APIS AND all its implied

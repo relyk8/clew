@@ -212,7 +212,7 @@ tests/fixtures/*.exe
 tests/fixtures/*.bin
 
 # Generated pipeline output — regenerable batch results, and embeds local machine
-# paths / sample provenance; reproduce via scripts/. See docs/channel0_at_scale.md.
+# paths / sample provenance; reproduce via scripts/.
 results/
 
 # Stray clew record dumps
