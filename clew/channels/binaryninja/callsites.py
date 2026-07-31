@@ -498,13 +498,14 @@ def _getprocaddress_call_sites(bv, MediumLevelILOperation, SymbolType) -> list:
 
 
 def _is_forwarder_thunk(func) -> bool:
-    """True if `func` is a tiny forwarder stub — a single basic block whose
-    whole body is the forwarding jump/call (BN's `jmp [IAT_slot]` import
-    thunks). Used to safely drop the thunk's own outgoing ref without
-    discarding legitimate calls that merely sit at a real function's start.
+    """True if `func` is a tiny forwarder stub — a single basic block that is the
+    lone forwarding jump (BN's `jmp [IAT_slot]` import thunks). Used to drop the
+    thunk's own outgoing ref without discarding legitimate calls that merely sit
+    at a real function's start.
 
-    Heuristic: one basic block, and at most a couple of instructions. Import
-    thunks are exactly one instruction; we allow 2 for tolerance.
+    Heuristic: one basic block of exactly ONE instruction. A true import thunk is
+    a single `jmp [IAT]`; a two-instruction `call [IAT]; ret` is a real wrapper
+    function, not a thunk, and must keep its call site (scout #6).
     """
     try:
         blocks = list(func.basic_blocks)
@@ -516,8 +517,8 @@ def _is_forwarder_thunk(func) -> bool:
     bb = blocks[0]
     count = getattr(bb, "instruction_count", None)
     if count is None:
-        return (bb.end - bb.start) <= 8  # ~one x86 jmp [mem] is 6 bytes
-    return count <= 2
+        return (bb.end - bb.start) <= 6  # one x86 `jmp dword [mem]` is 6 bytes
+    return count == 1
 
 
 def _is_import_thunk(bv, func, SymbolType) -> bool:
