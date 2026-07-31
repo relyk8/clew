@@ -289,28 +289,36 @@ def _floss_version() -> str:
         return "unknown"
 
 
-def _sigs_identity(sigs_path) -> str:
-    """Content-shape fingerprint of the signatures used.
+def _file_sha256(path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
-    Hashes sorted (relative-path, size) pairs -- NOT mtime (a git checkout or
-    `cp -p` changes mtime without changing bytes, and must not trigger a false
-    stale), and NOT the path string (same path, edited files must trigger one).
-    `None` means FLOSS's bundled sigs, which are version-locked to the FLOSS
-    version already in the key, so a stable sentinel is sufficient and correct.
+
+def _sigs_identity(sigs_path) -> str:
+    """Content fingerprint of the signatures used.
+
+    Hashes sorted (relative-path, content-hash) pairs -- file *content*, NOT size
+    (a same-size edit must still trigger a stale; scout #14), and NOT mtime (a git
+    checkout or `cp -p` changes mtime without changing bytes and must not trigger
+    a false stale). `None` means FLOSS's bundled sigs, which are version-locked to
+    the FLOSS version already in the key, so a stable sentinel is sufficient.
     """
     if sigs_path is None:
         return "bundled"
     p = Path(sigs_path)
-    entries = []
     if p.is_dir():
-        entries = [
-            (str(f.relative_to(p)), f.stat().st_size) for f in sorted(p.rglob("*")) if f.is_file()
-        ]
+        files = [f for f in sorted(p.rglob("*")) if f.is_file()]
+        rels = [str(f.relative_to(p)) for f in files]
     elif p.is_file():
-        entries = [(p.name, p.stat().st_size)]
+        files, rels = [p], [p.name]
+    else:
+        files, rels = [], []
     h = hashlib.sha256()
-    for rel, size in entries:
-        h.update(f"{rel}:{size}\n".encode())
+    for rel, f in zip(rels, files):
+        h.update(f"{rel}:{_file_sha256(f)}\n".encode())
     return h.hexdigest()[:16]
 
 

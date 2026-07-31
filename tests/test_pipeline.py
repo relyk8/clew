@@ -249,7 +249,7 @@ def test_quiet_floss_logging_is_scoped_not_global():
 # --- FLOSS cache: key, sigs identity, and miss-vs-stale safety ---------------
 
 
-def test_sigs_identity_stable_and_size_sensitive(tmp_path):
+def test_sigs_identity_stable_and_content_sensitive(tmp_path):
     d = tmp_path / "sigs"
     d.mkdir()
     (d / "a.sig").write_bytes(b"xxxx")
@@ -257,8 +257,21 @@ def test_sigs_identity_stable_and_size_sensitive(tmp_path):
     (d / "sub" / "b.sig").write_bytes(b"yy")
     first = pipeline._sigs_identity(d)
     assert first == pipeline._sigs_identity(d)  # deterministic
-    (d / "a.sig").write_bytes(b"xxxxADDED")  # content/size change
-    assert pipeline._sigs_identity(d) != first  # detected
+    (d / "a.sig").write_bytes(b"yyyy")  # SAME size, different bytes
+    assert pipeline._sigs_identity(d) != first  # scout #14: same-size edit detected
+
+
+def test_sigs_identity_stable_across_mtime_only_change(tmp_path):
+    import os
+    import time
+
+    d = tmp_path / "sigs"
+    d.mkdir()
+    f = d / "a.sig"
+    f.write_bytes(b"xxxx")
+    first = pipeline._sigs_identity(d)
+    os.utime(f, (time.time() + 10_000, time.time() + 10_000))  # bump mtime only
+    assert pipeline._sigs_identity(d) == first  # content hash must ignore mtime
 
 
 def test_sigs_identity_bundled_sentinel():
