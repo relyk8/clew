@@ -59,6 +59,29 @@ def test_detonate_dash_o_streams_to_stdout(monkeypatch, capsys, tmp_path):
     assert not (tmp_path / "-").exists()
 
 
+def test_detonate_wait_poll_error_returns_2(monkeypatch):
+    # poll() raising CapeError under --wait (timeout / CAPE down) must be a clean
+    # exit 2, not an uncaught traceback (M4 / scout #3).
+    import clew.channels.cape.client as capeclient
+
+    def boom(self, *a, **k):
+        raise capeclient.CapeError("timeout")
+
+    monkeypatch.setattr(capeclient.CapeClient, "submit", lambda self, *a, **k: 7)
+    monkeypatch.setattr(capeclient.CapeClient, "poll", boom)
+    assert cli.main(["detonate", "x.exe", "--wait"]) == 2
+
+
+def test_poll_timeout_raises_capeerror():
+    # poll() must raise CapeError (not builtin TimeoutError) so callers' existing
+    # `except CapeError` handles it (M4 / scout #3).
+    import clew.channels.cape.client as capeclient
+
+    c = capeclient.CapeClient("http://x")
+    with pytest.raises(capeclient.CapeError):
+        c.poll(1, poll_interval=0, max_wait=-1)
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1

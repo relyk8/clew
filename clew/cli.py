@@ -533,7 +533,11 @@ def _cmd_detonate(args) -> int:
     log.info("submitted task %s (package=%s)", tid, args.package)
 
     if args.wait:
-        status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+        try:
+            status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+        except CapeError as e:
+            log.error("%s", e)
+            return 2
         result = {"task_id": tid, "status": status}
         rc = 0 if status == "reported" else 2
     else:
@@ -747,7 +751,11 @@ def _cmd_run(args) -> int:
         return 2
     log.info("submitted task %s (package=%s)", tid, args.package)
 
-    status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+    try:
+        status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+    except CapeError as e:
+        log.error("%s", e)
+        return 2
     if status != "reported":
         # A failed detonation has no logs to correlate against.
         log.error("task %s did not report (status=%s), cannot correlate", tid, status)

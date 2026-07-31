@@ -36,9 +36,12 @@ class CapeClient:
     # ---------- low level ----------
 
     def _get(self, path: str, timeout: int | None = None) -> dict[str, Any]:
-        r = self.session.get(f"{self.base}{path}", timeout=timeout or self.http_timeout)
-        r.raise_for_status()
-        return r.json()
+        try:
+            r = self.session.get(f"{self.base}{path}", timeout=timeout or self.http_timeout)
+            r.raise_for_status()
+            return r.json()
+        except requests.RequestException as exc:
+            raise CapeError(f"CAPE request failed ({path}): {exc}") from exc
 
     # ---------- public API ----------
 
@@ -78,16 +81,19 @@ class CapeClient:
         if package:
             data["package"] = package
 
-        with sample_path.open("rb") as f:
-            files = {"file": (sample_path.name, f)}
-            r = self.session.post(
-                f"{self.base}/apiv2/tasks/create/file/",
-                data=data,
-                files=files,
-                timeout=self.http_timeout,
-            )
-        r.raise_for_status()
-        j = r.json()
+        try:
+            with sample_path.open("rb") as f:
+                files = {"file": (sample_path.name, f)}
+                r = self.session.post(
+                    f"{self.base}/apiv2/tasks/create/file/",
+                    data=data,
+                    files=files,
+                    timeout=self.http_timeout,
+                )
+            r.raise_for_status()
+            j = r.json()
+        except requests.RequestException as exc:
+            raise CapeError(f"submit request failed: {exc}") from exc
         if j.get("error"):
             raise CapeError(f"submit error: {j}")
 
@@ -135,7 +141,7 @@ class CapeClient:
             if status in terminal:
                 return status
             time.sleep(poll_interval)
-        raise TimeoutError(
+        raise CapeError(
             f"task {task_id} did not terminate within {max_wait}s (last status: {last})"
         )
 
