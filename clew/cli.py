@@ -156,11 +156,6 @@ def _add_correlate_subparser(sub, parent) -> None:
         help="CAPE analyses storage root (only used with --task)",
     )
     s.add_argument(
-        "--cape-url",
-        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
-        help="CAPE base URL (only used with --task; default $CAPE_BASE_URL)",
-    )
-    s.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -485,7 +480,9 @@ def _cmd_correlate(args) -> int:
         from clew.channels.cape.client import CapeClient, CapeError
 
         try:
-            logs = CapeClient(args.cape_url).fetch_cmplog_logs(args.task, args.storage_root)
+            # fetch_cmplog_logs reads CAPE's on-disk storage (no REST call), so
+            # the client needs no base URL here (correlate has no --cape-url).
+            logs = CapeClient("").fetch_cmplog_logs(args.task, args.storage_root)
         except CapeError as e:
             log.error("%s", e)
             return 2

@@ -82,6 +82,13 @@ def test_poll_timeout_raises_capeerror():
         c.poll(1, poll_interval=0, max_wait=-1)
 
 
+def test_correlate_rejects_cape_url(monkeypatch):
+    # --cape-url was inert on correlate (its --task path reads local disk, not
+    # REST) and has been removed (D2 cleanup): argparse must reject it.
+    with pytest.raises(SystemExit):
+        cli.main(["correlate", "--record", "r.json", "--task", "1", "--cape-url", "http://x"])
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1
