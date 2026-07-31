@@ -55,10 +55,19 @@ def test_list_tasks_status_filter(client, monkeypatch):
     assert [t["id"] for t in out] == [3, 1]
 
 
-def test_list_tasks_limit_slices_without_resort(client, monkeypatch):
-    monkeypatch.setattr(client, "_get", lambda path: {"error": False, "data": _tasks()})
-    out = client.list_tasks(limit=2)
-    assert [t["id"] for t in out] == [3, 2]
+def test_list_tasks_sorts_newest_first(client, monkeypatch):
+    # CAPE's native order isn't reliably newest-first (observed live: older
+    # failed tasks leading), so list_tasks sorts by id desc before slicing
+    # (D3 / CLI-conformance finding).
+    unsorted = [
+        {"id": 3, "status": "failed_analysis"},
+        {"id": 2, "status": "failed_analysis"},
+        {"id": 14, "status": "reported"},
+        {"id": 10, "status": "reported"},
+    ]
+    monkeypatch.setattr(client, "_get", lambda path: {"error": False, "data": unsorted})
+    assert [t["id"] for t in client.list_tasks()] == [14, 10, 3, 2]
+    assert [t["id"] for t in client.list_tasks(limit=2)] == [14, 10]
 
 
 def test_list_tasks_status_then_limit(client, monkeypatch):

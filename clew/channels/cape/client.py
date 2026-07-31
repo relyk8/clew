@@ -179,7 +179,8 @@ class CapeClient:
         shape varies across CAPE builds, so normalize defensively: data may be a
         list of task dicts, or a dict holding a 'tasks'/'data' list. Optional
         client-side filters: keep tasks whose status matches, then slice to limit.
-        The API tends to return newest-first, so do not re-sort, just slice.
+        CAPE's list order is not reliably newest-first, so sort by task id
+        descending before filtering and slicing.
         """
         j = self._get("/apiv2/tasks/list/")
         if j.get("error"):
@@ -191,6 +192,8 @@ class CapeClient:
         else:
             tasks = data
         tasks = [t for t in tasks if isinstance(t, dict)]
+        # Sort newest-first by task id: CAPE's native order isn't reliable.
+        tasks.sort(key=lambda t: t.get("id") or 0, reverse=True)
 
         if status is not None:
             tasks = [t for t in tasks if t.get("status") == status]
