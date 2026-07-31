@@ -541,11 +541,12 @@ def _cmd_detonate(args) -> int:
         rc = 0
 
     text = json.dumps(result)
-    if args.output:
+    if args.output and args.output != Path("-"):
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text)
         log.info("wrote %s", args.output)
     else:
+        # No -o, or `-o -`: stream to stdout (consistent with the record verbs).
         print(text)
     return rc
 

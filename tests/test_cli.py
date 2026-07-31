@@ -46,6 +46,19 @@ def test_emit_record_creates_missing_parent_dir(tmp_path):
     assert json.loads(target.read_text())["sample_sha256"] == "abc123"
 
 
+def test_detonate_dash_o_streams_to_stdout(monkeypatch, capsys, tmp_path):
+    # `detonate -o -` must stream the task-id JSON to stdout, not create a file
+    # literally named "-" (M1 / scout #13).
+    import clew.channels.cape.client as capeclient
+
+    monkeypatch.setattr(capeclient.CapeClient, "submit", lambda self, *a, **k: 42)
+    monkeypatch.chdir(tmp_path)
+    rc = cli.main(["detonate", "x.exe", "-o", "-"])
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out) == {"task_id": 42}
+    assert not (tmp_path / "-").exists()
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1
