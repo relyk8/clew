@@ -12,7 +12,11 @@ offline with no network and no monkeypatch.
 
 from __future__ import annotations
 
+import logging
+
 from .cmplog_parse import CmpRecord
+
+logger = logging.getLogger(__name__)
 
 # Window sizes in bytes past a call site. NARROW captures comparisons just after
 # the call. WIDE is a looser band accepted only for return-value candidates,
@@ -29,6 +33,11 @@ BASE_CONFIDENCE = 0.6
 
 # Channel token for the source of these comparisons. Reuses the existing enum.
 _SOURCE_CHANNELS = ["drio"]
+
+# A wrong or missing --module-base makes every rebased PC miss the static module,
+# yielding an empty (but valid-looking) correlation. Warn when that is likely: a
+# non-trivial number of records parsed, none landing in the module's VA range.
+_MIN_RECORDS_FOR_WARN = 1000
 
 
 def rebase(pc: int, module_base: int | None, image_base: int) -> int:
@@ -61,6 +70,32 @@ def _clamp(value: float) -> float:
     return max(0.0, min(1.0, value))
 
 
+def _warn_if_unrebased(
+    cmp_records: list[CmpRecord],
+    rebased: list,
+    csvas: list[int],
+    module_base: int | None,
+) -> None:
+    """Warn on the likely-wrong-module-base case: many runtime records parsed but
+    none land in the static module's VA range (so the correlation is silently
+    empty, indistinguishable from a sample that defeated instrumentation)."""
+    if len(cmp_records) < _MIN_RECORDS_FOR_WARN or not csvas:
+        return
+    lo, hi = min(csvas), max(csvas) + WIDE
+    if any(lo <= rpc <= hi for rpc, _ in rebased):
+        return
+    logger.warning(
+        "correlate: parsed %d comparison records but none landed in the static "
+        "module range [0x%x, 0x%x]; the runtime module base likely differs from "
+        "0x%x -- pass the correct --module-base (currently %s).",
+        len(cmp_records),
+        lo,
+        hi,
+        IMAGE_BASE,
+        f"0x{module_base:x}" if module_base is not None else "unset",
+    )
+
+
 def correlate_record(
     record: dict,
     cmp_records: list[CmpRecord],
@@ -75,6 +110,8 @@ def correlate_record(
     the legacy comparison fields from the top entry. Mutates and returns record.
     """
     rebased = [(rebase(r.pc, module_base, image_base), r) for r in cmp_records]
+    csvas = [int(c["call_site_va"], 16) for c in record["candidates"]]
+    _warn_if_unrebased(cmp_records, rebased, csvas, module_base)
 
     for candidate in record["candidates"]:
         csva = int(candidate["call_site_va"], 16)

@@ -30,6 +30,35 @@ def _by_va(record):
     return {c["call_site_va"]: c for c in record["candidates"]}
 
 
+def test_warns_when_no_records_rebase_into_module(caplog):
+    # D4: many records parsed but none land in the static module range (a wrong or
+    # missing --module-base) must warn, not fail silently to an empty result.
+    import logging
+
+    from clew.channels.cape.cmplog_parse import CmpRecord
+
+    record = {"candidates": [{"call_site_va": "0x401000", "parameter_index": 0, "evidence": {}}]}
+    # 2000 records at an ASLR-relocated base far from 0x401000, no --module-base.
+    recs = [CmpRecord(tid=1, pc=0xBF0000 + i, opcode="cmp", operands=[]) for i in range(2000)]
+    with caplog.at_level(logging.WARNING):
+        correlate_record(record, recs)
+    assert "none landed in the static module range" in caplog.text
+    assert record["candidates"][0]["comparison_candidates"] == []
+
+
+def test_no_warn_when_records_land_in_module(caplog):
+    import logging
+
+    from clew.channels.cape.cmplog_parse import CmpRecord
+
+    record = {"candidates": [{"call_site_va": "0x401000", "parameter_index": 0, "evidence": {}}]}
+    # 2000 records right after the call site: they land in-module -> no warning.
+    recs = [CmpRecord(tid=1, pc=0x401000 + (i % 200), opcode="cmp", operands=[]) for i in range(2000)]
+    with caplog.at_level(logging.WARNING):
+        correlate_record(record, recs)
+    assert "none landed" not in caplog.text
+
+
 def test_matching_candidate_ranked_and_far_candidate_empty():
     rec = correlate_record(_load_input(), _load_records())
     by_va = _by_va(rec)
