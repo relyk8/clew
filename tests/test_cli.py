@@ -37,6 +37,15 @@ _RECORD_WITH_VALUES = {
 }
 
 
+def test_emit_record_creates_missing_parent_dir(tmp_path):
+    # `-o <newdir>/f.json` into a non-existent dir must create the parent, not
+    # crash after computing the record (D1 / scout #8).
+    target = tmp_path / "newdir" / "out.clew.json"
+    cli._emit_record({"sample_sha256": "abc123"}, target, "summary")
+    assert target.is_file()
+    assert json.loads(target.read_text())["sample_sha256"] == "abc123"
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1

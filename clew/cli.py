@@ -411,9 +411,9 @@ def _emit_record(record, output, summary: str) -> None:
         return
     if output is None:
         path = _default_record_path(record)
-        path.parent.mkdir(parents=True, exist_ok=True)
     else:
         path = output
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     logging.getLogger("clew.cli").info("wrote %s: %s", path, summary)
 
@@ -542,6 +542,7 @@ def _cmd_detonate(args) -> int:
 
     text = json.dumps(result)
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text)
         log.info("wrote %s", args.output)
     else:
