@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 # that logs more (jcc, sub, ...).
 _KEPT_OPCODES = frozenset({"cmp", "test"})
 
+# Caps: the logs are attacker-influenced (a sample controls how many comparisons
+# it executes, and can write into the shared guest filesystem), so bound both the
+# total records accumulated and any single line's length to keep the host parser
+# from exhausting memory. A real run is tens of thousands of short lines; these
+# ceilings sit far above that.
+MAX_RECORDS = 5_000_000
+MAX_LINE_LEN = 8192
+
 # T<tid> pc=0x<hex> <opcode> <rest-of-operands>
 _LINE_RE = re.compile(r"^T(\d+)\s+pc=(0x[0-9a-fA-F]+)\s+(\S+)(.*)$")
 
@@ -96,26 +104,55 @@ def _parse_line(line: str) -> CmpRecord | None:
     return CmpRecord(tid=int(m.group(1)), pc=int(m.group(2), 16), opcode=opcode, operands=operands)
 
 
-def parse_cmplog_lines(lines: Iterable[str]) -> list[CmpRecord]:
-    """Parse cmplog log lines to `CmpRecord`s. Malformed lines are skipped."""
+def parse_cmplog_lines(lines: Iterable[str], max_records: int | None = None) -> list[CmpRecord]:
+    """Parse cmplog log lines to `CmpRecord`s. Malformed and pathologically long
+    lines are skipped; accumulation stops at `max_records` (default MAX_RECORDS)."""
+    cap = MAX_RECORDS if max_records is None else max_records
     records: list[CmpRecord] = []
     for line in lines:
+        if len(line) > MAX_LINE_LEN:
+            continue
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
         record = _parse_line(stripped)
         if record is not None:
             records.append(record)
+            if len(records) >= cap:
+                logger.warning("cmplog record cap (%d) reached; truncating", cap)
+                break
     return records
 
 
+def _bounded_lines(fh, max_line_len: int = MAX_LINE_LEN, chunk_size: int = 65536):
+    """Yield newline-delimited lines from `fh` without buffering an unbounded
+    single line. A stretch longer than `max_line_len` with no newline (a
+    malformed or hostile log) is dropped and parsing resyncs at the next
+    newline, so one giant line can't exhaust host memory."""
+    buf = ""
+    for chunk in iter(lambda: fh.read(chunk_size), ""):
+        buf += chunk
+        while "\n" in buf:
+            line, buf = buf.split("\n", 1)
+            yield line
+        if len(buf) > max_line_len:
+            buf = ""  # drop the oversized partial line; resync at next newline
+    if buf:
+        yield buf
+
+
 def parse_cmplog_files(paths: Iterable[Path]) -> list[CmpRecord]:
-    """Read and concatenate cmplog logs. One unreadable/bad file is skipped."""
+    """Read and concatenate cmplog logs. One unreadable/bad file is skipped;
+    total records are capped at MAX_RECORDS across all files."""
     records: list[CmpRecord] = []
     for path in paths:
+        if len(records) >= MAX_RECORDS:
+            break
         try:
             with Path(path).open(encoding="utf-8", errors="replace") as fh:
-                records.extend(parse_cmplog_lines(fh))
+                records.extend(
+                    parse_cmplog_lines(_bounded_lines(fh), max_records=MAX_RECORDS - len(records))
+                )
         except OSError as exc:
             logger.warning("skipping unreadable cmplog file %s (%s)", path, exc)
     return records
