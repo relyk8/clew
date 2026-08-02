@@ -36,6 +36,43 @@ def test_run_capa_integration(fixtures_dir, capa_paths):
     assert "check for debugger via API" in result.rule_names
 
 
+def test_parse_capa_json_banner_preamble_fallback():
+    # scout #10: capa CLI output can be preceded by log/banner lines; the
+    # brace-finder fallback must still parse it.
+    from clew.channels.capa import _parse_capa_json
+
+    r = _parse_capa_json('WARNING: loading rules\n{"rules": {}}')
+    assert r.rule_names == frozenset()
+
+
+def test_parse_capa_json_error_branches():
+    from clew.channels.capa import CapaParseError, _parse_capa_json
+
+    with pytest.raises(CapaParseError):
+        _parse_capa_json("no json object here")  # no brace
+    with pytest.raises(CapaParseError):
+        _parse_capa_json('{"norules": 1}')  # missing 'rules'
+    with pytest.raises(CapaParseError):
+        _parse_capa_json(123)  # unsupported type
+
+
+def test_run_capa_nonzero_exit_raises(monkeypatch, tmp_path):
+    # scout #10: a nonzero capa exit must raise CapaRunError (untested before).
+    from clew.channels import capa as capa_mod
+
+    sample = tmp_path / "s.exe"
+    sample.write_bytes(b"MZ")
+
+    class _Proc:
+        returncode = 3
+        stdout = b""
+        stderr = b"boom"
+
+    monkeypatch.setattr(capa_mod.subprocess, "run", lambda *a, **k: _Proc())
+    with pytest.raises(capa_mod.CapaRunError):
+        capa_mod.run_capa(sample, rules_path=tmp_path, sigs_path=tmp_path)
+
+
 def test_run_capa_missing_binary(fixtures_dir, capa_paths):
     rules, sigs = capa_paths
     sample = fixtures_dir / "al-khaser_x86.exe"
