@@ -104,7 +104,7 @@ clew detonate SAMPLE [--wait]
 | `--wait` | block until the task reaches a terminal state, then report status |
 | `--enforce-timeout` / `--no-enforce-timeout` | kill the guest at the timeout vs wait for self-exit (default on) |
 | `--cape-url URL` | CAPE base URL (default `$CAPE_BASE_URL` or `http://127.0.0.1:8000`) |
-| `-o, --output PATH` | write the task-id JSON to a file (default stdout) |
+| `-o, --output PATH` | write the task-id JSON to a file (omit or `-` for stdout) |
 
 ### correlate — join runtime operands onto a record (Channel 3)
 
@@ -149,8 +149,8 @@ so a sample that defeats instrumentation reads 0 at a glance.
 clew run SAMPLE
 ```
 
-Takes the `static` options plus `--package`, `--timeout`, `--cape-url`,
-`--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
+Takes the `static` options plus `--package`, `--timeout`, `--enforce-timeout`,
+`--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
 
