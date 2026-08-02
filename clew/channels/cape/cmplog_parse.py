@@ -106,8 +106,10 @@ def _parse_line(line: str) -> CmpRecord | None:
 
 def parse_cmplog_lines(lines: Iterable[str], max_records: int | None = None) -> list[CmpRecord]:
     """Parse cmplog log lines to `CmpRecord`s. Malformed and pathologically long
-    lines are skipped; accumulation stops at `max_records` (default MAX_RECORDS)."""
+    lines are skipped; accumulation stops at `max_records` (default MAX_RECORDS,
+    `0` = unlimited)."""
     cap = MAX_RECORDS if max_records is None else max_records
+    unlimited = cap == 0
     records: list[CmpRecord] = []
     for line in lines:
         if len(line) > MAX_LINE_LEN:
@@ -118,7 +120,7 @@ def parse_cmplog_lines(lines: Iterable[str], max_records: int | None = None) -> 
         record = _parse_line(stripped)
         if record is not None:
             records.append(record)
-            if len(records) >= cap:
+            if not unlimited and len(records) >= cap:
                 logger.warning("cmplog record cap (%d) reached; truncating", cap)
                 break
     return records
@@ -141,18 +143,20 @@ def _bounded_lines(fh, max_line_len: int = MAX_LINE_LEN, chunk_size: int = 65536
         yield buf
 
 
-def parse_cmplog_files(paths: Iterable[Path]) -> list[CmpRecord]:
+def parse_cmplog_files(paths: Iterable[Path], max_records: int | None = None) -> list[CmpRecord]:
     """Read and concatenate cmplog logs. One unreadable/bad file is skipped;
-    total records are capped at MAX_RECORDS across all files."""
+    total records are capped at `max_records` (default MAX_RECORDS, `0` =
+    unlimited) across all files."""
+    cap = MAX_RECORDS if max_records is None else max_records
+    unlimited = cap == 0
     records: list[CmpRecord] = []
     for path in paths:
-        if len(records) >= MAX_RECORDS:
+        if not unlimited and len(records) >= cap:
             break
         try:
+            remaining = 0 if unlimited else cap - len(records)
             with Path(path).open(encoding="utf-8", errors="replace") as fh:
-                records.extend(
-                    parse_cmplog_lines(_bounded_lines(fh), max_records=MAX_RECORDS - len(records))
-                )
+                records.extend(parse_cmplog_lines(_bounded_lines(fh), max_records=remaining))
         except OSError as exc:
             logger.warning("skipping unreadable cmplog file %s (%s)", path, exc)
     return records

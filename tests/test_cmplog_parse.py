@@ -112,6 +112,17 @@ def test_record_cap_truncates(monkeypatch):
     assert len(cp.parse_cmplog_lines(lines)) == 3
 
 
+def test_max_records_zero_is_unlimited(monkeypatch):
+    # `--max-cmp-records 0` means the analyst wants everything: no cap, even past
+    # the default MAX_RECORDS ceiling (#15 / analyst control).
+    import clew.channels.cape.cmplog_parse as cp
+
+    monkeypatch.setattr(cp, "MAX_RECORDS", 3)
+    lines = ["T1 pc=0x401000 cmp src0=imm=0x1 src1=imm=0x2"] * 10
+    assert len(cp.parse_cmplog_lines(lines, max_records=0)) == 10  # unlimited
+    assert len(cp.parse_cmplog_lines(lines)) == 3  # default still caps
+
+
 def test_overlong_line_skipped():
     # A pathologically long line is skipped; normal lines still parse (scout #9).
     import clew.channels.cape.cmplog_parse as cp

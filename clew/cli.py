@@ -156,6 +156,13 @@ def _add_correlate_subparser(sub, parent) -> None:
         help="CAPE analyses storage root (only used with --task)",
     )
     s.add_argument(
+        "--max-cmp-records",
+        type=int,
+        default=5_000_000,
+        help="cap comparison records loaded from the logs (0 = unlimited); guards "
+        "host memory/CPU against a hostile sample's oversized log",
+    )
+    s.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -300,6 +307,13 @@ def _add_run_subparser(sub, parent) -> None:
         "--storage-root",
         default="/opt/CAPEv2/storage/analyses",
         help="CAPE analyses storage root (read for the cmplog logs)",
+    )
+    s.add_argument(
+        "--max-cmp-records",
+        type=int,
+        default=5_000_000,
+        help="cap comparison records loaded from the logs (0 = unlimited); guards "
+        "host memory/CPU against a hostile sample's oversized log",
     )
     s.add_argument(
         "-o",
@@ -487,7 +501,7 @@ def _cmd_correlate(args) -> int:
             log.error("%s", e)
             return 2
 
-    cmp_records = parse_cmplog_files(logs)
+    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
     log.info("parsed %d comparison records from %d log(s)", len(cmp_records), len(logs))
     enriched = correlate_record(record, cmp_records, module_base=args.module_base)
 
@@ -767,7 +781,7 @@ def _cmd_run(args) -> int:
     except CapeError as e:
         log.error("%s", e)
         return 2
-    cmp_records = parse_cmplog_files(logs)
+    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
     enriched = correlate_record(record, cmp_records, module_base=args.module_base)
     with_cmps = [cand for cand in enriched["candidates"] if cand.get("comparison_candidates")]
     log.info("stage 3/3 correlate: %d candidates with comparisons", len(with_cmps))

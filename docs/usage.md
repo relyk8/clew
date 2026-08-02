@@ -119,6 +119,7 @@ clew correlate --record RECORD (--cmplog-dir DIR | --task N)
 | `--task N` | a CAPE task id; reads the logs from CAPE storage |
 | `--module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
 | `--storage-root DIR` | CAPE analyses storage root (with `--task`) |
+| `--max-cmp-records N` | cap comparison records loaded from the logs (`0` = unlimited; default 5,000,000) — guards host memory/CPU on an oversized log |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
 
 `--cmplog-dir` and `--task` are mutually exclusive, and one is required.
@@ -149,7 +150,7 @@ clew run SAMPLE
 ```
 
 Takes the `static` options plus `--package`, `--timeout`, `--cape-url`,
-`--module-base`, `--storage-root`, and `-o`. It runs the static pipeline,
+`--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
 
