@@ -74,6 +74,43 @@ def bn_fixture(fixtures_dir):
     return path
 
 
+def test_collect_call_sites_drops_forwarder_thunk_ref(monkeypatch):
+    # scout #2: the offline suite only asserts a frozen post-filter fixture, so a
+    # thunk-filter regression stays green. Drive _collect_call_sites' real loop +
+    # thunk guard (and the real _is_forwarder_thunk) over controlled fakes, with
+    # only the BN-touching helpers monkeypatched.
+    import sys
+    import types
+
+    import clew.channels.binaryninja.callsites as cs
+
+    # `from binaryninja import SymbolType` needs the module present; its contents
+    # are unused because the helpers that would consume it are monkeypatched.
+    monkeypatch.setitem(sys.modules, "binaryninja", types.SimpleNamespace(SymbolType=object()))
+
+    sym = types.SimpleNamespace(address=0x1000)
+    thunk = types.SimpleNamespace(
+        start=0x2000,
+        basic_blocks=[types.SimpleNamespace(instruction_count=1, start=0x2000, end=0x2006)],
+    )
+    real = types.SimpleNamespace(
+        start=0x3000,
+        basic_blocks=[types.SimpleNamespace(instruction_count=20, start=0x3000, end=0x3100)],
+    )
+    ref_thunk = types.SimpleNamespace(address=0x2000, function=thunk)  # at func.start -> forwarder
+    ref_real = types.SimpleNamespace(address=0x3050, function=real)  # genuine call site
+
+    monkeypatch.setattr(cs, "_import_symbols", lambda bv, st: [sym])
+    monkeypatch.setattr(cs, "_classify_import_symbol", lambda s, st: ("CreateFileW", "import", None))
+    monkeypatch.setattr(cs, "_is_import_thunk", lambda bv, func, st: False)
+    monkeypatch.setattr(cs, "_calling_convention_name", lambda func: "stdcall")
+    monkeypatch.setattr(cs, "_getprocaddress_call_sites", lambda bv, op, st: [])
+
+    bv = types.SimpleNamespace(get_code_refs=lambda addr: [ref_thunk, ref_real])
+    vas = {s.call_site_va for s in cs._collect_call_sites(bv, object())}
+    assert vas == {0x3050}  # the forwarder-thunk ref (at func.start) was dropped
+
+
 def test_is_forwarder_thunk_rejects_call_ret_wrapper():
     # A 2-instruction `call [IAT]; ret` wrapper is a real function, not a
     # forwarder thunk; its call site must be kept (B3 / scout #6).
