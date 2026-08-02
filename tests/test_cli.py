@@ -106,6 +106,16 @@ def test_records_computed_for_all_terminal_states(tmp_path):
     assert by_id["3"] == "-"  # non-terminal: not counted
 
 
+def test_humanize_age_iso_tz_and_future(monkeypatch):
+    # scout #17: the fromisoformat fallback, tz-aware drop, and future clamp were
+    # untested (only the strptime buckets + garbage were covered).
+    assert cli._humanize_age("2020-01-01T00:00:00.123456+00:00").endswith("d")  # ISO + offset
+    assert cli._humanize_age("2020-01-01T00:00:00+00:00").endswith("d")  # tz-aware, tzinfo dropped
+    assert cli._humanize_age("2999-01-01T00:00:00") == "0s"  # future clamps, no negative
+    assert cli._humanize_age("not a date") == "-"
+    assert cli._humanize_age(None) == "-"
+
+
 def test_run_enforce_timeout_threads_to_submit(monkeypatch):
     # M3: `run` exposes --enforce-timeout/--no-enforce-timeout and threads it into
     # submit (previously it was forced on with no override).
