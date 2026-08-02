@@ -117,6 +117,25 @@ def test_legacy_fields_mirror_top_entry():
     assert matched["evidence"]["cmp_operand_b"] == top["cmp_operand_b"]
 
 
+def test_narrow_edge_hit_outranks_wide_just_past_boundary():
+    # scout #7: previously a wide hit just past NARROW could out-score a narrow
+    # hit near the NARROW edge (non-monotonic). Both must still be emitted, but
+    # the narrow one must rank first.
+    from clew.channels.cape.cmplog_parse import CmpRecord, Operand
+    from clew.channels.cape.correlate import NARROW
+
+    csva = 0x401000
+    record = {"candidates": [{"call_site_va": "0x401000", "parameter_index": -1, "evidence": {}}]}
+    recs = [
+        CmpRecord(tid=1, pc=csva + NARROW - 6, opcode="cmp", operands=[Operand("imm", value=0x1)]),
+        CmpRecord(tid=1, pc=csva + NARROW + 6, opcode="cmp", operands=[Operand("imm", value=0x2)]),
+    ]
+    correlate_record(record, recs)
+    comps = record["candidates"][0]["comparison_candidates"]
+    assert len(comps) == 2  # quantity preserved: both emitted
+    assert comps[0]["cmp_operand_a"] == "0x1"  # the narrow (edge) hit ranks first
+
+
 def test_return_value_wide_window_ranks_below_narrow():
     rec = correlate_record(_load_input(), _load_records())
     # The -1 candidate accepts a wider band; the wide hit must rank strictly
