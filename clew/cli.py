@@ -156,11 +156,6 @@ def _add_correlate_subparser(sub, parent) -> None:
         help="CAPE analyses storage root (only used with --task)",
     )
     s.add_argument(
-        "--cape-url",
-        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
-        help="CAPE base URL (only used with --task; default $CAPE_BASE_URL)",
-    )
-    s.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -411,9 +406,9 @@ def _emit_record(record, output, summary: str) -> None:
         return
     if output is None:
         path = _default_record_path(record)
-        path.parent.mkdir(parents=True, exist_ok=True)
     else:
         path = output
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     logging.getLogger("clew.cli").info("wrote %s: %s", path, summary)
 
@@ -485,7 +480,9 @@ def _cmd_correlate(args) -> int:
         from clew.channels.cape.client import CapeClient, CapeError
 
         try:
-            logs = CapeClient(args.cape_url).fetch_cmplog_logs(args.task, args.storage_root)
+            # fetch_cmplog_logs reads CAPE's on-disk storage (no REST call), so
+            # the client needs no base URL here (correlate has no --cape-url).
+            logs = CapeClient("").fetch_cmplog_logs(args.task, args.storage_root)
         except CapeError as e:
             log.error("%s", e)
             return 2
@@ -533,7 +530,11 @@ def _cmd_detonate(args) -> int:
     log.info("submitted task %s (package=%s)", tid, args.package)
 
     if args.wait:
-        status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+        try:
+            status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+        except CapeError as e:
+            log.error("%s", e)
+            return 2
         result = {"task_id": tid, "status": status}
         rc = 0 if status == "reported" else 2
     else:
@@ -541,10 +542,12 @@ def _cmd_detonate(args) -> int:
         rc = 0
 
     text = json.dumps(result)
-    if args.output:
+    if args.output and args.output != Path("-"):
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text)
         log.info("wrote %s", args.output)
     else:
+        # No -o, or `-o -`: stream to stdout (consistent with the record verbs).
         print(text)
     return rc
 
@@ -745,7 +748,11 @@ def _cmd_run(args) -> int:
         return 2
     log.info("submitted task %s (package=%s)", tid, args.package)
 
-    status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+    try:
+        status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
+    except CapeError as e:
+        log.error("%s", e)
+        return 2
     if status != "reported":
         # A failed detonation has no logs to correlate against.
         log.error("task %s did not report (status=%s), cannot correlate", tid, status)

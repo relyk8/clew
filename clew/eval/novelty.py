@@ -33,6 +33,10 @@ IOC_CATEGORIES = (
 # leaves the stable suffix (WilError_03, WilStaging_02, etc) behind.
 _MUTEX_SESSION_PID_TID = re.compile(r"SM\d+:\d+:\d+:")
 
+# Shared empty default so cross-dict lookups tolerate a category missing from one
+# side (a hand-built or partial IoC dict) instead of raising KeyError.
+_EMPTY: frozenset[str] = frozenset()
+
 
 def _normalize_mutex(name: str) -> str:
     return _MUTEX_SESSION_PID_TID.sub("SM*:*:*:", name)
@@ -74,13 +78,13 @@ def novelty_score(baseline: dict[str, set[str]], mutated: dict[str, set[str]]) -
     Behaviors the baseline had but mutation suppressed aren't novelty,
     they're regression, and they get a different signal later.
     """
-    return {k: len(mutated[k] - baseline[k]) for k in baseline}
+    return {k: len(mutated.get(k, _EMPTY) - baseline[k]) for k in baseline}
 
 
 def novel_items(baseline: dict[str, set[str]], mutated: dict[str, set[str]]) -> dict[str, set[str]]:
     """Same as novelty_score but returns the actual novel elements.
     Useful for debugging / inspecting *what* is new, not just how many."""
-    return {k: mutated[k] - baseline[k] for k in baseline}
+    return {k: mutated.get(k, _EMPTY) - baseline[k] for k in baseline}
 
 
 def load_stable_baseline(path) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
@@ -115,6 +119,6 @@ def noise_filtered_novelty(
     """
     out = {}
     for k in persistent:
-        known = persistent[k] | volatile[k]
-        out[k] = len(mutated[k] - known)
+        known = persistent[k] | volatile.get(k, _EMPTY)
+        out[k] = len(mutated.get(k, _EMPTY) - known)
     return out

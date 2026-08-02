@@ -74,6 +74,25 @@ def bn_fixture(fixtures_dir):
     return path
 
 
+def test_is_forwarder_thunk_rejects_call_ret_wrapper():
+    # A 2-instruction `call [IAT]; ret` wrapper is a real function, not a
+    # forwarder thunk; its call site must be kept (B3 / scout #6).
+    from clew.channels.binaryninja.callsites import _is_forwarder_thunk
+
+    class _BB:
+        def __init__(self, n):
+            self.instruction_count = n
+            self.start = 0
+            self.end = n * 4
+
+    class _Func:
+        def __init__(self, n):
+            self.basic_blocks = [_BB(n)]
+
+    assert _is_forwarder_thunk(_Func(1)) is True  # single `jmp [IAT]` -> thunk
+    assert _is_forwarder_thunk(_Func(2)) is False  # `call [IAT]; ret` -> real wrapper
+
+
 def test_load_intermediate_json(bn_fixture):
     result = load_bn_results(bn_fixture)
     assert isinstance(result, BNCallSites)

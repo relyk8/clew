@@ -119,7 +119,6 @@ clew correlate --record RECORD (--cmplog-dir DIR | --task N)
 | `--task N` | a CAPE task id; reads the logs from CAPE storage |
 | `--module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
 | `--storage-root DIR` | CAPE analyses storage root (with `--task`) |
-| `--cape-url URL` | CAPE base URL (with `--task`) |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
 
 `--cmplog-dir` and `--task` are mutually exclusive, and one is required.

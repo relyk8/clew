@@ -103,6 +103,36 @@ def test_malformed_lines_tolerated():
     assert records[0].pc == 0x1
 
 
+def test_record_cap_truncates(monkeypatch):
+    # Attacker-controlled log volume must not accumulate unbounded (scout #9).
+    import clew.channels.cape.cmplog_parse as cp
+
+    monkeypatch.setattr(cp, "MAX_RECORDS", 3)
+    lines = ["T1 pc=0x401000 cmp src0=imm=0x1 src1=imm=0x2"] * 10
+    assert len(cp.parse_cmplog_lines(lines)) == 3
+
+
+def test_overlong_line_skipped():
+    # A pathologically long line is skipped; normal lines still parse (scout #9).
+    import clew.channels.cape.cmplog_parse as cp
+
+    normal = "T1 pc=0x401000 cmp src0=imm=0x1 src1=imm=0x2"
+    giant = "T2 pc=0x402000 cmp src0=imm=0x1 " + "A" * (cp.MAX_LINE_LEN + 10)
+    recs = cp.parse_cmplog_lines([normal, giant])
+    assert len(recs) == 1 and recs[0].pc == 0x401000
+
+
+def test_parse_files_bounds_giant_newlineless_blob(tmp_path):
+    # A large newline-free blob must not be buffered whole; the bounded reader
+    # drops it and resyncs to the valid line after it (scout #9).
+    import clew.channels.cape.cmplog_parse as cp
+
+    p = tmp_path / "cmplog.1.log"
+    p.write_text("X" * 200_000 + "\nT1 pc=0x401000 cmp src0=imm=0x1 src1=imm=0x2\n")
+    recs = cp.parse_cmplog_files([p])
+    assert len(recs) == 1 and recs[0].pc == 0x401000
+
+
 def test_parse_files_reads_and_concatenates(tmp_path):
     a = tmp_path / "cmplog.1.log"
     b = tmp_path / "cmplog.2.log"
