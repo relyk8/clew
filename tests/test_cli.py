@@ -89,6 +89,23 @@ def test_correlate_rejects_cape_url(monkeypatch):
         cli.main(["correlate", "--record", "r.json", "--task", "1", "--cape-url", "http://x"])
 
 
+def test_records_computed_for_all_terminal_states(tmp_path):
+    # M2: RECORDS reflects any terminal task, not only 'reported'.
+    class FakeClient:
+        def count_cmplog_lines(self, tid, root):
+            return 7 if tid in (1, 2) else None
+
+    tasks = [
+        {"id": 1, "status": "reported", "target": "a.exe"},
+        {"id": 2, "status": "failed_processing", "target": "b.exe"},
+        {"id": 3, "status": "running", "target": "c.exe"},
+    ]
+    by_id = {r["task"]: r["records"] for r in cli._build_display_rows(tasks, FakeClient(), str(tmp_path))}
+    assert by_id["1"] == "7"  # reported
+    assert by_id["2"] == "7"  # terminal failure now also counted
+    assert by_id["3"] == "-"  # non-terminal: not counted
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1
@@ -604,8 +621,8 @@ def test_tasks_json_includes_records(monkeypatch, capsys):
     assert isinstance(rows, list) and rows
     assert rows[0]["sample"] == "signtool.exe"
     assert rows[0]["records"] == "24429"
-    # The non-terminal task shows "-" RECORDS.
-    assert rows[1]["records"] == "-"
+    # failed_analysis is terminal too, so its RECORDS are counted (M2).
+    assert rows[1]["records"] == "24429"
 
 
 def test_tasks_cape_error_returns_2(monkeypatch):
