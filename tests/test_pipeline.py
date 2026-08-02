@@ -211,8 +211,10 @@ def test_capa_techniques_and_status_from_capa_result():
     # only the anti-analysis rule is an evasion technique
     assert "check for debugger via API" in techniques
     assert "get OS version" not in techniques
-    # status is one of the four derivation buckets (whatever classify returns)
-    assert status in {"fully_derivable", "partially_derivable", "not_derivable", "no_capa_signal"}
+    # classify runs over the evasion-FILTERED techniques, so the lone actionable
+    # anti-analysis rule yields fully_derivable -- NOT partially_derivable, which
+    # classifying the full (unfiltered) rule set used to give (scout #1).
+    assert status == "fully_derivable"
 
 
 def test_quiet_floss_logging_suppresses_and_restores():
