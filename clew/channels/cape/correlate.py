@@ -139,9 +139,14 @@ def correlate_record(
         comparisons = []
         for rpc, r, wide, _hit_count in seen.values():
             dist = rpc - csva
-            # Wide hits get a strictly-lower proximity factor so they rank below
-            # narrow hits captured right at the call site.
-            proximity = 0.5 * (1 - dist / WIDE) if wide else 1 - dist / NARROW
+            # Two disjoint proximity bands so a narrow hit ALWAYS ranks above any
+            # wide hit, and within each band a closer hit ranks higher (monotonic
+            # in dist): narrow -> (0.5, 1.0], wide -> [0, 0.5). Nothing is dropped;
+            # every comparison is still emitted, just ranked (scout #7).
+            if wide:
+                proximity = 0.5 * (1 - (dist - NARROW) / (WIDE - NARROW))
+            else:
+                proximity = 0.5 + 0.5 * (1 - dist / NARROW)
             readability = 0.7 if _has_unreadable_mem(r) else 1.0
             confidence = _clamp(BASE_CONFIDENCE * proximity * readability)
             comparisons.append(

@@ -164,6 +164,79 @@ def test_count_cmplog_lines_unreadable_returns_none(client, tmp_path, monkeypatc
 # ---------- poll ----------
 
 
+def test_submit_returns_first_task_id(client, tmp_path, monkeypatch):
+    sample = tmp_path / "s.exe"
+    sample.write_bytes(b"MZ")
+
+    class R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"data": {"task_ids": [42, 43]}}
+
+    monkeypatch.setattr(client.session, "post", lambda *a, **k: R())
+    assert client.submit(sample) == 42
+
+
+def test_submit_older_cape_singular_task_id(client, tmp_path, monkeypatch):
+    # Older CAPE builds return a singular "task_id" instead of "task_ids".
+    sample = tmp_path / "s.exe"
+    sample.write_bytes(b"MZ")
+
+    class R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"data": {"task_id": 5}}
+
+    monkeypatch.setattr(client.session, "post", lambda *a, **k: R())
+    assert client.submit(sample) == 5
+
+
+def test_submit_no_task_id_raises(client, tmp_path, monkeypatch):
+    sample = tmp_path / "s.exe"
+    sample.write_bytes(b"MZ")
+
+    class R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"data": {}}
+
+    monkeypatch.setattr(client.session, "post", lambda *a, **k: R())
+    with pytest.raises(CapeError):
+        client.submit(sample)
+
+
+def test_submit_missing_file_raises(client):
+    with pytest.raises(FileNotFoundError):
+        client.submit("/nonexistent/s.exe")
+
+
+def test_delete_falls_back_to_post_on_404(client, monkeypatch):
+    calls = []
+
+    class R:
+        def __init__(self, code):
+            self.status_code = code
+
+    monkeypatch.setattr(client.session, "get", lambda *a, **k: (calls.append("get"), R(404))[1])
+    monkeypatch.setattr(client.session, "post", lambda *a, **k: (calls.append("post"), R(200))[1])
+    assert client.delete(9) is True
+    assert calls == ["get", "post"]
+
+
+def test_status_returns_data_and_raises_on_error(client, monkeypatch):
+    monkeypatch.setattr(client, "_get", lambda path: {"error": False, "data": {"tasks": 3}})
+    assert client.status() == {"tasks": 3}
+    monkeypatch.setattr(client, "_get", lambda path: {"error": True})
+    with pytest.raises(CapeError):
+        client.status()
+
+
 def test_poll_progress_callback_no_stdout(client, monkeypatch, capsys):
     # view yields running then reported; a progress callback receives each status
     # change and nothing leaks to stdout (the CLI stdout=artifact contract).

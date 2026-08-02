@@ -191,6 +191,19 @@ def test_record_plus_derivation_validates_against_schema():
 # --- capa / tiers glue (guarded: runs on the cluster, skips without them) -----
 
 
+def test_run_capa_stage_degrades_on_capa_error(monkeypatch):
+    # scout #11: any CapaError must degrade to no_capa_signal, never abort the
+    # pipeline -- guards against narrowing the `except capa.CapaError` clause.
+    from clew.channels import capa as capa_mod
+
+    def boom(*a, **k):
+        raise capa_mod.CapaRunError("nonzero exit")
+
+    monkeypatch.setattr(capa_mod, "run_capa", boom)
+    techniques, status = pipeline._run_capa_stage("s.exe", "rules", "sigs", "capa")
+    assert techniques == [] and status == "no_capa_signal"
+
+
 def test_capa_techniques_and_status_from_capa_result():
     pytest.importorskip("clew.channels.capa")
     pytest.importorskip("clew.tiers")
@@ -211,8 +224,10 @@ def test_capa_techniques_and_status_from_capa_result():
     # only the anti-analysis rule is an evasion technique
     assert "check for debugger via API" in techniques
     assert "get OS version" not in techniques
-    # status is one of the four derivation buckets (whatever classify returns)
-    assert status in {"fully_derivable", "partially_derivable", "not_derivable", "no_capa_signal"}
+    # classify runs over the evasion-FILTERED techniques, so the lone actionable
+    # anti-analysis rule yields fully_derivable -- NOT partially_derivable, which
+    # classifying the full (unfiltered) rule set used to give (scout #1).
+    assert status == "fully_derivable"
 
 
 def test_quiet_floss_logging_suppresses_and_restores():

@@ -118,20 +118,25 @@ def capa_techniques_and_status(capa_result) -> tuple:
 
     rules_meta = (getattr(capa_result, "raw", None) or {}).get("rules", {})
     techniques = filter_evasion_techniques(capa_result.rule_names, rules_meta)
-    return techniques, _derivation_status(capa_result, tiers)
+    return techniques, _derivation_status(techniques, tiers)
 
 
-def _derivation_status(capa_result, tiers) -> Optional[str]:
+def _derivation_status(techniques, tiers) -> Optional[str]:
     """Call `tiers.classify` defensively across return shapes (tuple /
     dataclass / bare string).
 
-    RECONCILE: confirm classify's exact signature/return on the first live run.
+    Classifies over the evasion-FILTERED technique names (matching
+    scripts/batch_channel0), NOT the full capa rule set: classify only rolls up
+    anti-analysis rules, so feeding it every matched capa rule (e.g. 'get OS
+    version', which nearly every PE matches) dragged the categorical down and made
+    'fully_derivable'/'no_capa_signal' practically unreachable on real samples.
+
     The tiers docstring says classify returns the categorical alongside the list
     of unmapped rules; this pulls just the categorical, whichever shape it comes
     in. Only `derivation_status` has a schema home -- the unmapped list is a
     backlog-sizing aid the record does not carry.
     """
-    result = tiers.classify(capa_result.rule_names)
+    result = tiers.classify(techniques)
     if isinstance(result, tuple):
         return result[0] if result else None
     for attr in ("derivation_status", "status", "value"):

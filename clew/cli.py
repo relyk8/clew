@@ -156,6 +156,13 @@ def _add_correlate_subparser(sub, parent) -> None:
         help="CAPE analyses storage root (only used with --task)",
     )
     s.add_argument(
+        "--max-cmp-records",
+        type=int,
+        default=5_000_000,
+        help="cap comparison records loaded from the logs (0 = unlimited); guards "
+        "host memory/CPU against a hostile sample's oversized log",
+    )
+    s.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -285,6 +292,12 @@ def _add_run_subparser(sub, parent) -> None:
         help="guest analysis timeout in seconds (default: 120)",
     )
     s.add_argument(
+        "--enforce-timeout",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+    )
+    s.add_argument(
         "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
@@ -300,6 +313,13 @@ def _add_run_subparser(sub, parent) -> None:
         "--storage-root",
         default="/opt/CAPEv2/storage/analyses",
         help="CAPE analyses storage root (read for the cmplog logs)",
+    )
+    s.add_argument(
+        "--max-cmp-records",
+        type=int,
+        default=5_000_000,
+        help="cap comparison records loaded from the logs (0 = unlimited); guards "
+        "host memory/CPU against a hostile sample's oversized log",
     )
     s.add_argument(
         "-o",
@@ -487,7 +507,7 @@ def _cmd_correlate(args) -> int:
             log.error("%s", e)
             return 2
 
-    cmp_records = parse_cmplog_files(logs)
+    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
     log.info("parsed %d comparison records from %d log(s)", len(cmp_records), len(logs))
     enriched = correlate_record(record, cmp_records, module_base=args.module_base)
 
@@ -587,6 +607,11 @@ def _humanize_age(added_on: str | None) -> str:
     return f"{seconds // 86400}d"
 
 
+# Terminal CAPE task states (mirrors CapeClient.poll). A task is "done" in any of
+# these; RECORDS is meaningful for all of them, not just 'reported'.
+_TERMINAL_STATUSES = frozenset({"reported", "failed_analysis", "failed_processing"})
+
+
 def _build_display_rows(tasks, client, storage_root) -> list[dict]:
     # Map raw CAPE task dicts to the display rows the table/JSON consume. The
     # real payload carries the on-disk path in `target` (a string) and `sample`
@@ -605,7 +630,7 @@ def _build_display_rows(tasks, client, storage_root) -> list[dict]:
         # RECORDS only makes sense once the task is terminal and its logs are
         # written; for anything else, or an unreadable/missing log, show "-".
         records = "-"
-        if status == "reported" and task_id is not None:
+        if status in _TERMINAL_STATUSES and task_id is not None:
             n = client.count_cmplog_lines(task_id, storage_root)
             if n is not None:
                 records = str(n)
@@ -738,6 +763,7 @@ def _cmd_run(args) -> int:
             args.sample,
             package=args.package,
             timeout=args.timeout,
+            enforce_timeout=args.enforce_timeout,
             options={"free": "yes"},
         )
     except FileNotFoundError:
@@ -767,7 +793,7 @@ def _cmd_run(args) -> int:
     except CapeError as e:
         log.error("%s", e)
         return 2
-    cmp_records = parse_cmplog_files(logs)
+    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
     enriched = correlate_record(record, cmp_records, module_base=args.module_base)
     with_cmps = [cand for cand in enriched["candidates"] if cand.get("comparison_candidates")]
     log.info("stage 3/3 correlate: %d candidates with comparisons", len(with_cmps))

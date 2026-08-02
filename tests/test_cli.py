@@ -89,6 +89,50 @@ def test_correlate_rejects_cape_url(monkeypatch):
         cli.main(["correlate", "--record", "r.json", "--task", "1", "--cape-url", "http://x"])
 
 
+def test_records_computed_for_all_terminal_states(tmp_path):
+    # M2: RECORDS reflects any terminal task, not only 'reported'.
+    class FakeClient:
+        def count_cmplog_lines(self, tid, root):
+            return 7 if tid in (1, 2) else None
+
+    tasks = [
+        {"id": 1, "status": "reported", "target": "a.exe"},
+        {"id": 2, "status": "failed_processing", "target": "b.exe"},
+        {"id": 3, "status": "running", "target": "c.exe"},
+    ]
+    by_id = {r["task"]: r["records"] for r in cli._build_display_rows(tasks, FakeClient(), str(tmp_path))}
+    assert by_id["1"] == "7"  # reported
+    assert by_id["2"] == "7"  # terminal failure now also counted
+    assert by_id["3"] == "-"  # non-terminal: not counted
+
+
+def test_humanize_age_iso_tz_and_future(monkeypatch):
+    # scout #17: the fromisoformat fallback, tz-aware drop, and future clamp were
+    # untested (only the strptime buckets + garbage were covered).
+    assert cli._humanize_age("2020-01-01T00:00:00.123456+00:00").endswith("d")  # ISO + offset
+    assert cli._humanize_age("2020-01-01T00:00:00+00:00").endswith("d")  # tz-aware, tzinfo dropped
+    assert cli._humanize_age("2999-01-01T00:00:00") == "0s"  # future clamps, no negative
+    assert cli._humanize_age("not a date") == "-"
+    assert cli._humanize_age(None) == "-"
+
+
+def test_run_enforce_timeout_threads_to_submit(monkeypatch):
+    # M3: `run` exposes --enforce-timeout/--no-enforce-timeout and threads it into
+    # submit (previously it was forced on with no override).
+    import clew.channels.cape.client as capeclient
+
+    captured = {}
+
+    def fake_submit(self, sample, **kw):
+        captured.update(kw)
+        raise capeclient.CapeError("stop after submit")  # short-circuit the run
+
+    monkeypatch.setattr(capeclient.CapeClient, "submit", fake_submit)
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: {"candidates": []})
+    cli.main(["run", "x.exe", "--no-enforce-timeout"])
+    assert captured.get("enforce_timeout") is False
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1
@@ -604,8 +648,8 @@ def test_tasks_json_includes_records(monkeypatch, capsys):
     assert isinstance(rows, list) and rows
     assert rows[0]["sample"] == "signtool.exe"
     assert rows[0]["records"] == "24429"
-    # The non-terminal task shows "-" RECORDS.
-    assert rows[1]["records"] == "-"
+    # failed_analysis is terminal too, so its RECORDS are counted (M2).
+    assert rows[1]["records"] == "24429"
 
 
 def test_tasks_cape_error_returns_2(monkeypatch):
