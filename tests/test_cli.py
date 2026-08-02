@@ -106,6 +106,23 @@ def test_records_computed_for_all_terminal_states(tmp_path):
     assert by_id["3"] == "-"  # non-terminal: not counted
 
 
+def test_run_enforce_timeout_threads_to_submit(monkeypatch):
+    # M3: `run` exposes --enforce-timeout/--no-enforce-timeout and threads it into
+    # submit (previously it was forced on with no override).
+    import clew.channels.cape.client as capeclient
+
+    captured = {}
+
+    def fake_submit(self, sample, **kw):
+        captured.update(kw)
+        raise capeclient.CapeError("stop after submit")  # short-circuit the run
+
+    monkeypatch.setattr(capeclient.CapeClient, "submit", fake_submit)
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: {"candidates": []})
+    cli.main(["run", "x.exe", "--no-enforce-timeout"])
+    assert captured.get("enforce_timeout") is False
+
+
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1

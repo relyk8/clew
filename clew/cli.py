@@ -292,6 +292,12 @@ def _add_run_subparser(sub, parent) -> None:
         help="guest analysis timeout in seconds (default: 120)",
     )
     s.add_argument(
+        "--enforce-timeout",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+    )
+    s.add_argument(
         "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
@@ -757,6 +763,7 @@ def _cmd_run(args) -> int:
             args.sample,
             package=args.package,
             timeout=args.timeout,
+            enforce_timeout=args.enforce_timeout,
             options={"free": "yes"},
         )
     except FileNotFoundError:
