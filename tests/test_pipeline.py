@@ -191,6 +191,19 @@ def test_record_plus_derivation_validates_against_schema():
 # --- capa / tiers glue (guarded: runs on the cluster, skips without them) -----
 
 
+def test_run_capa_stage_degrades_on_capa_error(monkeypatch):
+    # scout #11: any CapaError must degrade to no_capa_signal, never abort the
+    # pipeline -- guards against narrowing the `except capa.CapaError` clause.
+    from clew.channels import capa as capa_mod
+
+    def boom(*a, **k):
+        raise capa_mod.CapaRunError("nonzero exit")
+
+    monkeypatch.setattr(capa_mod, "run_capa", boom)
+    techniques, status = pipeline._run_capa_stage("s.exe", "rules", "sigs", "capa")
+    assert techniques == [] and status == "no_capa_signal"
+
+
 def test_capa_techniques_and_status_from_capa_result():
     pytest.importorskip("clew.channels.capa")
     pytest.importorskip("clew.tiers")
