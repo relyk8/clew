@@ -332,6 +332,38 @@ def _add_run_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_run)
 
 
+def _add_doctor_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "doctor",
+        parents=[parent],
+        help="check that clew's prerequisites are installed and configured",
+        description="Report whether Binary Ninja, capa, FLOSS and CAPE are reachable and "
+        "correctly configured, with the fix for anything that is not.",
+    )
+    s.add_argument(
+        "--license",
+        action="store_true",
+        help="also load Binary Ninja and take a license seat (slower; consumes a seat)",
+    )
+    s.add_argument(
+        "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL to probe (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
+    )
+    s.add_argument(
+        "--storage-root",
+        default="/opt/CAPEv2/storage/analyses",
+        help="CAPE analyses storage root to check for readability",
+    )
+    s.add_argument(
+        "--timeout",
+        type=int,
+        default=5,
+        help="seconds to wait on the CAPE probe (default: 5)",
+    )
+    s.set_defaults(func=_cmd_doctor)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -370,6 +402,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_detonate_subparser(sub, parent)
     _add_tasks_subparser(sub, parent)
     _add_run_subparser(sub, parent)
+    _add_doctor_subparser(sub, parent)
     return p
 
 
@@ -848,6 +881,23 @@ def _cmd_run(args) -> int:
         checkpoint.write_text(json.dumps(enriched, indent=2))
     log.info("done")
     return 0
+
+
+def _cmd_doctor(args) -> int:
+    # Lazy import to match the other verbs; doctor pulls the CAPE client only
+    # when it actually probes CAPE.
+    from clew.doctor import format_report, has_failures, run_checks
+
+    checks = run_checks(
+        cape_url=args.cape_url,
+        storage_root=args.storage_root,
+        timeout=args.timeout,
+        license_check=args.license,
+    )
+    # The report is this verb's artifact, so it goes to stdout (as `tasks` does),
+    # leaving stderr for logging.
+    print(format_report(checks, version=CLEW_VERSION, location=str(Path(__file__).parent)))
+    return 1 if has_failures(checks) else 0
 
 
 def main(argv=None) -> int:
