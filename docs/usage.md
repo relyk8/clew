@@ -6,25 +6,54 @@ its approach, see [theory.md](theory.md). For the record it produces, see
 
 ## Setup
 
-Install the package and its console entry point:
+Install Clew into an environment of its own, so there is nothing to activate
+before a run:
 
 ```bash
-pip install -e '.[dev,analysis]'
+pipx install git+https://github.com/relyk8/clew
 ```
 
-Clew reads machine-specific paths from a local `.env` (gitignored). Copy the
-template, fill in your paths, and load it:
+`uv tool install git+https://github.com/relyk8/clew` is equivalent. To work on
+Clew itself, clone it and install editable with `pip install -e '.[dev,analysis]'`.
+
+### Configuration
+
+Clew reads its machine-specific settings from the environment, and will load them
+from a file so they do not have to be exported before every run. Sources, in
+decreasing precedence:
+
+1. the process environment, so a one-off override still works
+2. `./.env` in the working directory, the per-checkout convention
+3. `~/.config/clew/config.env`, or `$XDG_CONFIG_HOME/clew/config.env`
+
+Nothing already set is ever overwritten. The file format is the `KEY=value`
+subset of shell, including an optional `export` prefix, so a file written to be
+`source`d can be used as-is.
 
 ```bash
-cp .env.example .env
-set -a; source .env; set +a
+mkdir -p ~/.config/clew
+cp .env.example ~/.config/clew/config.env
+chmod 600 ~/.config/clew/config.env    # it holds a Binary Ninja password
 ```
 
-Three variables matter. `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS` point at your capa
-rules checkout and its signatures, read by the static pipeline. `CAPE_BASE_URL`
-points at your CAPE instance, used only by the dynamic commands. The static
-pipeline also needs a Binary Ninja 4.2.6455 Ultimate Enterprise license checked
-out for the process.
+The settings, by channel:
+
+| Variable | Purpose |
+|---|---|
+| `CLEW_BN_API` | directory containing the `binaryninja` package (Channel 2) |
+| `BN_ENTERPRISE_SERVER` / `_USERNAME` / `_PASSWORD` | Binary Ninja Enterprise license checkout |
+| `CLEW_CAPA_RULES` / `CLEW_CAPA_SIGS` | capa rules checkout and its signatures (Channel 0) |
+| `CAPE_BASE_URL` | CAPE instance, used only by the dynamic commands (Channel 3) |
+
+`CLEW_BN_API` matters when Clew is installed in an isolated environment. Binary
+Ninja's `install_api.py` writes a `binaryninja.pth` into one specific
+`site-packages`, which a pipx or uv install does not share, so pointing this at
+the API directory is what makes `import binaryninja` resolve. Leave it unset if
+Binary Ninja already imports in Clew's environment.
+
+The static pipeline needs a Binary Ninja 4.2.6455 Ultimate Enterprise license
+checked out for the process; the credentials above are what the in-process
+checkout uses.
 
 ## The pipeline end to end
 
@@ -153,6 +182,30 @@ Takes the `static` options plus `--package`, `--timeout`, `--enforce-timeout`,
 `--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
+
+### doctor — check the prerequisites
+
+```bash
+clew doctor [--license]
+```
+
+| Option | Meaning |
+|---|---|
+| `--license` | also load Binary Ninja and take a license seat |
+| `--cape-url URL` | CAPE base URL to probe |
+| `--storage-root DIR` | CAPE analyses storage root to check for readability |
+| `--timeout SECS` | seconds to wait on the CAPE probe (default 5) |
+
+Reports each prerequisite, and for anything missing, the line that fixes it. The
+severity follows the pipeline's degradation policy: only Binary Ninja, the core
+channel, is a blocking failure, while capa, FLOSS, and CAPE are warnings because
+Clew degrades past them rather than failing. So the exit code answers exactly one
+question, which is whether static analysis will run.
+
+By default nothing is executed and no license seat is consumed: the Binary Ninja
+check locates the package without importing it. `--license` opts into the real
+import, a core-version comparison against the pinned version, and a checkout
+round trip, which is the check worth running before a long batch.
 
 ## Channel 3 requirements
 
