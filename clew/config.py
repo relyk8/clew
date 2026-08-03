@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -169,11 +170,52 @@ def config_sources() -> tuple[Path, ...]:
     return (Path(".env"), user_config_path())
 
 
+def ensure_bn_on_path() -> Path | None:
+    """Make the Binary Ninja Python API importable, if CLEW_BN_API points at it.
+
+    Binary Ninja is not a pip dependency -- it is licensed, installed out of
+    band, and reaches the interpreter through a ``binaryninja.pth`` that its
+    install_api.py drops into a specific site-packages. That works for a
+    virtualenv the user built by hand, and not at all for an isolated install
+    (pipx, uv tool), whose site-packages nothing ever wrote a .pth into.
+
+    Setting CLEW_BN_API to the directory *containing* the ``binaryninja``
+    package closes that gap without asking anyone to hand-edit an isolated
+    environment. Every ``import binaryninja`` in the codebase is lazy, inside
+    the functions that need it, so amending sys.path at startup is early enough.
+
+    Returns the directory added, or None when the variable is unset or unusable.
+    """
+    raw = os.environ.get("CLEW_BN_API")
+    if not raw:
+        return None
+    path = Path(raw).expanduser()
+    if not path.is_dir():
+        _log.warning("CLEW_BN_API=%s is not a directory; ignoring it", path)
+        return None
+    if not (path / "binaryninja").is_dir():
+        # Not fatal -- a layout we do not recognise may still import -- but this
+        # is far and away the most likely misconfiguration, and the resulting
+        # ImportError much later gives no hint that this variable caused it.
+        _log.warning(
+            "CLEW_BN_API=%s does not contain a 'binaryninja' package directory; "
+            "it should point at the API directory of a Binary Ninja install",
+            path,
+        )
+    entry = str(path)
+    if entry not in sys.path:
+        sys.path.insert(0, entry)
+    return path
+
+
 def load_config() -> tuple[LoadedFile, ...]:
     """Load config files into the environment and return what was read.
 
-    Idempotent in effect: because every assignment goes through setdefault, a
-    second call cannot change a value the first call established.
+    Also makes the Binary Ninja API importable if the loaded configuration asks
+    for it, so a single call establishes clew's whole runtime configuration.
+
+    Idempotent in effect: no assignment overwrites an existing variable, so a
+    second call cannot change what the first established.
     """
     global _loaded
     loaded = []
@@ -182,6 +224,7 @@ def load_config() -> tuple[LoadedFile, ...]:
         if entry is not None:
             loaded.append(entry)
     _loaded = tuple(loaded)
+    ensure_bn_on_path()
     return _loaded
 
 
