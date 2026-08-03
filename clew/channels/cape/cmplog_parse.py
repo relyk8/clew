@@ -43,6 +43,11 @@ _LINE_RE = re.compile(r"^T(\d+)\s+pc=(0x[0-9a-fA-F]+)\s+(\S+)(.*)$")
 # One operand token: src<i>=<value>, value has no spaces.
 _SRC_RE = re.compile(r"src\d+=(\S+)")
 
+# drtrace v1 additions, absent from cmplog logs. They sit in the same tail this
+# parser already scans for operands, so a drtrace log parses either way.
+_SEQ_RE = re.compile(r"\bseq=(\d+)\b")
+_JCC_RE = re.compile(r"\bjcc=(\w{1,16})\b")
+
 _REG_RE = re.compile(r"^reg:(\w+)=(0x[0-9a-fA-F]+)$")
 _IMM_RE = re.compile(r"^imm=(0x[0-9a-fA-F]+)$")
 _MEM_RE = re.compile(r"^mem\[(0x[0-9a-fA-F]+)\]=(0x[0-9a-fA-F]+|<unreadable>)$")
@@ -65,12 +70,21 @@ class Operand:
 
 @dataclass(frozen=True)
 class CmpRecord:
-    """One captured comparison instruction with its live source operands."""
+    """One captured comparison instruction with its live source operands.
+
+    `seq` and `jcc` are only present in `drtrace` v1 logs and stay None for
+    `cmplog` logs. `seq` is the client's global record counter, which orders this
+    comparison against the API returns in the same trace. `jcc` is the mnemonic
+    of the conditional branch that consumed the comparison's flags, which is what
+    resolves a bare `cmp` to a concrete operator.
+    """
 
     tid: int
     pc: int
     opcode: str
     operands: list[Operand]
+    seq: int | None = None
+    jcc: str | None = None
 
 
 def _parse_operand(token: str) -> Operand | None:
@@ -92,16 +106,35 @@ def _parse_operand(token: str) -> Operand | None:
     return None
 
 
-def _parse_line(line: str) -> CmpRecord | None:
-    """Parse one body line to a `CmpRecord`. None if it is not a kept record."""
+def parse_comparison_line(line: str) -> CmpRecord | None:
+    """Parse one comparison line to a `CmpRecord`. None if it is not one.
+
+    Public because `drtrace_parse` reuses it: the comparison record is identical
+    in both log formats apart from the optional `seq=` / `jcc=` tokens, so there
+    is one implementation rather than two that can drift.
+    """
     m = _LINE_RE.match(line)
     if not m:
         return None
     opcode = m.group(3).lower()
     if opcode not in _KEPT_OPCODES:
         return None
-    operands = [op for tok in _SRC_RE.findall(m.group(4)) if (op := _parse_operand(tok))]
-    return CmpRecord(tid=int(m.group(1)), pc=int(m.group(2), 16), opcode=opcode, operands=operands)
+    tail = m.group(4)
+    operands = [op for tok in _SRC_RE.findall(tail) if (op := _parse_operand(tok))]
+    seq_match = _SEQ_RE.search(tail)
+    jcc_match = _JCC_RE.search(tail)
+    return CmpRecord(
+        tid=int(m.group(1)),
+        pc=int(m.group(2), 16),
+        opcode=opcode,
+        operands=operands,
+        seq=int(seq_match.group(1)) if seq_match else None,
+        jcc=jcc_match.group(1).lower() if jcc_match else None,
+    )
+
+
+# Retained for the module's own internal use and existing callers.
+_parse_line = parse_comparison_line
 
 
 def parse_cmplog_lines(lines: Iterable[str], max_records: int | None = None) -> list[CmpRecord]:
