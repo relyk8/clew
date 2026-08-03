@@ -142,6 +142,39 @@ def _warn_if_unrebased(
     )
 
 
+def resolve_module_base(
+    trace, record: dict | None = None, explicit: int | None = None
+) -> int | None:
+    """Runtime load base to rebase PCs against, or None to leave them alone.
+
+    An explicit `--module-base` always wins: it is the analyst's override. Failing
+    that, the module table the client now logs answers the question directly,
+    which is what retires the old ASLR-off assumption -- previously the base had
+    to be worked out by hand and passed in, and getting it wrong produced an
+    empty correlation indistinguishable from a sample that defeated
+    instrumentation.
+
+    None means "no module table" (a legacy cmplog log), and PCs pass through
+    unrebased -- correct when the module loaded at its preferred base, which is
+    what the proven task-11 autoit3 run did.
+    """
+    if explicit is not None:
+        return explicit
+    sample_name = None
+    if record:
+        sample_path = record.get("sample_path") or ""
+        sample_name = sample_path.replace("\\", "/").rsplit("/", 1)[-1] or None
+    main = trace.main_module(sample_name)
+    if main is None:
+        return None
+    logger.info(
+        "correlate: rebasing from the logged module table (%s @ 0x%x)",
+        main.name or "<unnamed>",
+        main.base,
+    )
+    return main.base
+
+
 def correlate_record(
     record: dict,
     cmp_records: list[CmpRecord],

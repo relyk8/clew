@@ -249,3 +249,41 @@ def test_every_mapped_operator_is_a_schema_token():
         ]["ComparisonOperator"]["enum"]
     )
     assert set(_JCC_OPERATOR.values()) <= allowed
+
+
+def _trace(modules):
+    from clew.channels.cape.drtrace_parse import ModuleRecord, Trace
+
+    return Trace(modules=[ModuleRecord(seq=i, base=b, end=e, name=n)
+                          for i, (b, e, n) in enumerate(modules, 1)])
+
+
+def test_explicit_module_base_overrides_the_logged_table():
+    """--module-base is the analyst's override and must win over the table."""
+    from clew.channels.cape.correlate import resolve_module_base
+
+    trace = _trace([(0xBF0000, 0xC50000, "autoit3.exe")])
+    assert resolve_module_base(trace, explicit=0x400000) == 0x400000
+
+
+def test_module_base_comes_from_the_logged_table():
+    from clew.channels.cape.correlate import resolve_module_base
+
+    trace = _trace([(0xBF0000, 0xC50000, "autoit3.exe"), (0x77C10000, 0x77D50000, "ntdll.dll")])
+    assert resolve_module_base(trace) == 0xBF0000
+
+
+def test_module_base_prefers_the_records_own_sample_name():
+    from clew.channels.cape.correlate import resolve_module_base
+
+    trace = _trace([(0x400000, 0x410000, "helper.exe"), (0xBF0000, 0xC50000, "autoit3.exe")])
+    record = {"sample_path": "/tmp/cuckoo/upload_x/autoit3.exe"}
+    assert resolve_module_base(trace, record) == 0xBF0000
+
+
+def test_no_module_table_leaves_pcs_unrebased():
+    """A legacy cmplog log has no module records. Passing PCs through unchanged
+    is right when the module loaded at its preferred base -- what task 11 did."""
+    from clew.channels.cape.correlate import resolve_module_base
+
+    assert resolve_module_base(_trace([])) is None
