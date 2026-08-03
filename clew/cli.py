@@ -721,6 +721,29 @@ def _cmd_tasks(args) -> int:
     return 0
 
 
+def _run_checkpoint_path(args, record) -> Path:
+    # Where `run` parks the static record before handing off to CAPE. `-o -` has
+    # no file to park in, so fall back to the durable default: the safety net
+    # matters most in pipe mode, where nothing else lands on disk.
+    if args.output is None or args.output == Path("-"):
+        return _default_record_path(record)
+    return args.output
+
+
+def _log_resume(log, checkpoint: Path, tid=None) -> None:
+    # Stage 1 is the expensive half (BN analysis + a license seat). If a later
+    # stage fails, say where that work is and how to pick it back up.
+    if tid is None:
+        log.error("static record kept at %s", checkpoint)
+    else:
+        log.error(
+            "static record kept at %s -- resume with: clew correlate --record %s --task %s",
+            checkpoint,
+            checkpoint,
+            tid,
+        )
+
+
 def _cmd_run(args) -> int:
     # Lazy import: keep the CAPE client (which pulls requests) and the correlator
     # out of `clew static` and the offline suite.
@@ -754,6 +777,15 @@ def _cmd_run(args) -> int:
         return 1
     log.info("stage 1/3 static: %d candidates", len(record["candidates"]))
 
+    # Checkpoint before handing off to CAPE. Stages 2 and 3 fail routinely (a
+    # sample that self-terminates under detonation, a wedged CAPE that never
+    # reaches terminal), and without this the static analysis is discarded on
+    # every one of those paths. The final _emit_record overwrites this file.
+    checkpoint = _run_checkpoint_path(args, record)
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text(json.dumps(record, indent=2))
+    log.info("checkpointed static record to %s", checkpoint)
+
     # Stage 2/3 detonate: submit under cmplog + free mode and block for terminal.
     c = CapeClient(args.cape_url)
     try:
@@ -768,9 +800,11 @@ def _cmd_run(args) -> int:
         )
     except FileNotFoundError:
         log.error("sample not found: %s", args.sample)
+        _log_resume(log, checkpoint)
         return 1
     except CapeError as e:
         log.error("submit failed: %s", e)
+        _log_resume(log, checkpoint)
         return 2
     log.info("submitted task %s (package=%s)", tid, args.package)
 
@@ -778,10 +812,12 @@ def _cmd_run(args) -> int:
         status = c.poll(tid, progress=lambda s: log.info("task %s: %s", tid, s))
     except CapeError as e:
         log.error("%s", e)
+        _log_resume(log, checkpoint, tid)
         return 2
     if status != "reported":
         # A failed detonation has no logs to correlate against.
         log.error("task %s did not report (status=%s), cannot correlate", tid, status)
+        _log_resume(log, checkpoint, tid)
         return 2
     log.info("stage 2/3 detonate: task %s reported", tid)
 
@@ -792,6 +828,7 @@ def _cmd_run(args) -> int:
         logs = c.fetch_cmplog_logs(tid, args.storage_root)
     except CapeError as e:
         log.error("%s", e)
+        _log_resume(log, checkpoint, tid)
         return 2
     cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
     enriched = correlate_record(record, cmp_records, module_base=args.module_base)
@@ -804,6 +841,10 @@ def _cmd_run(args) -> int:
         f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
     )
     _emit_record(enriched, args.output, summary)
+    if args.output == Path("-"):
+        # Pipe mode: _emit_record only streamed to stdout, so refresh the
+        # checkpoint rather than leaving a stale static-only record on disk.
+        checkpoint.write_text(json.dumps(enriched, indent=2))
     log.info("done")
     return 0
 

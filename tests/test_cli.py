@@ -116,7 +116,7 @@ def test_humanize_age_iso_tz_and_future(monkeypatch):
     assert cli._humanize_age(None) == "-"
 
 
-def test_run_enforce_timeout_threads_to_submit(monkeypatch):
+def test_run_enforce_timeout_threads_to_submit(monkeypatch, tmp_path):
     # M3: `run` exposes --enforce-timeout/--no-enforce-timeout and threads it into
     # submit (previously it was forced on with no override).
     import clew.channels.cape.client as capeclient
@@ -128,7 +128,10 @@ def test_run_enforce_timeout_threads_to_submit(monkeypatch):
         raise capeclient.CapeError("stop after submit")  # short-circuit the run
 
     monkeypatch.setattr(capeclient.CapeClient, "submit", fake_submit)
-    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: {"candidates": []})
+    monkeypatch.setattr(
+        cli, "run_static_pipeline", lambda *a, **k: {"candidates": [], "sample_sha256": "x"}
+    )
+    monkeypatch.chdir(tmp_path)  # the pre-detonation checkpoint writes results/<sha>
     cli.main(["run", "x.exe", "--no-enforce-timeout"])
     assert captured.get("enforce_timeout") is False
 
@@ -691,6 +694,9 @@ _RUN_RECORD = {
     ],
     "derivation_status": "fully_derivable",
     "capa_techniques": [],
+    # Real records always carry this (schema-required, filled by assemble_record);
+    # `run` needs it to resolve the pre-detonation checkpoint path.
+    "sample_sha256": "runsha",
 }
 
 
@@ -711,8 +717,9 @@ def _patch_run_stages(monkeypatch, poll_status="reported"):
     )
 
 
-def test_run_happy_path_emits_enriched_record(monkeypatch, capsys):
+def test_run_happy_path_emits_enriched_record(monkeypatch, capsys, tmp_path):
     _patch_run_stages(monkeypatch)
+    monkeypatch.chdir(tmp_path)  # the pre-detonation checkpoint writes results/<sha>
     # -o - streams the enriched record to stdout so the test can read it.
     assert cli.main(["run", "sample.exe", "--no-license-checkout", "-o", "-"]) == 0
     enriched = json.loads(capsys.readouterr().out)
@@ -724,16 +731,53 @@ def test_run_happy_path_emits_enriched_record(monkeypatch, capsys):
     assert enriched["candidates"][1]["comparison_candidates"] == []
 
 
-def test_run_detonation_failed_returns_2_without_correlating(monkeypatch):
+def test_run_detonation_failed_returns_2_without_correlating(monkeypatch, tmp_path):
     from clew.channels.cape import client as cape_client
 
     _patch_run_stages(monkeypatch, poll_status="failed_analysis")
+    monkeypatch.chdir(tmp_path)
 
     def boom(self, task_id, storage_root):
         raise AssertionError("correlate must not run after a failed detonation")
 
     monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
     assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 2
+    # The expensive stage-1 record survives the failed detonation.
+    kept = tmp_path / "results" / "runsha.clew.json"
+    assert kept.is_file()
+    assert json.loads(kept.read_text())["candidates"][0]["api_name"] == "IsDebuggerPresent"
+
+
+def test_run_failed_detonation_logs_resume_command(monkeypatch, tmp_path, capsys):
+    # The checkpoint is only useful if the user is told where it is and how to
+    # pick the run back up, so the failure path names both the file and the task.
+    # Asserted on stderr, not caplog: _configure_logging(force=True) drops
+    # caplog's root handler.
+    _patch_run_stages(monkeypatch, poll_status="failed_analysis")
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 2
+    hint = capsys.readouterr().err
+    assert "results/runsha.clew.json" in hint
+    assert "clew correlate --record" in hint
+    assert "--task 77" in hint
+
+
+def test_run_checkpoint_written_before_submit(monkeypatch, tmp_path):
+    # The checkpoint must land *before* CAPE is touched -- that is the whole
+    # point: a submit that never succeeds still leaves the static work on disk.
+    import clew.channels.cape.client as capeclient
+
+    seen = {}
+
+    def fake_submit(self, sample, **kw):
+        seen["checkpoint_exists"] = (tmp_path / "results" / "runsha.clew.json").is_file()
+        raise capeclient.CapeError("cape is down")
+
+    _patch_run_stages(monkeypatch)
+    monkeypatch.setattr(capeclient.CapeClient, "submit", fake_submit)
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 2
+    assert seen["checkpoint_exists"] is True
 
 
 def test_run_static_not_found_returns_1(monkeypatch):
