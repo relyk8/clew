@@ -47,9 +47,55 @@ def rebase(pc: int, module_base: int | None, image_base: int) -> int:
     return pc - module_base + image_base
 
 
-def _operator_for(opcode: str) -> str:
-    """Best-effort operator. test is a mask check, cmp needs the following jcc."""
-    return "bitwise_and" if opcode == "test" else "unknown"
+# Which relation a conditional branch tests, for `cmp a, b` immediately before
+# it. Both mnemonic spellings of each condition are present because DynamoRIO
+# defines them as aliases (OP_jae / OP_jnb) and decode_opcode_name may emit
+# either. The schema's ComparisonOperator draws no signed/unsigned distinction,
+# so jl (signed) and jb (unsigned) both land on less_than.
+#
+# Conditions that are not relational -- sign, overflow, parity, and the jcxz
+# family -- are deliberately absent and fall through to "unknown" rather than
+# being forced onto an operator that would misdescribe them.
+_JCC_OPERATOR = {
+    "je": "equality",
+    "jz": "equality",
+    "jne": "inequality",
+    "jnz": "inequality",
+    "jl": "less_than",
+    "jnge": "less_than",
+    "jb": "less_than",
+    "jnae": "less_than",
+    "jc": "less_than",
+    "jle": "less_equal",
+    "jng": "less_equal",
+    "jbe": "less_equal",
+    "jna": "less_equal",
+    "jg": "greater_than",
+    "jnle": "greater_than",
+    "ja": "greater_than",
+    "jnbe": "greater_than",
+    "jge": "greater_equal",
+    "jnl": "greater_equal",
+    "jae": "greater_equal",
+    "jnb": "greater_equal",
+    "jnc": "greater_equal",
+}
+
+
+def _operator_for(record: CmpRecord) -> str:
+    """The operator this comparison is testing.
+
+    `test` is a mask check and is unambiguous on its own. `cmp` only sets flags;
+    what the comparison *meant* is carried by the conditional branch that
+    consumes them, which drtrace logs as `jcc`. Without it -- a legacy cmplog
+    log, or a cmp whose consumer the client could not attribute -- the operator
+    stays unknown rather than being guessed.
+    """
+    if record.opcode == "test":
+        return "bitwise_and"
+    if record.jcc:
+        return _JCC_OPERATOR.get(record.jcc.lower(), "unknown")
+    return "unknown"
 
 
 def _render_operand(record: CmpRecord, index: int) -> str | None:
@@ -151,7 +197,7 @@ def correlate_record(
             confidence = _clamp(BASE_CONFIDENCE * proximity * readability)
             comparisons.append(
                 {
-                    "comparison_operator": _operator_for(r.opcode),
+                    "comparison_operator": _operator_for(r),
                     "cmp_operand_a": _render_operand(r, 0),
                     "cmp_operand_b": _render_operand(r, 1),
                     "confidence": confidence,
