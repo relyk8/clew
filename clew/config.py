@@ -170,6 +170,28 @@ def config_sources() -> tuple[Path, ...]:
     return (Path(".env"), user_config_path())
 
 
+def default_capa_bin() -> str:
+    """Resolve the capa executable to invoke.
+
+    capa is the one channel driven as a subprocess, and it has always been
+    looked up as a bare ``capa`` on PATH. That breaks precisely where clew is
+    otherwise most convenient: an isolated install (pipx, uv tool) puts only
+    clew's own entry point on PATH and leaves its dependencies' console scripts
+    inside a venv nothing else can see, so Channel 0 would fail on exactly the
+    installation the README recommends.
+
+    Prefer the capa sitting next to the interpreter running clew, which is where
+    pip puts it when it installs clew's dependencies, and fall back to a PATH
+    lookup so an externally-managed capa still wins when there is no bundled one.
+    """
+    bindir = Path(sys.executable).parent
+    for name in ("capa", "capa.exe"):
+        candidate = bindir / name
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return "capa"
+
+
 def ensure_bn_on_path() -> Path | None:
     """Make the Binary Ninja Python API importable, if CLEW_BN_API points at it.
 

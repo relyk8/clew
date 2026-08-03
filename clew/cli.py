@@ -26,7 +26,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from clew.config import load_config, loaded_files
+from clew.config import default_capa_bin, load_config, loaded_files
 from clew.pipeline import (
     CLEW_VERSION,
     DEFAULT_CAPA_RULES,
@@ -64,8 +64,9 @@ def _add_static_flags(parser) -> None:
     )
     parser.add_argument(
         "--capa-bin",
-        default="capa",
-        help="capa executable to invoke (default: capa on PATH)",
+        default=default_capa_bin(),
+        help="capa executable to invoke (default: the capa installed alongside clew, "
+        "else capa on PATH)",
     )
     parser.add_argument(
         "--no-license-checkout",

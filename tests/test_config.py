@@ -255,3 +255,36 @@ def test_is_secret():
     assert config.is_secret("BN_ENTERPRISE_PASSWORD")
     assert config.is_secret("some_token")
     assert not config.is_secret("CAPE_BASE_URL")
+
+
+# --- capa executable resolution ---------------------------------------------
+
+
+def test_capa_bin_prefers_the_one_beside_the_interpreter(tmp_path, monkeypatch):
+    # The pipx case: only clew's entry point is on PATH, so a bare `capa` lookup
+    # would miss the capa pip installed as clew's own dependency.
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    capa = bindir / "capa"
+    capa.write_text("#!/bin/sh\n")
+    capa.chmod(0o755)
+    monkeypatch.setattr(sys, "executable", str(bindir / "python"))
+
+    assert config.default_capa_bin() == str(capa)
+
+
+def test_capa_bin_falls_back_to_path_lookup(tmp_path, monkeypatch):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    monkeypatch.setattr(sys, "executable", str(bindir / "python"))
+
+    assert config.default_capa_bin() == "capa"
+
+
+def test_capa_bin_ignores_a_non_executable_file(tmp_path, monkeypatch):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    (bindir / "capa").write_text("not executable")
+    monkeypatch.setattr(sys, "executable", str(bindir / "python"))
+
+    assert config.default_capa_bin() == "capa"

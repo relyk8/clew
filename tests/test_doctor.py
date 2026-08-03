@@ -132,12 +132,30 @@ def test_capa_rules_populated_directory(tmp_path, monkeypatch):
     assert doctor.check_capa_rules().status == doctor.OK
 
 
-def test_capa_binary_found(monkeypatch):
+def test_capa_binary_found_on_path(monkeypatch):
+    # Pin the resolution too: whether a capa sits beside the interpreter depends
+    # on how the test environment was built, and that must not decide the result.
+    monkeypatch.setattr(doctor, "default_capa_bin", lambda: "capa")
     monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/capa")
-    assert doctor.check_capa_bin().status == doctor.OK
+    check = doctor.check_capa_bin()
+    assert check.status == doctor.OK
+    assert "on PATH" in check.detail
+
+
+def test_capa_binary_found_alongside_clew(monkeypatch):
+    monkeypatch.setattr(doctor, "default_capa_bin", lambda: "/opt/venv/bin/capa")
+    # An absolute resolution must not consult PATH at all: that is the whole
+    # point of it, since an isolated install's bin/ is not on PATH.
+    monkeypatch.setattr(
+        doctor.shutil, "which", lambda name: pytest.fail("PATH consulted despite absolute capa")
+    )
+    check = doctor.check_capa_bin()
+    assert check.status == doctor.OK
+    assert "alongside clew" in check.detail
 
 
 def test_capa_binary_missing_is_a_warning(monkeypatch):
+    monkeypatch.setattr(doctor, "default_capa_bin", lambda: "capa")
     monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
     assert doctor.check_capa_bin().status == doctor.WARN
 

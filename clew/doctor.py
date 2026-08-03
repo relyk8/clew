@@ -29,7 +29,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from clew.config import config_sources, loaded_files, user_config_path
+from clew.config import config_sources, default_capa_bin, loaded_files, user_config_path
 
 OK = "ok"
 WARN = "warn"
@@ -214,14 +214,18 @@ def check_capa_sigs() -> Check:
 
 
 def check_capa_bin() -> Check:
-    # capa is the one channel invoked as a subprocess, so it must be on PATH.
-    found = shutil.which("capa")
+    # capa is the one channel invoked as a subprocess. Resolve it exactly the way
+    # the pipeline will, so the report cannot disagree with what a run does.
+    resolved = default_capa_bin()
+    if os.path.isabs(resolved):
+        return Check("capa binary", OK, f"{_short(resolved)} (installed alongside clew)")
+    found = shutil.which(resolved)
     if found:
-        return Check("capa binary", OK, found)
+        return Check("capa binary", OK, f"{found} (on PATH)")
     return Check(
         "capa binary",
         WARN,
-        "capa not on PATH; Channel 0 will fail and degrade to no_capa_signal",
+        "capa not found; Channel 0 will fail and degrade to no_capa_signal",
         fix="pip install 'flare-capa>=9.4.0,<10' into the same environment as clew",
     )
 
