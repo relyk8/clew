@@ -26,6 +26,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from clew.config import load_config, loaded_files
 from clew.pipeline import (
     CLEW_VERSION,
     DEFAULT_CAPA_RULES,
@@ -851,10 +852,23 @@ def _cmd_run(args) -> int:
 
 def main(argv=None) -> int:
     raw = sys.argv[1:] if argv is None else argv
+    # Load config files into the environment before the parser is built. Several
+    # defaults (--cape-url, --capa-rules, --capa-sigs) read os.environ at parser
+    # construction time, so a load placed any later would not reach them.
+    load_config()
     parser = build_parser()
     argv2 = _inject_default_verb(raw, _known_verbs(parser))
     args = parser.parse_args(argv2)
     _configure_logging(args.verbose, args.quiet)
+    # Config loading necessarily runs before -v/-q are parsed, so it cannot log
+    # its own result. Report it here, once logging reflects the user's choice.
+    for entry in loaded_files():
+        logging.getLogger("clew.config").debug(
+            "%s: %d key(s) defined, %d applied",
+            entry.path,
+            len(entry.defined),
+            len(entry.applied),
+        )
     if getattr(args, "command", None) is None:
         # Bare `clew` -> show the verb menu.
         parser.print_help(sys.stderr)
