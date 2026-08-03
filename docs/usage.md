@@ -135,13 +135,19 @@ clew tasks [--watch] [--json]
 | `--status STATUS` | only tasks with this status (e.g. `reported`) |
 | `--limit N` | show at most N tasks (newest first) |
 | `--json` | emit rows as JSON instead of a table |
-| `--watch` | refresh continuously until Ctrl-C |
+| `--watch` | redraw in place until Ctrl-C |
 | `--interval SECS` | refresh interval with `--watch` (default 2.0) |
 | `--cape-url URL` | CAPE base URL |
 | `--storage-root DIR` | CAPE analyses storage root (read for the RECORDS column) |
 
 The RECORDS column shows how many comparison records each terminal task produced,
 so a sample that defeats instrumentation reads 0 at a glance.
+
+`--watch` repaints the same table over itself each interval rather than scrolling,
+and leaves the last frame on screen when you Ctrl-C out. That only applies to a
+terminal: redirect it (`clew tasks --watch > log`) and the frames append as plain
+text with a `# clew tasks @ HH:MM:SS` header, and `--json --watch` emits nothing
+but the JSON documents, so both stay consumable.
 
 ### run — static, detonate, and correlate end to end
 
