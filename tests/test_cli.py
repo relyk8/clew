@@ -665,6 +665,87 @@ def test_tasks_cape_error_returns_2(monkeypatch):
     assert cli.main(["tasks"]) == 2
 
 
+def _bounded_watch(monkeypatch, frames: int):
+    # Bound the otherwise-infinite loop the way a user does: interrupt it.
+    calls = {"n": 0}
+
+    def fake_sleep(_interval):
+        calls["n"] += 1
+        if calls["n"] >= frames:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli.time, "sleep", fake_sleep)
+    return calls
+
+
+def test_watch_redraws_in_place_on_a_tty(monkeypatch, capsys):
+    # A tty gets the clear-and-home escape per frame, so frames overwrite each
+    # other instead of scrolling, and the cursor is hidden then restored.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: True, raising=False)
+    _bounded_watch(monkeypatch, frames=3)
+    assert cli._watch(lambda: "BODY", 0.0, as_json=False) == 0
+    out = capsys.readouterr().out
+    assert out.count(cli._ANSI_HOME_CLEAR) == 3
+    assert out.startswith(cli._ANSI_CURSOR_HIDE)
+    assert out.endswith(cli._ANSI_CURSOR_SHOW)
+    assert "Ctrl-C to exit" in out
+
+
+def test_watch_restores_cursor_when_render_raises(monkeypatch, capsys):
+    # The cursor must come back even when the loop dies on a CAPE error, or the
+    # user is left with an invisible cursor in their shell.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: True, raising=False)
+
+    def boom():
+        raise RuntimeError("cape exploded")
+
+    with pytest.raises(RuntimeError):
+        cli._watch(boom, 0.0, as_json=False)
+    assert capsys.readouterr().out.endswith(cli._ANSI_CURSOR_SHOW)
+
+
+def test_watch_emits_no_ansi_when_redirected(monkeypatch, capsys):
+    # Redirected output must stay a clean log: no escapes, and the commented
+    # timestamp keeps consecutive frames separable.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: False, raising=False)
+    _bounded_watch(monkeypatch, frames=2)
+    assert cli._watch(lambda: "BODY", 0.0, as_json=False) == 0
+    out = capsys.readouterr().out
+    assert "\033[" not in out
+    assert out.count("# clew tasks @") == 2
+
+
+def test_watch_json_stays_machine_readable(monkeypatch, capsys):
+    # --json is a data stream even on a tty: no escapes, no header, so each
+    # frame parses on its own.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: True, raising=False)
+    _bounded_watch(monkeypatch, frames=2)
+    assert cli._watch(lambda: '[{"task": "1"}]', 0.0, as_json=True) == 0
+    out = capsys.readouterr().out
+    assert "\033[" not in out
+    assert "clew tasks @" not in out
+    assert json.loads(out.strip().splitlines()[0]) == [{"task": "1"}]
+
+
+def test_watch_reuses_the_one_shot_body(monkeypatch, capsys):
+    # The guard against a second table renderer: whatever the one-shot path
+    # prints is exactly what a frame redraws.
+    from clew.channels.cape import client as cape_client
+
+    tasks = [{"id": 1, "target": "/tmp/s.exe", "package": "exe_cmplog", "status": "reported"}]
+    monkeypatch.setattr(cape_client.CapeClient, "list_tasks", lambda self, **k: tasks)
+    monkeypatch.setattr(cape_client.CapeClient, "count_cmplog_lines", lambda self, *a: 7)
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: False, raising=False)
+
+    assert cli.main(["tasks"]) == 0
+    one_shot = capsys.readouterr().out.strip()
+
+    _bounded_watch(monkeypatch, frames=1)
+    assert cli.main(["tasks", "--watch"]) == 0
+    framed = capsys.readouterr().out
+    assert one_shot in framed
+
+
 # ---------- run (static -> detonate --wait -> correlate) ----------
 
 

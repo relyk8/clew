@@ -674,6 +674,47 @@ def _format_tasks_table(display_rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+# Home + clear-to-end redraws a frame over the last one; the cursor is parked
+# out of sight while it does. Only ever written to a real terminal -- redirected
+# output and --json stay plain so they remain consumable.
+_ANSI_HOME_CLEAR = "\033[H\033[J"
+_ANSI_CURSOR_HIDE = "\033[?25l"
+_ANSI_CURSOR_SHOW = "\033[?25h"
+
+
+def _watch(render, interval: float, as_json: bool) -> int:
+    # `render` is the same callable the one-shot path uses, so a frame is just
+    # its output with framing around it -- there is no second table renderer.
+    live = sys.stdout.isatty() and not as_json
+    if live:
+        sys.stdout.write(_ANSI_CURSOR_HIDE)
+    try:
+        while True:
+            body = render()
+            stamp = f"{datetime.now():%H:%M:%S}"
+            if live:
+                frame = (
+                    f"{_ANSI_HOME_CLEAR}clew tasks @ {stamp}  (every {interval:g}s)\n\n"
+                    f"{body}\n\nCtrl-C to exit\n"
+                )
+            elif as_json:
+                frame = f"{body}\n"
+            else:
+                # Redirected text: keep the commented timestamp so consecutive
+                # frames stay separable in a log file.
+                frame = f"# clew tasks @ {stamp}\n{body}\n"
+            # One write per frame: partial flushes are what make a redraw tear.
+            sys.stdout.write(frame)
+            sys.stdout.flush()
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        if live:
+            sys.stdout.write(_ANSI_CURSOR_SHOW)
+            sys.stdout.flush()
+
+
 def _requests_exc():
     # The requests base exception, resolved lazily so requests (a Channel-3-only
     # dep) stays out of the module-top imports. Falls back to a never-matching
@@ -694,27 +735,19 @@ def _cmd_tasks(args) -> int:
     log = logging.getLogger("clew.cli")
     c = CapeClient(args.cape_url)
 
-    def render() -> None:
+    def render() -> str:
+        # The single source of rendered output: the one-shot path prints this,
+        # and every watch frame redraws exactly this.
         tasks = c.list_tasks(limit=args.limit, status=args.status)
         rows = _build_display_rows(tasks, c, args.storage_root)
         if args.json:
-            print(json.dumps(rows, indent=2))
-        else:
-            print(_format_tasks_table(rows))
+            return json.dumps(rows, indent=2)
+        return _format_tasks_table(rows)
 
     try:
         if args.watch:
-            try:
-                while True:
-                    # A timestamp header each redraw marks the refresh without
-                    # aggressively clearing the screen (progress lands on stderr).
-                    print(f"# clew tasks @ {datetime.now():%H:%M:%S} (Ctrl-C to exit)")
-                    render()
-                    time.sleep(args.interval)
-            except KeyboardInterrupt:
-                return 0
-        else:
-            render()
+            return _watch(render, args.interval, args.json)
+        print(render())
     except (CapeError, _requests_exc()) as e:
         log.error("cannot reach CAPE at %s: %s", args.cape_url, e)
         return 2
