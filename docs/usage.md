@@ -102,7 +102,7 @@ clew detonate SAMPLE [--wait]
 | `--package PKG` | CAPE analysis package (default `exe_cmplog`) |
 | `--timeout SECS` | guest analysis timeout (default 120) |
 | `--wait` | block until the task reaches a terminal state, then report status |
-| `--enforce-timeout` / `--no-enforce-timeout` | kill the guest at the timeout vs wait for self-exit (default on) |
+| `--enforce-timeout` / `--no-enforce-timeout` | run the full `--timeout` window vs let the analysis end when the sample exits (default on) |
 | `--cape-url URL` | CAPE base URL (default `$CAPE_BASE_URL` or `http://127.0.0.1:8000`) |
 | `-o, --output PATH` | write the task-id JSON to a file (omit or `-` for stdout) |
 

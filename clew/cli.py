@@ -201,13 +201,17 @@ def _add_detonate_subparser(sub, parent) -> None:
         action="store_true",
         help="block until the task reaches a terminal state and report the status",
     )
-    # enforce_timeout defaults True: sleepy anti-analysis samples otherwise hang
-    # the guest. BooleanOptionalAction gives the --enforce-timeout/--no-* pair.
+    # CAPE reads enforce_timeout as "disable the process monitor and run the full
+    # window" (analyzer.py: `if self.config.enforce_timeout: self.pid_check =
+    # False`). --timeout is the ceiling either way; this only decides whether the
+    # analysis may end early. Defaults True so a sample that exits promptly does
+    # not cut the instrumented window short. BooleanOptionalAction gives the pair.
     s.add_argument(
         "--enforce-timeout",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+        help="run the full --timeout window instead of ending when the sample exits "
+        "(default: on)",
     )
     s.add_argument(
         "-u", "--cape-url",
@@ -308,7 +312,8 @@ def _add_run_subparser(sub, parent) -> None:
         "--enforce-timeout",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+        help="run the full --timeout window instead of ending when the sample exits "
+        "(default: on)",
     )
     s.add_argument(
         "-u", "--cape-url",
