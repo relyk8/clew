@@ -435,8 +435,9 @@ def test_call_at_an_unenumerated_site_becomes_a_new_candidate():
     assert [c["api_resolution"] for c in fresh] == ["runtime", "runtime"]
     assert {c["parameter_index"] for c in fresh} == {1, -1}  # out-param and retval
     assert all(c["evidence"]["channels"] == ["drio"] for c in fresh)
-    # No function is known for a site the static pass never reached.
-    assert all("function_va" not in c for c in fresh)
+    # 0x43f108 lies past every function the static pass identified, so there is
+    # no evidence placing it in one: null, and present rather than omitted.
+    assert all(c["function_va"] is None for c in fresh)
 
 
 def test_new_candidate_at_a_known_site_borrows_that_sites_function_va():
@@ -493,3 +494,90 @@ def test_correlate_trace_rebases_from_the_module_table():
     # the only candidate added is the one for the call's return value.
     added = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
     assert [c["parameter_index"] for c in added] == [-1]
+
+
+# --- placing a runtime call site in a function ------------------------------
+
+
+def _spans_record():
+    """Two functions the static pass found, with a gap between them that no
+    identified function spans."""
+    def cand(fva, csva):
+        return {"call_site_va": csva, "function_va": fva, "api_name": "X",
+                "api_resolution": "import", "parameter_index": 0,
+                "candidate_values": [], "evidence": {"channels": ["bn_xref"]}}
+
+    return [
+        cand("0x00401000", "0x00401010"),
+        cand("0x00401000", "0x00401040"),   # function A known to reach 0x401040
+        cand("0x00402000", "0x00402008"),   # function B known to reach 0x402008
+    ]
+
+
+def test_function_span_is_the_highest_known_call_site():
+    from clew.channels.cape.correlate import build_function_spans
+
+    assert build_function_spans(_spans_record()) == [
+        (0x401000, 0x401040, "0x00401000"),
+        (0x402000, 0x402008, "0x00402000"),
+    ]
+
+
+def test_site_inside_a_known_function_extent_is_placed():
+    from clew.channels.cape.correlate import build_function_spans, function_va_for
+
+    spans = build_function_spans(_spans_record())
+    # Between the function start and the furthest call site the record evidences.
+    assert function_va_for(0x401020, spans) == "0x00401000"
+    assert function_va_for(0x401040, spans) == "0x00401000"
+
+
+def test_site_beyond_the_known_extent_is_null_not_guessed():
+    """Past the last call site the record evidences there is nothing to say the
+    function still runs -- BN may not have carved a function there at all, which
+    is the usual reason Unit 3 missed the site."""
+    from clew.channels.cape.correlate import build_function_spans, function_va_for
+
+    spans = build_function_spans(_spans_record())
+    assert function_va_for(0x401041, spans) is None
+    assert function_va_for(0x401900, spans) is None   # the gap between A and B
+
+
+def test_site_below_every_known_function_is_null():
+    from clew.channels.cape.correlate import build_function_spans, function_va_for
+
+    spans = build_function_spans(_spans_record())
+    assert function_va_for(0x400010, spans) is None
+
+
+def test_a_later_function_disqualifies_an_earlier_one():
+    """Choosing the nearest function at or below the site means a function
+    starting in between rules out the earlier one automatically."""
+    from clew.channels.cape.correlate import build_function_spans, function_va_for
+
+    spans = build_function_spans(_spans_record())
+    assert function_va_for(0x402004, spans) == "0x00402000"
+
+
+def test_unenumerated_site_inside_a_known_function_gets_placed():
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(csva="0x00401000", function_va="0x00400f00")
+    # 0x401080 is past the only known call site, so it cannot be placed...
+    merge_observed_calls(record, _trace_with([_call(site=0x401082, returned=False,
+                                                   argstr={0: "a.dll"})]))
+    fresh = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert fresh[0]["function_va"] is None
+
+
+def test_function_va_is_null_never_absent():
+    """A uniform shape for the consumer: null says 'no answer', a missing key
+    just looks like a different kind of record."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record()
+    merge_observed_calls(record, _trace_with([_call(site=0x999999, returned=False,
+                                                   argstr={0: "x.dll"})]))
+    fresh = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert all("function_va" in c for c in fresh)
+    assert fresh[0]["function_va"] is None

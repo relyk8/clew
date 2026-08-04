@@ -345,17 +345,64 @@ def _promote_or_append(candidate: dict, value) -> bool:
     return True
 
 
-def _new_candidate(csva: int, api: str, param_index: int, value, function_va: str | None) -> dict:
-    """A candidate for a call site the static pass never enumerated.
+def build_function_spans(candidates: list[dict]) -> list[tuple[int, int, str]]:
+    """(start, known_extent, rendered_va) per function, sorted by start.
 
-    `function_va` is set only when a sibling candidate at this call site already
-    knows it. For a site Unit 3 missed entirely the enclosing function is often
-    one Binary Ninja never identified -- packed or runtime-unpacked code -- so
-    there is no honest value, and guessing one would poison the two things the
-    field exists for: grouping by function and cross-referencing into BN.
+    `known_extent` is the highest call site the static pass found inside that
+    function -- a *lower bound* on where the function's body reaches, which is
+    all the record actually evidences. Used to place a runtime call site into a
+    function without inventing boundaries the record does not contain.
     """
-    candidate = {
+    spans: dict[int, tuple[int, str]] = {}
+    for candidate in candidates:
+        rendered = candidate.get("function_va")
+        if not rendered:
+            continue
+        start = int(rendered, 16)
+        csva = int(candidate["call_site_va"], 16)
+        known = spans.get(start)
+        if known is None or csva > known[0]:
+            spans[start] = (csva, rendered)
+    return sorted((start, extent, rendered) for start, (extent, rendered) in spans.items())
+
+
+def function_va_for(site: int, spans: list[tuple[int, int, str]]) -> str | None:
+    """The function containing `site`, or None when the record cannot say.
+
+    Takes the nearest function starting at or below `site` and accepts it only
+    if `site` falls within the extent that function is *known* to span. Because
+    the nearest such function is chosen, a function starting between it and
+    `site` automatically disqualifies it.
+
+    Beyond that bound there is no evidence: Binary Ninja may simply not have
+    carved a function there at all, which is the usual reason Unit 3 missed the
+    call site in the first place. Returning None there is deliberate -- inventing
+    a value would corrupt exactly what the field is for, grouping candidates by
+    routine and cross-referencing back into BN.
+    """
+    lo, hi = 0, len(spans)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if spans[mid][0] <= site:
+            lo = mid + 1
+        else:
+            hi = mid
+    if lo == 0:
+        return None
+    start, extent, rendered = spans[lo - 1]
+    return rendered if site <= extent else None
+
+
+def _new_candidate(csva: int, api: str, param_index: int, value, function_va: str | None) -> dict:
+    """A candidate for a call site the static pass never produced a value for.
+
+    `function_va` is null rather than absent when it cannot be determined: the
+    consumer gets a uniform shape, and null says "no answer" where a missing key
+    would just look like a different kind of record.
+    """
+    return {
         "call_site_va": f"0x{csva:08x}",
+        "function_va": function_va,
         "api_name": api,
         "api_resolution": "runtime",
         "parameter_index": param_index,
@@ -371,9 +418,6 @@ def _new_candidate(csva: int, api: str, param_index: int, value, function_va: st
             "cmp_operand_b": None,
         },
     }
-    if function_va is not None:
-        candidate["function_va"] = function_va
-    return candidate
 
 
 def merge_observed_calls(
@@ -402,10 +446,12 @@ def merge_observed_calls(
         by_key[(csva, candidate.get("parameter_index"))] = candidate
         if candidate.get("function_va") and csva not in function_va_by_site:
             function_va_by_site[csva] = candidate["function_va"]
+    spans = build_function_spans(candidates)
 
     seen: set[tuple[int, int, object]] = set()
     enriched = added = 0
     unmatched_sites: set[int] = set()
+    placed = unplaced = 0
 
     for call in trace.calls:
         site = rebase(call.site, module_base, image_base)
@@ -428,13 +474,20 @@ def merge_observed_calls(
                         channels.append(_SOURCE_CHANNELS[0])
                     continue
                 # Known call site, but the static pass produced nothing for this
-                # parameter -- still a new candidate, and the function is known.
+                # parameter -- still a new candidate, and the function is known
+                # exactly, from a sibling candidate at the same site.
                 fresh = _new_candidate(
                     matched, call.api, param_index, value, function_va_by_site.get(matched)
                 )
             else:
                 unmatched_sites.add(site)
-                fresh = _new_candidate(site, call.api, param_index, value, None)
+                fresh = _new_candidate(
+                    site, call.api, param_index, value, function_va_for(site, spans)
+                )
+            if fresh["function_va"] is None:
+                unplaced += 1
+            else:
+                placed += 1
 
             candidates.append(fresh)
             by_key[(int(fresh["call_site_va"], 16), param_index)] = fresh
@@ -448,6 +501,14 @@ def merge_observed_calls(
         added,
         len(unmatched_sites),
     )
+    if added:
+        logger.info(
+            "correlate: %d/%d new candidates placed in a known function; %d have "
+            "function_va=null (no function the static pass identified spans that address)",
+            placed,
+            added,
+            unplaced,
+        )
     if trace.capped:
         logger.warning(
             "correlate: %d (api, call site) pairs hit the client's logging cap; "
