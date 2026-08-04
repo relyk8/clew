@@ -509,10 +509,16 @@ event_module_load(void *drcontext, const module_data_t *info, bool loaded)
         app_pc towrap = (app_pc)dr_get_proc_address(info->handle, drtrace_api_names[i]);
         if (towrap == NULL)
             continue;
-        /* Forwarded exports mean several module!name pairs can resolve to one
-         * address (kernel32!X and kernelbase!X both forwarding into ntdll), so
-         * the second wrap legitimately fails -- the sample wrap.c notes the same.
-         * The first wrap wins and the log carries whichever name resolved first. */
+        /* Forwarded exports mean several module!name pairs resolve to one address
+         * (kernel32!GetModuleHandleW and kernelbase!GetModuleHandleW both land in
+         * the same code). drwrap does NOT reject the repeat request when the
+         * callback pair is identical -- it stacks it, and every call then fires
+         * wrap_pre and wrap_post once per exporting module. Observed on autoit3
+         * (CAPE task 17): every C and R record duplicated at consecutive seq.
+         * So skip an address already wrapped; the log carries whichever module
+         * resolved it first. */
+        if (drwrap_is_wrapped(towrap, wrap_pre, wrap_post))
+            continue;
         if (drwrap_wrap_ex(towrap, wrap_pre, wrap_post, (void *)(ptr_int_t)i,
                            DRWRAP_UNWIND_ON_EXCEPTION))
             wrapped++;
