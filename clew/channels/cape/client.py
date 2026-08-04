@@ -156,19 +156,29 @@ class CapeClient:
         return r.json()
 
     def delete(self, task_id: int) -> bool:
-        """Delete task and associated analysis data. Returns True on success."""
-        # Newer CAPE builds prefer GET; if yours is 404, swap to POST.
-        r = self.session.get(
-            f"{self.base}/apiv2/tasks/delete/{task_id}/",
-            timeout=self.http_timeout,
-        )
-        if r.status_code == 404:
-            r = self.session.post(
+        """
+        Delete task and associated analysis data. Returns True on success.
+
+        Raises CapeError if CAPE refuses. The endpoint ships disabled
+        (`[taskdelete] enabled = no` in conf/api.conf) and a disabled endpoint
+        answers HTTP 200 with an error body, so the status code alone cannot be
+        trusted -- reading it as success would report a deletion that never
+        happened. GET is the only method the route accepts; POST answers 405.
+        """
+        try:
+            r = self.session.get(
                 f"{self.base}/apiv2/tasks/delete/{task_id}/",
                 timeout=self.http_timeout,
             )
-        # Treat HTTP 200 as success; some builds omit the error field entirely
-        return r.status_code == 200
+            r.raise_for_status()
+            body = r.json()
+        except requests.RequestException as exc:
+            raise CapeError(f"delete task {task_id} failed: {exc}") from exc
+        except ValueError as exc:  # non-JSON body
+            raise CapeError(f"delete task {task_id}: unparseable response") from exc
+        if body.get("error"):
+            raise CapeError(f"delete task {task_id} refused: {body.get('error_value', body)}")
+        return True
 
     # ---------- Channel 3 (cmplog) helpers ----------
 
