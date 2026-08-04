@@ -793,11 +793,10 @@ def _log_resume(log, checkpoint: Path, tid=None) -> None:
 
 
 def _cmd_run(args) -> int:
-    # Lazy import: keep the CAPE client (which pulls requests) and the correlator
-    # out of `clew static` and the offline suite.
+    # Lazy import: keep the CAPE client (which pulls requests) out of `clew
+    # static` and the offline suite. The parser and correlator are imported
+    # inside _apply_correlation, which picks them per log family.
     from clew.channels.cape.client import CapeClient, CapeError
-    from clew.channels.cape.cmplog_parse import parse_cmplog_files
-    from clew.channels.cape.correlate import correlate_record
 
     log = logging.getLogger("clew.cli")
     log.info("clew %s run starting", CLEW_VERSION)
