@@ -1,30 +1,9 @@
 # Clew — usage
 
-The command reference and the end-to-end workflow. For the problem Clew solves and
-its approach, see [theory.md](theory.md). For the record it produces, see
-[schema.md](schema.md).
-
-## Setup
-
-Install the package and its console entry point:
-
-```bash
-pip install -e '.[dev,analysis]'
-```
-
-Clew reads machine-specific paths from a local `.env` (gitignored). Copy the
-template, fill in your paths, and load it:
-
-```bash
-cp .env.example .env
-set -a; source .env; set +a
-```
-
-Three variables matter. `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS` point at your capa
-rules checkout and its signatures, read by the static pipeline. `CAPE_BASE_URL`
-points at your CAPE instance, used only by the dynamic commands. The static
-pipeline also needs a Binary Ninja 4.2.6455 Ultimate Enterprise license checked
-out for the process.
+The command reference and the end-to-end workflow. To install Clew and point it
+at Binary Ninja, capa, and CAPE first, see [installation.md](installation.md).
+For the problem Clew solves and its approach, see [theory.md](theory.md). For the
+record it produces, see [schema.md](schema.md).
 
 ## The pipeline end to end
 
@@ -153,6 +132,30 @@ Takes the `static` options plus `--package`, `--timeout`, `--enforce-timeout`,
 `--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
+
+### doctor — check the prerequisites
+
+```bash
+clew doctor [--license]
+```
+
+| Option | Meaning |
+|---|---|
+| `--license` | also load Binary Ninja and take a license seat |
+| `--cape-url URL` | CAPE base URL to probe |
+| `--storage-root DIR` | CAPE analyses storage root to check for readability |
+| `--timeout SECS` | seconds to wait on the CAPE probe (default 5) |
+
+Reports each prerequisite, and for anything missing, the line that fixes it. The
+severity follows the pipeline's degradation policy: only Binary Ninja, the core
+channel, is a blocking failure, while capa, FLOSS, and CAPE are warnings because
+Clew degrades past them rather than failing. So the exit code answers exactly one
+question, which is whether static analysis will run.
+
+By default nothing is executed and no license seat is consumed: the Binary Ninja
+check locates the package without importing it. `--license` opts into the real
+import, a core-version comparison against the pinned version, and a checkout
+round trip, which is the check worth running before a long batch.
 
 ## Channel 3 requirements
 

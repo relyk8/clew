@@ -26,6 +26,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from clew.config import default_capa_bin, load_config, loaded_files
 from clew.pipeline import (
     CLEW_VERSION,
     DEFAULT_CAPA_RULES,
@@ -63,8 +64,9 @@ def _add_static_flags(parser) -> None:
     )
     parser.add_argument(
         "--capa-bin",
-        default="capa",
-        help="capa executable to invoke (default: capa on PATH)",
+        default=default_capa_bin(),
+        help="capa executable to invoke (default: the capa installed alongside clew, "
+        "else capa on PATH)",
     )
     parser.add_argument(
         "--no-license-checkout",
@@ -331,6 +333,38 @@ def _add_run_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_run)
 
 
+def _add_doctor_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "doctor",
+        parents=[parent],
+        help="check that clew's prerequisites are installed and configured",
+        description="Report whether Binary Ninja, capa, FLOSS and CAPE are reachable and "
+        "correctly configured, with the fix for anything that is not.",
+    )
+    s.add_argument(
+        "--license",
+        action="store_true",
+        help="also load Binary Ninja and take a license seat (slower; consumes a seat)",
+    )
+    s.add_argument(
+        "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL to probe (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
+    )
+    s.add_argument(
+        "--storage-root",
+        default="/opt/CAPEv2/storage/analyses",
+        help="CAPE analyses storage root to check for readability",
+    )
+    s.add_argument(
+        "--timeout",
+        type=int,
+        default=5,
+        help="seconds to wait on the CAPE probe (default: 5)",
+    )
+    s.set_defaults(func=_cmd_doctor)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -369,6 +403,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_detonate_subparser(sub, parent)
     _add_tasks_subparser(sub, parent)
     _add_run_subparser(sub, parent)
+    _add_doctor_subparser(sub, parent)
     return p
 
 
@@ -849,12 +884,42 @@ def _cmd_run(args) -> int:
     return 0
 
 
+def _cmd_doctor(args) -> int:
+    # Lazy import to match the other verbs; doctor pulls the CAPE client only
+    # when it actually probes CAPE.
+    from clew.doctor import format_report, has_failures, run_checks
+
+    checks = run_checks(
+        cape_url=args.cape_url,
+        storage_root=args.storage_root,
+        timeout=args.timeout,
+        license_check=args.license,
+    )
+    # The report is this verb's artifact, so it goes to stdout (as `tasks` does),
+    # leaving stderr for logging.
+    print(format_report(checks, version=CLEW_VERSION, location=str(Path(__file__).parent)))
+    return 1 if has_failures(checks) else 0
+
+
 def main(argv=None) -> int:
     raw = sys.argv[1:] if argv is None else argv
+    # Load config files into the environment before the parser is built. Several
+    # defaults (--cape-url, --capa-rules, --capa-sigs) read os.environ at parser
+    # construction time, so a load placed any later would not reach them.
+    load_config()
     parser = build_parser()
     argv2 = _inject_default_verb(raw, _known_verbs(parser))
     args = parser.parse_args(argv2)
     _configure_logging(args.verbose, args.quiet)
+    # Config loading necessarily runs before -v/-q are parsed, so it cannot log
+    # its own result. Report it here, once logging reflects the user's choice.
+    for entry in loaded_files():
+        logging.getLogger("clew.config").debug(
+            "%s: %d key(s) defined, %d applied",
+            entry.path,
+            len(entry.defined),
+            len(entry.applied),
+        )
     if getattr(args, "command", None) is None:
         # Bare `clew` -> show the verb menu.
         parser.print_help(sys.stderr)
