@@ -26,13 +26,16 @@ documented candidate future additions; the draft deliberately starts narrow
 
 ## Status
 
-**First draft — COMPILE-UNVERIFIED.** There is no MSVC toolchain on the Linux
-dev host (DynamoRIO's CMake refuses any non-MSVC compiler), so this has not been
-built or run. Correctness was established by verifying every DR API call against
-the DR 11.91.20651 headers and modeling on the shipped samples. Build it in a
-Windows dev snapshot per `BUILD_RECIPE.md`, then deploy per `exe_cmplog.py`.
+**Built and proven end to end.** Compiled 32-bit against DynamoRIO 11.91.20651
+and run through CAPE against benign PE32 samples: 24,429 comparison records from
+one, 42,026 from another, with live register, immediate and memory operands. The
+`clew correlate` step consumes these logs today.
 
-Target: **32-bit / x86**, DynamoRIO **11.91.20651** (the Clew guest is PE32).
+Building requires a Windows host with MSVC, because DynamoRIO's CMake refuses any
+other compiler on Windows. See `BUILD_RECIPE.md`.
+
+Target: **32-bit / x86**, DynamoRIO **11.91.20651**. Clew analyses PE32 samples,
+so the client, the DynamoRIO build, and the guest Python are all 32-bit.
 
 ## Files
 
@@ -53,9 +56,14 @@ still leaves every comparison observed up to that point on disk.
 
 ## Fit in the pipeline
 
-Channel 3 is **dynamic and not yet integrated** into the static `clew/`
-pipeline; the intermediate record currently emits the comparison operands as
-placeholders (`comparison_operator="unknown"`, `cmp_operand_a`/`_b=null`). This
-client produces the raw runtime data those fields will eventually be filled
-from. See the rule notes `clew-channel-34-dynamic` (design) and
-`clew-channel-3-cape-drio` (CAPE/DynamoRIO ops).
+Channel 3 is the dynamic half of Clew. `clew detonate` submits a sample to CAPE
+under the `exe_cmplog` package, which runs it under this client; `clew correlate`
+then parses the resulting logs and joins each runtime comparison onto the static
+call site it follows, filling the record's `comparison_candidates`. `clew run`
+chains both onto a static analysis.
+
+The static pipeline never invokes this client. It emits the comparison fields as
+placeholders, and correlation is a separate step, which is what lets a record be
+re-correlated without re-detonating.
+
+To set this up from scratch, see [docs/channel3_setup.md](../../docs/channel3_setup.md).

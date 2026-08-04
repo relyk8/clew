@@ -182,7 +182,8 @@ round trip, which is the check worth running before a long batch.
 
 The dynamic commands (`detonate`, `run`, and `correlate --task`) need a CAPE
 instance with the cmplog DynamoRIO analysis package deployed, reachable at
-`CAPE_BASE_URL`. The package runs the sample under DynamoRIO and records its
+`CAPE_BASE_URL`. To build and deploy that from scratch, see
+[channel3_setup.md](channel3_setup.md). The package runs the sample under DynamoRIO and records its
 runtime comparison operands, which CAPE stores per task under
 `storage/analyses/<id>/files/`.
 
