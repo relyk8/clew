@@ -132,7 +132,7 @@ def _add_correlate_subparser(sub, parent) -> None:
         "operands from DynamoRIO cmplog logs.",
     )
     s.add_argument(
-        "--record",
+        "-r", "--record",
         required=True,
         help="path to the intermediate record JSON to enrich",
     )
@@ -144,12 +144,12 @@ def _add_correlate_subparser(sub, parent) -> None:
         help="dir of cmplog.*.log files (offline; no CAPE needed)",
     )
     source.add_argument(
-        "--task",
+        "-t", "--task",
         type=int,
         help="CAPE task id; reads cmplog.*.log from CAPE storage",
     )
     s.add_argument(
-        "--module-base",
+        "-m", "--module-base",
         type=lambda v: int(v, 0),
         default=None,
         help="runtime load base to rebase PCs into static VA space (0x... accepted)",
@@ -186,18 +186,18 @@ def _add_detonate_subparser(sub, parent) -> None:
     )
     s.add_argument("sample", help="path to the PE32 sample")
     s.add_argument(
-        "--package",
+        "-p", "--package",
         default="exe_cmplog",
         help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
     )
     s.add_argument(
-        "--timeout",
+        "-T", "--timeout",
         type=int,
         default=120,
         help="guest analysis timeout in seconds (default: 120)",
     )
     s.add_argument(
-        "--wait",
+        "-w", "--wait",
         action="store_true",
         help="block until the task reaches a terminal state and report the status",
     )
@@ -210,7 +210,7 @@ def _add_detonate_subparser(sub, parent) -> None:
         help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
@@ -233,7 +233,7 @@ def _add_tasks_subparser(sub, parent) -> None:
         "record count for terminal tasks. With --watch, refresh in place.",
     )
     s.add_argument(
-        "--status",
+        "-s", "--status",
         default=None,
         help="only show tasks with this status (e.g. reported, failed_analysis)",
     )
@@ -242,34 +242,34 @@ def _add_tasks_subparser(sub, parent) -> None:
     # for its RECORDS count, and that history only grows. --all opts back in.
     view = s.add_mutually_exclusive_group()
     view.add_argument(
-        "--limit",
+        "-l", "--limit",
         type=int,
         default=DEFAULT_TASKS_LIMIT,
         help=f"show at most this many tasks, newest first (default: {DEFAULT_TASKS_LIMIT})",
     )
     view.add_argument(
-        "--all",
+        "-a", "--all",
         action="store_true",
         help="show every task, not just the newest --limit",
     )
     s.add_argument(
-        "--json",
+        "-j", "--json",
         action="store_true",
         help="emit the rows as JSON instead of a table (for piping)",
     )
     s.add_argument(
-        "--watch",
+        "-w", "--watch",
         action="store_true",
         help="refresh continuously until interrupted (Ctrl-C to exit)",
     )
     s.add_argument(
-        "--interval",
+        "-i", "--interval",
         type=float,
         default=2.0,
         help="seconds between refreshes when --watch is set (default: 2.0)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
@@ -294,12 +294,12 @@ def _add_run_subparser(sub, parent) -> None:
     _add_static_flags(s)
     # Detonate stage.
     s.add_argument(
-        "--package",
+        "-p", "--package",
         default="exe_cmplog",
         help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
     )
     s.add_argument(
-        "--timeout",
+        "-T", "--timeout",
         type=int,
         default=120,
         help="guest analysis timeout in seconds (default: 120)",
@@ -311,13 +311,13 @@ def _add_run_subparser(sub, parent) -> None:
         help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
     # Correlate stage.
     s.add_argument(
-        "--module-base",
+        "-m", "--module-base",
         type=lambda v: int(v, 0),
         default=None,
         help="runtime load base to rebase PCs into static VA space (0x... accepted)",
