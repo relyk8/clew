@@ -52,92 +52,34 @@ string that Binary Ninja and FLOSS both confirm (confidence 0.9). A fuzzer that
 reaches this call site now knows the exact argument to supply. Fields are abridged
 here. The full contract is in [docs/schema.md](docs/schema.md).
 
-## Install
+## Installation
 
 ```bash
 pipx install git+https://github.com/relyk8/clew
 ```
 
-This puts `clew` on your `PATH` in an environment of its own, so there is no
-virtualenv to activate before each run. `uv tool install
-git+https://github.com/relyk8/clew` does the same thing. To work on Clew itself,
-clone the repository and install it editable with `pip install -e
-'.[dev,analysis]'`.
+Clew needs a licensed Binary Ninja, a capa rules checkout, and, for the dynamic
+step, a CAPE instance. Configure them once and check the result with `clew
+doctor`. See [docs/installation.md](docs/installation.md) for every installation
+and configuration method.
 
-## Configure
-
-Clew depends on things pip cannot install: a licensed Binary Ninja, a capa rules
-checkout, and, for the dynamic step, a CAPE instance. Tell Clew where they are
-once, in a file, rather than exporting variables before every run:
-
-```bash
-mkdir -p ~/.config/clew
-curl -o ~/.config/clew/config.env https://raw.githubusercontent.com/relyk8/clew/main/.env.example
-chmod 600 ~/.config/clew/config.env    # it holds a Binary Ninja password
-$EDITOR ~/.config/clew/config.env
-```
-
-Clew reads that file, then `./.env`, and anything already exported in your
-environment wins over both, so a one-off override still works. Then confirm it
-sees what you expect:
-
-```bash
-clew doctor
-```
-
-`doctor` reports each prerequisite and, for anything missing, the line that fixes
-it. It exits non-zero only when something would actually stop the static
-pipeline: capa, FLOSS, and CAPE are reported as warnings because Clew degrades
-past them rather than failing.
-
-## Run
+## Usage
 
 ```bash
 clew suspicious.exe          # writes results/<sha256>.clew.json
-```
-
-Pass `-o <path>` to choose a location, or `-o -` to write to stdout. To add the
-dynamic comparison operands, Clew detonates the sample under DynamoRIO in CAPE
-and correlates the runtime comparisons back onto the record:
-
-```bash
 clew run suspicious.exe      # static, then detonate, then correlate
 ```
 
 `clew --help` lists the commands. See [docs/usage.md](docs/usage.md) for the full
 command reference and the end-to-end workflow.
 
-## Prerequisites
-
-- Binary Ninja 4.2.6455 Ultimate with an Enterprise license, for the core static
-  analysis. If Clew is installed in an isolated environment, point `CLEW_BN_API`
-  at the directory containing the `binaryninja` package: Binary Ninja's
-  `install_api.py` writes its `.pth` into one specific `site-packages`, which an
-  isolated install does not share.
-- capa rules and signatures, via `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS`.
-- A CAPE instance with the cmplog DynamoRIO package, for the dynamic step
-  (`detonate`, `run`). The static pipeline runs without it.
-
-Without a Binary Ninja license, the offline test suite still runs clean on a bare
-checkout (see Tests).
-
 ## Documentation
 
 - [docs/theory.md](docs/theory.md) — the problem and Clew's approach (read first).
+- [docs/installation.md](docs/installation.md) — installing, configuring, and
+  verifying a setup, plus running the tests.
 - [docs/usage.md](docs/usage.md) — the command reference and end-to-end workflow.
 - [docs/schema.md](docs/schema.md) — the record contract. The machine-checkable
   version is `schema/clew_record.schema.json`.
 - [docs/binary_ninja_headless_setup.md](docs/binary_ninja_headless_setup.md) —
   headless Binary Ninja setup notes.
-
-## Tests
-
-```bash
-pytest        # offline, fixture-driven; no BN license or capa rules needed
-```
-
-Expensive and licensed tests are opt-in via environment variables. `BN_INTEGRATION=1`
-enables the licensed Binary Ninja analysis tests (needs a BN Enterprise license and
-the fixture `.exe`), and `CAPA_RULES_PATH` with `CAPA_SIGS_PATH` enables the capa
-integration tests. Tests skip when a required fixture is absent, so a clean checkout
-runs a reduced but green suite.
