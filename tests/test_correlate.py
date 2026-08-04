@@ -243,11 +243,8 @@ def test_every_mapped_operator_is_a_schema_token():
     a record that fails its own schema."""
     from clew.channels.cape.correlate import _JCC_OPERATOR
 
-    allowed = set(
-        json.loads((Path(__file__).parent.parent / "schema" / "clew_record.schema.json").read_text())[
-            "$defs"
-        ]["ComparisonOperator"]["enum"]
-    )
+    schema_path = Path(__file__).parent.parent / "schema" / "clew_record.schema.json"
+    allowed = set(json.loads(schema_path.read_text())["$defs"]["ComparisonOperator"]["enum"])
     assert set(_JCC_OPERATOR.values()) <= allowed
 
 
@@ -287,3 +284,212 @@ def test_no_module_table_leaves_pcs_unrebased():
     from clew.channels.cape.correlate import resolve_module_base
 
     assert resolve_module_base(_trace([])) is None
+
+
+# --- hybrid merge of observed API calls -------------------------------------
+
+
+def _call(api="GetModuleHandleW", site=0x401005, seq=10, args=None, argstr=None,
+          outstr=None, retval=0, returned=True):
+    from clew.channels.cape.drtrace_parse import ApiCall
+
+    return ApiCall(
+        seq=seq, tid=1, api=api, site=site,
+        args=args or {}, arg_strings=argstr or {},
+        return_seq=seq + 1 if returned else None,
+        retval=retval if returned else None,
+        out_strings=outstr or {},
+    )
+
+
+def _trace_with(calls, modules=()):
+    from clew.channels.cape.drtrace_parse import ModuleRecord, Trace
+
+    return Trace(
+        modules=[ModuleRecord(seq=i, base=b, end=e, name=n)
+                 for i, (b, e, n) in enumerate(modules, 1)],
+        calls=list(calls),
+    )
+
+
+def _stub_record(csva="0x00401000", param=0, api="GetModuleHandleW", value=None,
+                 function_va="0x00400f00"):
+    return {
+        "candidates": [
+            {
+                "call_site_va": csva,
+                "function_va": function_va,
+                "api_name": api,
+                "api_resolution": "import",
+                "parameter_index": param,
+                "comparison_operator": "unknown",
+                "candidate_values": [
+                    {"value": value, "represents": "unknown", "retarget_to": None,
+                     "confidence": 0.0 if value is None else 0.7,
+                     "source_channels": ["bn_xref"]}
+                ],
+                "evidence": {"channels": ["bn_xref"], "cmp_operand_a": None,
+                             "cmp_operand_b": None},
+            }
+        ]
+    }
+
+
+def test_return_address_joins_to_the_call_instruction_not_past_it():
+    """drwrap logs the address the API returns to; Unit 3 records the address of
+    the call instruction. Matching on equality would find nothing, on every
+    sample, while looking exactly like a sample that was never observed."""
+    from clew.channels.cape.correlate import match_call_site
+
+    sites = {0x401000}
+    assert match_call_site(0x401005, sites) == 0x401000  # E8 rel32
+    assert match_call_site(0x401006, sites) == 0x401000  # FF 15 disp32
+    assert match_call_site(0x401002, sites) == 0x401000  # FF D0
+    assert match_call_site(0x401000, sites) is None      # the call itself
+    assert match_call_site(0x401064, sites) is None      # far too distant
+
+
+def test_nearest_call_site_wins_when_several_are_in_range():
+    from clew.channels.cape.correlate import match_call_site
+
+    assert match_call_site(0x401006, {0x401000, 0x401004}) == 0x401004
+
+
+def test_observed_argument_fills_an_unresolved_static_stub():
+    """The point of the whole channel: Channel 2 found the call site but could
+    not resolve what flowed in, and the runtime observation answers it."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record()
+    merge_observed_calls(record, _trace_with([_call(argstr={0: "SbieDll.dll"})]))
+
+    candidate = next(c for c in record["candidates"] if c["parameter_index"] == 0)
+    values = candidate["candidate_values"]
+    assert [v["value"] for v in values] == [None, "SbieDll.dll"]
+    assert values[1]["confidence"] == 0.95
+    assert values[1]["source_channels"] == ["drio"]
+    # The stub is kept, not overwritten: it is still what static concluded.
+    assert values[0]["confidence"] == 0.0
+    assert "drio" in candidate["evidence"]["channels"]
+
+
+def test_runtime_confirmation_of_a_static_value_unions_rather_than_duplicates():
+    """Static inferred it and runtime saw it: one value with two sources."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(value="SbieDll.dll")
+    merge_observed_calls(record, _trace_with([_call(argstr={0: "SbieDll.dll"})]))
+
+    (value,) = record["candidates"][0]["candidate_values"]
+    assert value["source_channels"] == ["bn_xref", "drio"]
+    assert value["confidence"] == 0.95
+
+
+def test_return_value_fills_a_parameter_index_minus_one_stub():
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(param=-1)
+    merge_observed_calls(record, _trace_with([_call(retval=0)]))
+
+    values = record["candidates"][0]["candidate_values"]
+    assert [v["value"] for v in values] == [None, 0]
+
+
+def test_out_parameter_becomes_a_value_the_binary_never_contained():
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(api="GetComputerNameA", param=0)
+    merge_observed_calls(
+        record,
+        _trace_with([_call(api="GetComputerNameA", outstr={0: "DESKTOP-7F2K9"}, retval=1)]),
+    )
+    values = record["candidates"][0]["candidate_values"]
+    assert "DESKTOP-7F2K9" in [v["value"] for v in values]
+
+
+def test_an_unchanged_argument_is_not_reported_twice():
+    """An in-string that is still there after the call was an input, not an
+    out-parameter."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record()
+    merge_observed_calls(
+        record,
+        _trace_with([_call(argstr={0: "kernel32.dll"}, outstr={0: "kernel32.dll"})]),
+    )
+    values = [v["value"] for v in record["candidates"][0]["candidate_values"]]
+    assert values.count("kernel32.dll") == 1
+
+
+def test_call_at_an_unenumerated_site_becomes_a_new_candidate():
+    """Channel 3 producing rather than annotating: a site Unit 3 never found."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record()
+    merge_observed_calls(
+        record,
+        _trace_with([_call(api="GetVolumeInformationW", site=0x43F108,
+                           outstr={1: "VMware"})]),
+    )
+    fresh = [c for c in record["candidates"] if c["api_name"] == "GetVolumeInformationW"]
+    assert [c["api_resolution"] for c in fresh] == ["runtime", "runtime"]
+    assert {c["parameter_index"] for c in fresh} == {1, -1}  # out-param and retval
+    assert all(c["evidence"]["channels"] == ["drio"] for c in fresh)
+    # No function is known for a site the static pass never reached.
+    assert all("function_va" not in c for c in fresh)
+
+
+def test_new_candidate_at_a_known_site_borrows_that_sites_function_va():
+    """A known call site whose parameter had no static candidate: the enclosing
+    function is known from its sibling, so it should be carried over."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(param=0)
+    merge_observed_calls(record, _trace_with([_call(retval=0x7C800000)]))
+
+    fresh = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert len(fresh) == 1
+    assert fresh[0]["parameter_index"] == -1
+    assert fresh[0]["function_va"] == "0x00400f00"
+
+
+def test_a_looping_call_site_contributes_each_distinct_value_once():
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record()
+    calls = [_call(argstr={0: "SbieDll.dll"}, seq=n) for n in range(20)]
+    merge_observed_calls(record, _trace_with(calls))
+
+    values = [v["value"] for v in record["candidates"][0]["candidate_values"]]
+    assert values.count("SbieDll.dll") == 1
+
+
+def test_merge_never_demotes_an_unobserved_candidate():
+    """One detonation covers one path. A candidate that did not run this time is
+    unobserved, not disproven."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(value="untouched")
+    before = json.loads(json.dumps(record))
+    merge_observed_calls(record, _trace_with([]))
+    assert record == before
+
+
+def test_correlate_trace_rebases_from_the_module_table():
+    """The sample loaded at 0xbf0000; its static image base is 0x400000. Without
+    the table this needed a hand-passed --module-base."""
+    from clew.channels.cape.correlate import correlate_trace
+
+    record = _stub_record()
+    trace = _trace_with(
+        [_call(site=0xBF1005, argstr={0: "SbieDll.dll"})],
+        modules=[(0xBF0000, 0xC50000, "s.exe")],
+    )
+    correlate_trace(record, trace)
+
+    matched = next(c for c in record["candidates"] if c["parameter_index"] == 0)
+    assert "SbieDll.dll" in [v["value"] for v in matched["candidate_values"]]
+    # The site matched the static candidate rather than being treated as new, so
+    # the only candidate added is the one for the call's return value.
+    added = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert [c["parameter_index"] for c in added] == [-1]

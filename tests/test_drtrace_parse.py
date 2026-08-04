@@ -18,6 +18,11 @@ def _hex(text: str, wide: bool = False) -> str:
     return text.encode("utf-16-le" if wide else "ascii").hex()
 
 
+_CALL_LINE = (
+    "C seq=10 T2224 api=GetModuleHandleW site=0x0041a2f0 "
+    f'a0=0x0019fb14 s0=W:{_hex("SbieDll.dll", True)} a1=0x0'
+)
+
 # A short but complete trace: two modules, a wrapped call with a wide-string
 # argument that returns NULL, an out-parameter call, a comparison carrying its
 # jcc, and a capped notice.
@@ -25,7 +30,7 @@ SAMPLE_LOG = f"""\
 # drtrace v1 pid=5148 tid=2224
 M seq=1 base=0x00400000 end=0x0049a000 name={_hex("autoit3.exe")}
 M seq=2 base=0x77c10000 end=0x77d50000 name={_hex("kernel32.dll")}
-C seq=10 T2224 api=GetModuleHandleW site=0x0041a2f0 a0=0x0019fb14 s0=W:{_hex("SbieDll.dll", True)} a1=0x0
+{_CALL_LINE}
 R seq=11 T2224 api=GetModuleHandleW site=0x0041a2f0 rv=0x00000000
 T2224 pc=0x0041a2f5 cmp seq=12 jcc=jz src0=reg:eax=0x0 src1=imm=0x0
 C seq=20 T2224 api=GetComputerNameA site=0x00421b80 a0=0x0019fc00 a1=0x0019fc90
@@ -190,7 +195,8 @@ def test_files_merge_and_sort_by_global_seq(tmp_path):
         f"M seq=1 base=0x400000 end=0x410000 name={_hex('s.exe')}\n"
     )
     (tmp_path / "drtrace.1.100.log").write_text(
-        "C seq=30 T100 api=Sleep site=0x401000 a0=0x1\nR seq=31 T100 api=Sleep site=0x401000 rv=0x0\n"
+        "C seq=30 T100 api=Sleep site=0x401000 a0=0x1\n"
+        "R seq=31 T100 api=Sleep site=0x401000 rv=0x0\n"
     )
     (tmp_path / "drtrace.1.200.log").write_text(
         "C seq=10 T200 api=GetTickCount site=0x402000\n"

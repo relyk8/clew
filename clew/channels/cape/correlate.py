@@ -142,6 +142,45 @@ def _warn_if_unrebased(
     )
 
 
+# Confidence stamped on a value drtrace actually watched go into (or come out
+# of) an API call. Written out rather than derived: the static ladder is 0.9
+# bn_xref+floss, 0.7 bn_xref, 0.6 obfuscated/FLOSS-only, 0.0 unresolved, and it
+# is deliberately not monotone in channel count, so "one rung up" means nothing.
+# 0.95 sits above every static rung because a runtime observation is the only
+# evidence in the record that was not inferred: the value was seen.
+RUNTIME_CONFIDENCE = 0.95
+
+# The client logs a call site as drwrap_get_retaddr -- the address the API
+# returns to. Unit 3 records call_site_va as the address of the call
+# *instruction*. They differ by the length of that instruction, so the two never
+# join on equality, and a naive match yields zero hits on every sample while
+# looking like a sample that simply was not observed.
+#
+# x86 call encodings in range: FF D0 (register, 2), FF 55 xx (indirect, 3),
+# E8 rel32 (direct, 5), FF 15 disp32 (indirect memory, 6), plus room for a
+# prefix. A window is used rather than a fixed offset because the encoding is
+# not knowable from the return address alone.
+MIN_CALL_INSTR_LEN = 2
+MAX_CALL_INSTR_LEN = 7
+
+
+def match_call_site(retaddr: int, call_site_vas) -> int | None:
+    """Static call_site_va that the runtime return address `retaddr` came from.
+
+    The nearest call site below `retaddr` that sits within one call instruction
+    of it. Returns None when nothing is close enough, which is the honest answer
+    for a call site Unit 3 never enumerated -- exactly the case that becomes a
+    new runtime candidate.
+    """
+    best = None
+    for csva in call_site_vas:
+        delta = retaddr - csva
+        if MIN_CALL_INSTR_LEN <= delta <= MAX_CALL_INSTR_LEN:
+            if best is None or csva > best:
+                best = csva
+    return best
+
+
 def resolve_module_base(
     trace, record: dict | None = None, explicit: int | None = None
 ) -> int | None:
@@ -249,4 +288,190 @@ def correlate_record(
             candidate["evidence"]["cmp_operand_a"] = top["cmp_operand_a"]
             candidate["evidence"]["cmp_operand_b"] = top["cmp_operand_b"]
 
+    return record
+
+
+def _value_entry(value) -> dict:
+    """A candidate_values entry for something drtrace watched happen."""
+    return {
+        "value": value,
+        "represents": "unknown",
+        "retarget_to": None,
+        "confidence": RUNTIME_CONFIDENCE,
+        "source_channels": list(_SOURCE_CHANNELS),
+    }
+
+
+def _observed_values(call) -> list[tuple[int, object]]:
+    """(parameter_index, value) pairs this call demonstrated.
+
+    Arguments read at call time, arguments re-read after the return, and the
+    return value itself (parameter_index -1, the schema's "check is on the
+    return value"). An argument whose text is unchanged across the call is
+    reported once: it was an input, not an out-parameter.
+    """
+    observed: list[tuple[int, object]] = []
+    for idx, text in sorted(call.arg_strings.items()):
+        observed.append((idx, text))
+    for idx, text in sorted(call.out_strings.items()):
+        if call.arg_strings.get(idx) != text:
+            observed.append((idx, text))
+    if call.returned:
+        observed.append((-1, call.retval))
+    return observed
+
+
+def _promote_or_append(candidate: dict, value) -> bool:
+    """Record `value` on `candidate`. True if this was new information.
+
+    When the value is already there, this unions `drio` into its provenance and
+    raises its confidence rather than adding a duplicate: static inferred the
+    value and runtime confirmed it, which is one value with two sources, not
+    two values.
+
+    Strictly additive. A candidate that was not observed this run is unobserved,
+    not disproven -- one detonation covers one path -- so nothing is ever removed
+    or demoted here.
+    """
+    values = candidate.setdefault("candidate_values", [])
+    for existing in values:
+        if existing.get("value") == value:
+            channels = existing.setdefault("source_channels", [])
+            if _SOURCE_CHANNELS[0] not in channels:
+                channels.append(_SOURCE_CHANNELS[0])
+            existing["confidence"] = max(existing.get("confidence") or 0.0, RUNTIME_CONFIDENCE)
+            return False
+    values.append(_value_entry(value))
+    return True
+
+
+def _new_candidate(csva: int, api: str, param_index: int, value, function_va: str | None) -> dict:
+    """A candidate for a call site the static pass never enumerated.
+
+    `function_va` is set only when a sibling candidate at this call site already
+    knows it. For a site Unit 3 missed entirely the enclosing function is often
+    one Binary Ninja never identified -- packed or runtime-unpacked code -- so
+    there is no honest value, and guessing one would poison the two things the
+    field exists for: grouping by function and cross-referencing into BN.
+    """
+    candidate = {
+        "call_site_va": f"0x{csva:08x}",
+        "api_name": api,
+        "api_resolution": "runtime",
+        "parameter_index": param_index,
+        "comparison_operator": "unknown",
+        "candidate_values": [_value_entry(value)],
+        "evidence": {
+            "channels": list(_SOURCE_CHANNELS),
+            "string_source": None,
+            "string_va": None,
+            "string_function_va": None,
+            "dataflow_path": [],
+            "cmp_operand_a": None,
+            "cmp_operand_b": None,
+        },
+    }
+    if function_va is not None:
+        candidate["function_va"] = function_va
+    return candidate
+
+
+def merge_observed_calls(
+    record: dict,
+    trace,
+    *,
+    module_base: int | None = None,
+    image_base: int = IMAGE_BASE,
+) -> dict:
+    """Merge drtrace's observed API calls into `record["candidates"]`.
+
+    An observed call whose site matches a static candidate enriches that
+    candidate in place -- this is what finally answers the unresolved stubs the
+    static pass leaves behind, where Channel 2 found the call site but could not
+    work out what flowed into it. A call at a site the static pass never
+    enumerated becomes a new candidate, which is how Channel 3 stops being an
+    annotator of Channel 2 and starts producing candidates of its own.
+    """
+    candidates = record.setdefault("candidates", [])
+    by_key: dict[tuple[int, int], dict] = {}
+    function_va_by_site: dict[int, str] = {}
+    call_site_vas: set[int] = set()
+    for candidate in candidates:
+        csva = int(candidate["call_site_va"], 16)
+        call_site_vas.add(csva)
+        by_key[(csva, candidate.get("parameter_index"))] = candidate
+        if candidate.get("function_va") and csva not in function_va_by_site:
+            function_va_by_site[csva] = candidate["function_va"]
+
+    seen: set[tuple[int, int, object]] = set()
+    enriched = added = 0
+    unmatched_sites: set[int] = set()
+
+    for call in trace.calls:
+        site = rebase(call.site, module_base, image_base)
+        matched = match_call_site(site, call_site_vas)
+        for param_index, value in _observed_values(call):
+            if value is None:
+                continue
+            key = (matched if matched is not None else site, param_index, value)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            if matched is not None:
+                candidate = by_key.get((matched, param_index))
+                if candidate is not None:
+                    if _promote_or_append(candidate, value):
+                        enriched += 1
+                    channels = candidate.setdefault("evidence", {}).setdefault("channels", [])
+                    if _SOURCE_CHANNELS[0] not in channels:
+                        channels.append(_SOURCE_CHANNELS[0])
+                    continue
+                # Known call site, but the static pass produced nothing for this
+                # parameter -- still a new candidate, and the function is known.
+                fresh = _new_candidate(
+                    matched, call.api, param_index, value, function_va_by_site.get(matched)
+                )
+            else:
+                unmatched_sites.add(site)
+                fresh = _new_candidate(site, call.api, param_index, value, None)
+
+            candidates.append(fresh)
+            by_key[(int(fresh["call_site_va"], 16), param_index)] = fresh
+            added += 1
+
+    logger.info(
+        "correlate: %d observed calls -> %d values onto existing candidates, "
+        "%d new candidates (%d call sites the static pass never enumerated)",
+        len(trace.calls),
+        enriched,
+        added,
+        len(unmatched_sites),
+    )
+    if trace.capped:
+        logger.warning(
+            "correlate: %d (api, call site) pairs hit the client's logging cap; "
+            "their observed call counts are lower bounds",
+            len(trace.capped),
+        )
+    return record
+
+
+def correlate_trace(
+    record: dict,
+    trace,
+    *,
+    module_base: int | None = None,
+    image_base: int = IMAGE_BASE,
+) -> dict:
+    """Full Channel 3 correlation for a drtrace run: comparisons and API calls.
+
+    The module base comes from the trace's own module table unless overridden.
+    Comparison correlation runs first so that the candidates created from
+    observed calls are not then scanned for comparisons -- their operands come
+    from the call itself, not from a proximity guess.
+    """
+    base = resolve_module_base(trace, record, module_base)
+    correlate_record(record, trace.comparisons, module_base=base, image_base=image_base)
+    merge_observed_calls(record, trace, module_base=base, image_base=image_base)
     return record
