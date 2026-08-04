@@ -130,6 +130,11 @@ typedef struct {
 static hitcap_entry_t hitcap[DRTRACE_HITCAP_SLOTS];
 static void *hitcap_lock;
 
+/* Which API names are already wrapped, so a name exported by several modules is
+ * wrapped once. See the forwarder note in event_module_load. Written only from
+ * module load events, which drmgr serializes, so no lock is needed. */
+static bool api_wrapped[DRTRACE_API_COUNT];
+
 /* Whether this (API, call site) pair may still log. On the transition to capped
  * it emits the marker once, so truncation is reported rather than silent. */
 static bool
@@ -506,22 +511,35 @@ event_module_load(void *drcontext, const module_data_t *info, bool loaded)
     dr_mutex_unlock(module_lock);
 
     for (i = 0; i < DRTRACE_API_COUNT; i++) {
-        app_pc towrap = (app_pc)dr_get_proc_address(info->handle, drtrace_api_names[i]);
+        app_pc towrap;
+        /* Wrap each API NAME at most once, across every module that exports it.
+         *
+         * Several system DLLs export the same name at *different* addresses,
+         * where the outer one is a forwarder that tail-jumps to the inner one:
+         * kernel32!GetNativeSystemInfo jmps into kernelbase!GetNativeSystemInfo.
+         * Wrapping both means one application call fires two pre-callbacks, and
+         * because a jmp does not push a return address, both report the *same*
+         * call site -- so the duplicates are indistinguishable from two real
+         * calls.
+         *
+         * Deduping by address cannot catch this: the two are genuinely different
+         * addresses, so drwrap_is_wrapped correctly says "no". Observed on
+         * autoit3 (CAPE task 17, and still on task 18 after the address-based
+         * attempt): every record duplicated except NtQueryInformationProcess,
+         * which ntdll alone exports.
+         *
+         * Whichever module loads first wins. That is safe in either order,
+         * because the call passes through the forwarder *and* the target. */
+        if (api_wrapped[i])
+            continue;
+        towrap = (app_pc)dr_get_proc_address(info->handle, drtrace_api_names[i]);
         if (towrap == NULL)
             continue;
-        /* Forwarded exports mean several module!name pairs resolve to one address
-         * (kernel32!GetModuleHandleW and kernelbase!GetModuleHandleW both land in
-         * the same code). drwrap does NOT reject the repeat request when the
-         * callback pair is identical -- it stacks it, and every call then fires
-         * wrap_pre and wrap_post once per exporting module. Observed on autoit3
-         * (CAPE task 17): every C and R record duplicated at consecutive seq.
-         * So skip an address already wrapped; the log carries whichever module
-         * resolved it first. */
-        if (drwrap_is_wrapped(towrap, wrap_pre, wrap_post))
-            continue;
         if (drwrap_wrap_ex(towrap, wrap_pre, wrap_post, (void *)(ptr_int_t)i,
-                           DRWRAP_UNWIND_ON_EXCEPTION))
+                           DRWRAP_UNWIND_ON_EXCEPTION)) {
+            api_wrapped[i] = true;
             wrapped++;
+        }
     }
     dr_log(NULL, DR_LOG_ALL, 1, "drtrace: module %s -> wrapped %d APIs\n",
            name == NULL ? "?" : name, wrapped);
