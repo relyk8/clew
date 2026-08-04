@@ -193,6 +193,49 @@ def test_output_flag_writes_file_and_summarizes(monkeypatch, capsys, tmp_path):
     assert capsys.readouterr().out == ""
 
 
+# (argv, dest, expected) for every short flag. Shorts are what gets typed from
+# memory, so a rename that silently drops one is a quiet break -- pin the map.
+_SHORT_FLAGS = [
+    (["tasks", "-s", "reported"], "status", "reported"),
+    (["tasks", "-l", "3"], "limit", 3),
+    (["tasks", "-a"], "all", True),
+    (["tasks", "-j"], "json", True),
+    (["tasks", "-w"], "watch", True),
+    (["tasks", "-i", "5"], "interval", 5.0),
+    (["tasks", "-u", "http://x"], "cape_url", "http://x"),
+    (["correlate", "-r", "r.json", "--task", "1"], "record", "r.json"),
+    (["correlate", "--record", "r.json", "-t", "16"], "task", 16),
+    (["correlate", "--record", "r.json", "-t", "1", "-m", "0xc00000"], "module_base", 0xC00000),
+    (["detonate", "s.exe", "-p", "exe_drcov"], "package", "exe_drcov"),
+    (["detonate", "s.exe", "-T", "300"], "timeout", 300),
+    (["detonate", "s.exe", "-w"], "wait", True),
+    (["detonate", "s.exe", "-u", "http://x"], "cape_url", "http://x"),
+    (["detonate", "s.exe", "-o", "out.json"], "output", Path("out.json")),
+    (["static", "x.exe", "-o", "-"], "output", Path("-")),
+    (["run", "s.exe", "-T", "60"], "timeout", 60),
+    (["run", "s.exe", "-p", "exe_drcov"], "package", "exe_drcov"),
+    (["run", "s.exe", "-m", "0x400000"], "module_base", 0x400000),
+    (["run", "s.exe", "-u", "http://x"], "cape_url", "http://x"),
+]
+
+
+@pytest.mark.parametrize("argv,dest,expected", _SHORT_FLAGS)
+def test_short_flag_maps_to_its_long_option(argv, dest, expected):
+    assert getattr(cli.build_parser().parse_args(argv), dest) == expected
+
+
+def test_short_flag_meaning_is_stable_across_verbs():
+    # The letter policy: one letter, one meaning everywhere. -t is always
+    # --task, which is why --timeout had to take -T.
+    p = cli.build_parser()
+    assert p.parse_args(["correlate", "--record", "r", "-t", "9"]).task == 9
+    assert p.parse_args(["detonate", "s.exe", "-T", "9"]).timeout == 9
+    assert p.parse_args(["run", "s.exe", "-T", "9"]).timeout == 9
+    # -t must NOT be a timeout alias on the verbs that lack --task.
+    with pytest.raises(SystemExit):
+        p.parse_args(["detonate", "s.exe", "-t", "9"])
+
+
 def test_parser_defaults():
     ns = cli.build_parser().parse_args(["static", "x.exe"])
     assert ns.sample == "x.exe"
