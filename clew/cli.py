@@ -26,6 +26,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from clew.channels.cape.statuses import TERMINAL_STATUSES
 from clew.pipeline import (
     CLEW_VERSION,
     DEFAULT_CAPA_RULES,
@@ -625,9 +626,8 @@ def _humanize_age(added_on: str | None) -> str:
     return f"{seconds // 86400}d"
 
 
-# Terminal CAPE task states (mirrors CapeClient.poll). A task is "done" in any of
-# these; RECORDS is meaningful for all of them, not just 'reported'.
-_TERMINAL_STATUSES = frozenset({"reported", "failed_analysis", "failed_processing"})
+# RECORDS is meaningful for any state where the analysis is over, not just
+# 'reported'. Shared with CapeClient.poll so the two cannot drift.
 
 
 def _build_display_rows(tasks, client, storage_root) -> list[dict]:
@@ -648,7 +648,7 @@ def _build_display_rows(tasks, client, storage_root) -> list[dict]:
         # RECORDS only makes sense once the task is terminal and its logs are
         # written; for anything else, or an unreadable/missing log, show "-".
         records = "-"
-        if status in _TERMINAL_STATUSES and task_id is not None:
+        if status in TERMINAL_STATUSES and task_id is not None:
             n = client.count_cmplog_lines(task_id, storage_root)
             if n is not None:
                 records = str(n)

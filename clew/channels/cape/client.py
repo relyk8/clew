@@ -15,6 +15,8 @@ from typing import Any, Callable
 
 import requests
 
+from clew.channels.cape.statuses import TERMINAL_STATUSES
+
 
 class CapeError(RuntimeError):
     pass
@@ -121,12 +123,11 @@ class CapeClient:
     ) -> str:
         """
         Block until task reaches a terminal state. Returns the final status.
-        Terminal states: 'reported', 'failed_analysis', 'failed_processing'.
+        Terminal states: 'reported' plus CAPE's three failure states.
 
         On each status change, call progress(status) if given (so a CLI caller
         can route it to stderr), else print to stdout (the __main__ harness).
         """
-        terminal = {"reported", "failed_analysis", "failed_processing"}
         deadline = time.monotonic() + max_wait
         last = None
         while time.monotonic() < deadline:
@@ -138,7 +139,7 @@ class CapeClient:
                 else:
                     print(f"[task {task_id}] status: {status}")
                 last = status
-            if status in terminal:
+            if status in TERMINAL_STATUSES:
                 return status
             time.sleep(poll_interval)
         raise CapeError(

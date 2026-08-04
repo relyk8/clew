@@ -92,18 +92,52 @@ def test_correlate_rejects_cape_url(monkeypatch):
 def test_records_computed_for_all_terminal_states(tmp_path):
     # M2: RECORDS reflects any terminal task, not only 'reported'.
     class FakeClient:
+        # Logs exist for every task whose analysis actually ran.
         def count_cmplog_lines(self, tid, root):
-            return 7 if tid in (1, 2) else None
+            return 7 if tid in (1, 2, 4) else None
 
     tasks = [
         {"id": 1, "status": "reported", "target": "a.exe"},
         {"id": 2, "status": "failed_processing", "target": "b.exe"},
         {"id": 3, "status": "running", "target": "c.exe"},
+        {"id": 4, "status": "failed_reporting", "target": "d.exe"},
+        {"id": 5, "status": "completed", "target": "e.exe"},
     ]
     by_id = {r["task"]: r["records"] for r in cli._build_display_rows(tasks, FakeClient(), str(tmp_path))}
     assert by_id["1"] == "7"  # reported
     assert by_id["2"] == "7"  # terminal failure now also counted
     assert by_id["3"] == "-"  # non-terminal: not counted
+    # The analysis ran, so its logs exist even though no report landed.
+    assert by_id["4"] == "7"
+    # 'completed' is mid-flight -- still headed for processing/reporting.
+    assert by_id["5"] == "-"
+
+
+def test_terminal_statuses_match_capes_vocabulary():
+    # CAPE groups its failures as these three (lib/cuckoo/common/web_utils.py);
+    # omitting one made poll() spin to its max_wait on a task already finished.
+    from clew.channels.cape.statuses import TERMINAL_FAILURE_STATUSES, TERMINAL_STATUSES
+
+    assert TERMINAL_FAILURE_STATUSES == {
+        "failed_analysis",
+        "failed_processing",
+        "failed_reporting",
+    }
+    assert TERMINAL_STATUSES == {"reported", *TERMINAL_FAILURE_STATUSES}
+    assert "completed" not in TERMINAL_STATUSES
+
+
+def test_statuses_module_stays_dependency_free():
+    # cli.py imports this at module top, so it must not drag in requests the way
+    # client.py does -- that would break `clew static` on a bare checkout.
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; import clew.channels.cape.statuses; "
+        "sys.exit(1 if 'requests' in sys.modules else 0)"
+    )
+    assert subprocess.run([sys.executable, "-c", code]).returncode == 0
 
 
 def test_humanize_age_iso_tz_and_future(monkeypatch):
