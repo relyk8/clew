@@ -223,19 +223,47 @@ class CapeClient:
                 f"Copy them to a readable dir and use: clew correlate --cmplog-dir <dir>"
             ) from exc
 
+    def fetch_trace_logs(
+        self,
+        task_id: int,
+        storage_root: str | Path = "/opt/CAPEv2/storage/analyses",
+    ) -> tuple[list[Path], str | None]:
+        """
+        Glob a task's Channel-3 logs, whichever client produced them.
+
+        Returns (logs, kind) where kind is "drtrace" or "cmplog", or (
+        [], None) when the task has neither. drtrace is preferred when both are
+        present: a guest with both clients deployed would otherwise silently
+        correlate against the older, comparison-only logs.
+        """
+        files_dir = Path(storage_root) / str(task_id) / "files"
+        try:
+            for kind in ("drtrace", "cmplog"):
+                logs = sorted(files_dir.glob(f"{kind}.*.log"))
+                if logs:
+                    return logs, kind
+            return [], None
+        except (PermissionError, OSError) as exc:
+            raise CapeError(
+                f"cannot read Channel 3 logs under {files_dir}: {exc}. "
+                f"Copy them to a readable dir and use: clew correlate --log-dir <dir>"
+            ) from exc
+
     def count_cmplog_lines(
         self,
         task_id: int,
         storage_root: str | Path = "/opt/CAPEv2/storage/analyses",
     ) -> int | None:
         """
-        Count real cmplog records (non-comment, non-blank) across a task's logs.
+        Count real trace records (non-comment, non-blank) across a task's logs.
 
         Feeds a dashboard RECORDS column, so it degrades to None (never raises)
-        when the logs are missing or unreadable.
+        when the logs are missing or unreadable. Counts whichever client's logs
+        the task has, so the column stays meaningful across the drtrace
+        transition rather than reading zero for every new run.
         """
         try:
-            logs = self.fetch_cmplog_logs(task_id, storage_root)
+            logs, _kind = self.fetch_trace_logs(task_id, storage_root)
         except CapeError:
             return None
         total = 0

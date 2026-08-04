@@ -79,7 +79,8 @@
 
     "ApiResolution": {
       "type": "string",
-      "enum": ["import", "getprocaddress", "ordinal", "hashed"]
+      "description": "How the call to the API was resolved. The first four are static findings from Channel 2. 'runtime' means Channel 3 observed the call happen under instrumentation without the static pass having enumerated the call site -- so how it was reached was never determined, only that it was.",
+      "enum": ["import", "getprocaddress", "ordinal", "hashed", "runtime"]
     },
 
     "ComparisonOperator": {

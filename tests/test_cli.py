@@ -434,8 +434,8 @@ def test_correlate_task_path_reads_and_enriches(monkeypatch, capsys):
 
     monkeypatch.setattr(
         cape_client.CapeClient,
-        "fetch_cmplog_logs",
-        lambda self, task_id, storage_root: [FIXTURES / "cmplog_synth_01.log"],
+        "fetch_trace_logs",
+        lambda self, task_id, storage_root: ([FIXTURES / "cmplog_synth_01.log"], "cmplog"),
     )
     rc = cli.main(
         [
@@ -457,9 +457,9 @@ def test_correlate_task_cape_error_returns_2(monkeypatch):
     from clew.channels.cape import client as cape_client
 
     def boom(self, task_id, storage_root):
-        raise cape_client.CapeError("cannot read cmplog logs")
+        raise cape_client.CapeError("cannot read Channel 3 logs")
 
-    monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
+    monkeypatch.setattr(cape_client.CapeClient, "fetch_trace_logs", boom)
     rc = cli.main(
         [
             "correlate",
@@ -488,7 +488,7 @@ def test_correlate_source_is_required_and_exclusive():
 
 def test_detonate_no_wait_prints_task_id_and_submits_free_mode(monkeypatch, capsys):
     # Guards the critical free-mode requirement: without options={"free":"yes"}
-    # and package="exe_cmplog", capemon corrupts DynamoRIO and 0 logs land.
+    # and package="exe_drtrace", capemon corrupts DynamoRIO and 0 logs land.
     from clew.channels.cape import client as cape_client
 
     seen = {}
@@ -501,7 +501,7 @@ def test_detonate_no_wait_prints_task_id_and_submits_free_mode(monkeypatch, caps
     monkeypatch.setattr(cape_client.CapeClient, "submit", fake_submit)
     assert cli.main(["detonate", "x.exe"]) == 0
     assert capsys.readouterr().out.strip() == json.dumps({"task_id": 42})
-    assert seen["package"] == "exe_cmplog"
+    assert seen["package"] == "exe_drtrace"
     assert seen["options"] == {"free": "yes"}
 
 
@@ -712,8 +712,8 @@ def _patch_run_stages(monkeypatch, poll_status="reported"):
     monkeypatch.setattr(cape_client.CapeClient, "poll", lambda self, tid, **k: poll_status)
     monkeypatch.setattr(
         cape_client.CapeClient,
-        "fetch_cmplog_logs",
-        lambda self, task_id, storage_root: [FIXTURES / "cmplog_synth_01.log"],
+        "fetch_trace_logs",
+        lambda self, task_id, storage_root: ([FIXTURES / "cmplog_synth_01.log"], "cmplog"),
     )
 
 
@@ -740,7 +740,7 @@ def test_run_detonation_failed_returns_2_without_correlating(monkeypatch, tmp_pa
     def boom(self, task_id, storage_root):
         raise AssertionError("correlate must not run after a failed detonation")
 
-    monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
+    monkeypatch.setattr(cape_client.CapeClient, "fetch_trace_logs", boom)
     assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 2
     # The expensive stage-1 record survives the failed detonation.
     kept = tmp_path / "results" / "runsha.clew.json"
@@ -793,7 +793,7 @@ def test_run_parser_carries_merged_flags():
     assert ns.func is cli._cmd_run
     assert ns.sample == "x.exe"
     # Detonate stage defaults.
-    assert ns.package == "exe_cmplog"
+    assert ns.package == "exe_drtrace"
     assert ns.timeout == 120
     # Correlate stage defaults.
     assert ns.module_base is None
@@ -806,3 +806,88 @@ def test_run_parser_carries_merged_flags():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# ---------- correlate: drtrace logs ----------
+
+
+def _write_drtrace(dir_path):
+    """A minimal drtrace log: a module table, and one observed call whose site
+    matches the 0x00401000 candidate in correlate_input_01.json."""
+    name = "synthetic_pe32.exe".encode("ascii").hex()
+    value = "SbieDll.dll".encode("utf-16-le").hex()
+    (dir_path / "drtrace.1.modules.log").write_text(
+        f"M seq=1 base=0x00400000 end=0x0049a000 name={name}\n"
+    )
+    (dir_path / "drtrace.1.100.log").write_text(
+        "C seq=10 T100 api=GetModuleHandleW site=0x00401005 "
+        f"a0=0x0019fb14 s0=W:{value}\n"
+        "R seq=11 T100 api=GetModuleHandleW site=0x00401005 rv=0x00000000\n"
+    )
+
+
+def test_correlate_drtrace_dir_produces_runtime_candidates(tmp_path, capsys):
+    _write_drtrace(tmp_path)
+    out = tmp_path / "out.json"
+    rc = cli.main(
+        [
+            "correlate",
+            "--record", str(FIXTURES / "correlate_input_01.json"),
+            "--log-dir", str(tmp_path),
+            "-o", str(out),
+        ]
+    )
+    assert rc == 0
+    record = json.loads(out.read_text())
+    matched = next(c for c in record["candidates"] if c["call_site_va"] == "0x00401000")
+    # The observed argument reached the static candidate at that call site.
+    assert "SbieDll.dll" in [v["value"] for v in matched["candidate_values"]]
+    # And the return value became a candidate of Channel 3's own making.
+    produced = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert produced and all(c["evidence"]["channels"] == ["drio"] for c in produced)
+
+
+def test_correlate_cmplog_dir_alias_still_accepted(tmp_path):
+    """--cmplog-dir is in usage.md, the journal, and muscle memory."""
+    _write_drtrace(tmp_path)
+    out = tmp_path / "out.json"
+    assert cli.main(
+        [
+            "correlate",
+            "--record", str(FIXTURES / "correlate_input_01.json"),
+            "--cmplog-dir", str(tmp_path),
+            "-o", str(out),
+        ]
+    ) == 0
+    assert json.loads(out.read_text())["candidates"]
+
+
+def test_drtrace_logs_win_when_both_families_are_present(tmp_path):
+    """A guest with both clients deployed must not silently correlate against
+    the older comparison-only logs."""
+    _write_drtrace(tmp_path)
+    (tmp_path / "cmplog.1.100.log").write_text(
+        "T100 pc=0x00401010 cmp src0=imm=0x1 src1=imm=0x2\n"
+    )
+    logs, kind = cli._logs_from_dir(tmp_path)
+    assert kind == "drtrace"
+    assert all(p.name.startswith("drtrace.") for p in logs)
+
+
+def test_correlate_missing_logs_warns_and_still_writes(tmp_path, capsys):
+    """An empty log set is honest, not a failure: a sample that defeats
+    DynamoRIO legitimately produces none. But it must say so, because the result
+    is otherwise indistinguishable from a sample that simply had nothing to
+    observe."""
+    out = tmp_path / "out.json"
+    rc = cli.main(
+        [
+            "correlate",
+            "--record", str(FIXTURES / "correlate_input_01.json"),
+            "--log-dir", str(tmp_path),
+            "-o", str(out),
+        ]
+    )
+    assert rc == 0
+    assert "nothing to correlate" in capsys.readouterr().err
+    assert json.loads(out.read_text())["candidates"]

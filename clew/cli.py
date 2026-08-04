@@ -123,9 +123,10 @@ def _add_correlate_subparser(sub, parent) -> None:
     s = sub.add_parser(
         "correlate",
         parents=[parent],
-        help="join runtime cmp/test operands (Channel 3) onto a static clew record",
-        description="Enrich a static clew record with proximity-correlated comparison "
-        "operands from DynamoRIO cmplog logs.",
+        help="join Channel 3 runtime observations onto a static clew record",
+        description="Enrich a static clew record from DynamoRIO logs: comparison "
+        "operands, and (drtrace logs only) the observed API calls, their arguments, "
+        "out-parameters and return values.",
     )
     s.add_argument(
         "--record",
@@ -136,13 +137,17 @@ def _add_correlate_subparser(sub, parent) -> None:
     # path) or a CAPE task id (reads logs from CAPE storage on this host).
     source = s.add_mutually_exclusive_group(required=True)
     source.add_argument(
+        # --cmplog-dir kept as an alias: it is in usage.md, in the journal, and
+        # in muscle memory, and the directory may still hold cmplog logs.
+        "--log-dir",
         "--cmplog-dir",
-        help="dir of cmplog.*.log files (offline; no CAPE needed)",
+        dest="log_dir",
+        help="dir of drtrace.*.log or cmplog.*.log files (offline; no CAPE needed)",
     )
     source.add_argument(
         "--task",
         type=int,
-        help="CAPE task id; reads cmplog.*.log from CAPE storage",
+        help="CAPE task id; reads the trace logs from CAPE storage",
     )
     s.add_argument(
         "--module-base",
@@ -177,14 +182,14 @@ def _add_detonate_subparser(sub, parent) -> None:
         "detonate",
         parents=[parent],
         help="submit a sample to CAPE for DynamoRIO comparison logging (Channel 3)",
-        description="Submit a PE32 sample to CAPE under the exe_cmplog package and emit "
+        description="Submit a PE32 sample to CAPE under the exe_drtrace package and emit "
         "the task id (with --wait, block for the terminal status).",
     )
     s.add_argument("sample", help="path to the PE32 sample")
     s.add_argument(
         "--package",
-        default="exe_cmplog",
-        help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
+        default="exe_drtrace",
+        help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
     )
     s.add_argument(
         "--timeout",
@@ -224,8 +229,8 @@ def _add_tasks_subparser(sub, parent) -> None:
     s = sub.add_parser(
         "tasks",
         parents=[parent],
-        help="list CAPE tasks with a cmplog RECORDS column (a dashboard for Channel 3)",
-        description="List CAPE analysis tasks as a table (or JSON), showing the cmplog "
+        help="list CAPE tasks with a trace RECORDS column (a dashboard for Channel 3)",
+        description="List CAPE analysis tasks as a table (or JSON), showing the trace "
         "record count for terminal tasks. With --watch, refresh in place.",
     )
     s.add_argument(
@@ -273,7 +278,7 @@ def _add_run_subparser(sub, parent) -> None:
         "run",
         parents=[parent],
         help="run static -> detonate --wait -> correlate end to end for one sample",
-        description="Chain the static pipeline, a CAPE cmplog detonation, and proximity "
+        description="Chain the static pipeline, a CAPE drtrace detonation, and "
         "correlation into one enriched clew record for a single sample.",
     )
     s.add_argument("sample", help="path to the PE32 sample")
@@ -282,8 +287,8 @@ def _add_run_subparser(sub, parent) -> None:
     # Detonate stage.
     s.add_argument(
         "--package",
-        default="exe_cmplog",
-        help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
+        default="exe_drtrace",
+        help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
     )
     s.add_argument(
         "--timeout",
@@ -312,7 +317,7 @@ def _add_run_subparser(sub, parent) -> None:
     s.add_argument(
         "--storage-root",
         default="/opt/CAPEv2/storage/analyses",
-        help="CAPE analyses storage root (read for the cmplog logs)",
+        help="CAPE analyses storage root (read for the trace logs)",
     )
     s.add_argument(
         "--max-cmp-records",
@@ -473,12 +478,58 @@ def _cmd_static(args) -> int:
     return 0
 
 
-def _cmd_correlate(args) -> int:
-    # Lazy imports: keep `clew static` and the offline suite free of the CAPE
-    # client (which pulls requests) and the correlator.
+def _logs_from_dir(log_dir: Path) -> tuple[list[Path], str | None]:
+    """(logs, kind) for a local directory. drtrace wins when both are present."""
+    for kind in ("drtrace", "cmplog"):
+        logs = sorted(log_dir.glob(f"{kind}.*.log"))
+        if logs:
+            return logs, kind
+    return [], None
+
+
+def _apply_correlation(record: dict, logs: list[Path], kind: str | None, args, log) -> dict:
+    """Run the Channel 3 correlation appropriate to the log family.
+
+    Shared by `correlate` and `run` so the two verbs cannot drift on which
+    parser, which entry point, or which caps they use.
+    """
+    if kind == "drtrace":
+        from clew.channels.cape.correlate import correlate_trace
+        from clew.channels.cape.drtrace_parse import parse_drtrace_files
+
+        trace = parse_drtrace_files(logs, max_records=args.max_cmp_records)
+        log.info(
+            "parsed %d comparisons, %d API calls, %d module loads from %d drtrace log(s)",
+            len(trace.comparisons),
+            len(trace.calls),
+            len(trace.modules),
+            len(logs),
+        )
+        return correlate_trace(record, trace, module_base=args.module_base)
+
     from clew.channels.cape.cmplog_parse import parse_cmplog_files
     from clew.channels.cape.correlate import correlate_record
 
+    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
+    log.info("parsed %d comparison records from %d cmplog log(s)", len(cmp_records), len(logs))
+    return correlate_record(record, cmp_records, module_base=args.module_base)
+
+
+def _correlation_summary(record: dict) -> str:
+    candidates = record["candidates"]
+    with_cmps = [c for c in candidates if c.get("comparison_candidates")]
+    total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
+    produced = [c for c in candidates if c.get("api_resolution") == "runtime"]
+    summary = (
+        f"{len(candidates)} candidates, "
+        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
+    )
+    if produced:
+        summary += f", {len(produced)} produced from observed API calls"
+    return summary
+
+
+def _cmd_correlate(args) -> int:
     log = logging.getLogger("clew.cli")
 
     record_path = Path(args.record)
@@ -488,36 +539,33 @@ def _cmd_correlate(args) -> int:
         log.error("record not found: %s", record_path)
         return 1
 
-    if args.cmplog_dir is not None:
-        cmplog_dir = Path(args.cmplog_dir)
-        if not cmplog_dir.is_dir():
-            log.error("cmplog dir not found: %s", cmplog_dir)
+    if args.log_dir is not None:
+        log_dir = Path(args.log_dir)
+        if not log_dir.is_dir():
+            log.error("log dir not found: %s", log_dir)
             return 1
-        logs = sorted(cmplog_dir.glob("cmplog.*.log"))
+        logs, kind = _logs_from_dir(log_dir)
         if not logs:
-            log.warning("no cmplog.*.log files in %s (comparisons will be empty)", cmplog_dir)
+            log.warning(
+                "no drtrace.*.log or cmplog.*.log files in %s (nothing to correlate)", log_dir
+            )
     else:
+        # Lazy import: keep the CAPE client (which pulls requests) out of `clew
+        # static` and the offline suite.
         from clew.channels.cape.client import CapeClient, CapeError
 
         try:
-            # fetch_cmplog_logs reads CAPE's on-disk storage (no REST call), so
+            # fetch_trace_logs reads CAPE's on-disk storage (no REST call), so
             # the client needs no base URL here (correlate has no --cape-url).
-            logs = CapeClient("").fetch_cmplog_logs(args.task, args.storage_root)
+            logs, kind = CapeClient("").fetch_trace_logs(args.task, args.storage_root)
         except CapeError as e:
             log.error("%s", e)
             return 2
+        if not logs:
+            log.warning("task %s has no Channel 3 logs (nothing to correlate)", args.task)
 
-    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
-    log.info("parsed %d comparison records from %d log(s)", len(cmp_records), len(logs))
-    enriched = correlate_record(record, cmp_records, module_base=args.module_base)
-
-    with_cmps = [c for c in enriched["candidates"] if c.get("comparison_candidates")]
-    total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
-    summary = (
-        f"{len(enriched['candidates'])} candidates, "
-        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
-    )
-    _emit_record(enriched, args.output, summary)
+    enriched = _apply_correlation(record, logs, kind, args, log)
+    _emit_record(enriched, args.output, _correlation_summary(enriched))
     log.info("done")
     return 0
 
@@ -825,21 +873,14 @@ def _cmd_run(args) -> int:
     # empty log set is honest, not a failure -- some samples defeat DynamoRIO and
     # legitimately yield zero comparisons.
     try:
-        logs = c.fetch_cmplog_logs(tid, args.storage_root)
+        logs, kind = c.fetch_trace_logs(tid, args.storage_root)
     except CapeError as e:
         log.error("%s", e)
         _log_resume(log, checkpoint, tid)
         return 2
-    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
-    enriched = correlate_record(record, cmp_records, module_base=args.module_base)
-    with_cmps = [cand for cand in enriched["candidates"] if cand.get("comparison_candidates")]
-    log.info("stage 3/3 correlate: %d candidates with comparisons", len(with_cmps))
-
-    total_cmps = sum(len(cand["comparison_candidates"]) for cand in with_cmps)
-    summary = (
-        f"{len(enriched['candidates'])} candidates, "
-        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
-    )
+    enriched = _apply_correlation(record, logs, kind, args, log)
+    summary = _correlation_summary(enriched)
+    log.info("stage 3/3 correlate: %s", summary)
     _emit_record(enriched, args.output, summary)
     if args.output == Path("-"):
         # Pipe mode: _emit_record only streamed to stdout, so refresh the
