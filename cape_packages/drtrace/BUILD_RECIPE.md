@@ -32,6 +32,37 @@ snapshot, `qemu-img`, sudo). **[AGENT]** is drivable over the CAPE agent
 
 ---
 
+## Pre-flight: syntax-check on the Linux host  [AGENT]
+
+Do this before booting the guest. It will not produce a `.dll` — DR's CMake is
+MSVC-only — but MinGW supplies `windows.h` and targets 32-bit Windows, so the DR
+headers parse and the client gets a real syntax and type check. That is the
+difference between finding a typo here and burning a VM session on it.
+
+```bash
+sudo apt install gcc-mingw-w64-i686        # one time
+SDK=/home/relyk8/dr-sdk/DynamoRIO-Windows-11.91.20651
+cd cape_packages/drtrace
+python ../../scripts/gen_api_table.py       # api_table.h must be current
+i686-w64-mingw32-gcc -fsyntax-only -DWINDOWS -DX86_32 -Wall -Wextra \
+  -Wno-unused-parameter -I. -I$SDK/include -I$SDK/ext/include drtrace.c
+```
+
+`-DX86_32` is the one that matters: DR derives `X86` from it, and passing `-DX86`
+directly leaves the architecture undefined and buries you in errors from
+`dr_defines.h`.
+
+Expect exactly one warning, from DR's own headers ignoring an MSVC
+`#pragma warning`. Anything else is yours. `cape_packages/cmplog/cmplog.c`
+— which really did build under MSVC — produces the same single warning, so it is
+a useful control if you suspect the check itself.
+
+**What this does not catch:** linking (so a missing
+`use_DynamoRIO_extension` shows up only on the guest), MSVC-specific
+diagnostics, and anything about DR's runtime behaviour.
+
+---
+
 ## 0. Prereqs / state  [USER]
 
 Revert to a **running/agent-up** snapshot so the CAPE agent comes up:
