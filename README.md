@@ -58,6 +58,9 @@ here. The full contract is in [docs/schema.md](docs/schema.md).
 pipx install git+https://github.com/relyk8/clew
 ```
 
+Or install a pinned build from the
+[releases page](https://github.com/relyk8/clew/releases).
+
 Clew needs a licensed Binary Ninja, a capa rules checkout, and, for the dynamic
 step, a CAPE instance. Configure them once and check the result with `clew
 doctor`. See [docs/installation.md](docs/installation.md) for every installation
