@@ -133,7 +133,8 @@ clew tasks [--watch] [--json]
 | Option | Meaning |
 |---|---|
 | `--status STATUS` | only tasks with this status (e.g. `reported`) |
-| `--limit N` | show at most N tasks (newest first) |
+| `--limit N` | show at most N tasks, newest first (default: 10) |
+| `--all` | show every task instead of the newest N |
 | `--json` | emit rows as JSON instead of a table |
 | `--watch` | redraw in place until Ctrl-C |
 | `--interval SECS` | refresh interval with `--watch` (default 2.0) |
@@ -142,6 +143,11 @@ clew tasks [--watch] [--json]
 
 The RECORDS column shows how many comparison records each terminal task produced,
 so a sample that defeats instrumentation reads 0 at a glance.
+
+The dashboard is a recent-activity view, so it shows the newest 10 tasks by
+default; `--all` gives the full history. The window is not only cosmetic — each
+terminal row costs a filesystem read to count its cmplog records, and that
+history only grows.
 
 `--watch` repaints the same table over itself each interval rather than scrolling,
 and leaves the last frame on screen when you Ctrl-C out. That only applies to a

@@ -39,6 +39,10 @@ from clew.pipeline import (
 )
 
 
+DEFAULT_TASKS_LIMIT = 10
+"""How many tasks `clew tasks` shows before you ask for more."""
+
+
 def _add_static_flags(parser) -> None:
     # The static-stage flags, shared by the `static` and `run` verbs. Factored so
     # the two surfaces cannot drift on defaults. Excludes the `sample` positional
@@ -233,11 +237,20 @@ def _add_tasks_subparser(sub, parent) -> None:
         default=None,
         help="only show tasks with this status (e.g. reported, failed_analysis)",
     )
-    s.add_argument(
+    # The dashboard is a "what happened lately" view, so it defaults to a window
+    # rather than the whole history: every terminal row costs a filesystem read
+    # for its RECORDS count, and that history only grows. --all opts back in.
+    view = s.add_mutually_exclusive_group()
+    view.add_argument(
         "--limit",
         type=int,
-        default=None,
-        help="show at most this many tasks (newest first)",
+        default=DEFAULT_TASKS_LIMIT,
+        help=f"show at most this many tasks, newest first (default: {DEFAULT_TASKS_LIMIT})",
+    )
+    view.add_argument(
+        "--all",
+        action="store_true",
+        help="show every task, not just the newest --limit",
     )
     s.add_argument(
         "--json",
@@ -735,10 +748,14 @@ def _cmd_tasks(args) -> int:
     log = logging.getLogger("clew.cli")
     c = CapeClient(args.cape_url)
 
+    # --all is the escape hatch from the default window; list_tasks treats None
+    # as unlimited.
+    limit = None if args.all else args.limit
+
     def render() -> str:
         # The single source of rendered output: the one-shot path prints this,
         # and every watch frame redraws exactly this.
-        tasks = c.list_tasks(limit=args.limit, status=args.status)
+        tasks = c.list_tasks(limit=limit, status=args.status)
         rows = _build_display_rows(tasks, c, args.storage_root)
         if args.json:
             return json.dumps(rows, indent=2)

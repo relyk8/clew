@@ -655,6 +655,48 @@ def test_tasks_json_includes_records(monkeypatch, capsys):
     assert rows[1]["records"] == "24429"
 
 
+def _capture_limit(monkeypatch):
+    # list_tasks does the windowing, so assert on the limit it is handed.
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+
+    def fake_list(self, limit=None, status=None):
+        seen["limit"] = limit
+        return []
+
+    monkeypatch.setattr(cape_client.CapeClient, "list_tasks", fake_list)
+    return seen
+
+
+def test_tasks_defaults_to_a_window(monkeypatch, capsys):
+    # The dashboard is a recent-activity view: unbounded history costs a
+    # filesystem read per terminal row and only grows.
+    seen = _capture_limit(monkeypatch)
+    assert cli.main(["tasks"]) == 0
+    assert seen["limit"] == cli.DEFAULT_TASKS_LIMIT
+
+
+def test_tasks_all_shows_full_history(monkeypatch, capsys):
+    # --all opts back into everything; list_tasks reads None as unlimited.
+    seen = _capture_limit(monkeypatch)
+    assert cli.main(["tasks", "--all"]) == 0
+    assert seen["limit"] is None
+
+
+def test_tasks_explicit_limit_still_wins(monkeypatch, capsys):
+    seen = _capture_limit(monkeypatch)
+    assert cli.main(["tasks", "--limit", "3"]) == 0
+    assert seen["limit"] == 3
+
+
+def test_tasks_limit_and_all_are_mutually_exclusive():
+    # Asking for both a window and everything is a contradiction, so argparse
+    # rejects it rather than silently picking one.
+    with pytest.raises(SystemExit):
+        cli.main(["tasks", "--limit", "3", "--all"])
+
+
 def test_tasks_cape_error_returns_2(monkeypatch):
     from clew.channels.cape import client as cape_client
 
