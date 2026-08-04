@@ -1,59 +1,9 @@
 # Clew — usage
 
-The command reference and the end-to-end workflow. For the problem Clew solves and
-its approach, see [theory.md](theory.md). For the record it produces, see
-[schema.md](schema.md).
-
-## Setup
-
-Install Clew into an environment of its own, so there is nothing to activate
-before a run:
-
-```bash
-pipx install git+https://github.com/relyk8/clew
-```
-
-`uv tool install git+https://github.com/relyk8/clew` is equivalent. To work on
-Clew itself, clone it and install editable with `pip install -e '.[dev,analysis]'`.
-
-### Configuration
-
-Clew reads its machine-specific settings from the environment, and will load them
-from a file so they do not have to be exported before every run. Sources, in
-decreasing precedence:
-
-1. the process environment, so a one-off override still works
-2. `./.env` in the working directory, the per-checkout convention
-3. `~/.config/clew/config.env`, or `$XDG_CONFIG_HOME/clew/config.env`
-
-Nothing already set is ever overwritten. The file format is the `KEY=value`
-subset of shell, including an optional `export` prefix, so a file written to be
-`source`d can be used as-is.
-
-```bash
-mkdir -p ~/.config/clew
-cp .env.example ~/.config/clew/config.env
-chmod 600 ~/.config/clew/config.env    # it holds a Binary Ninja password
-```
-
-The settings, by channel:
-
-| Variable | Purpose |
-|---|---|
-| `CLEW_BN_API` | directory containing the `binaryninja` package (Channel 2) |
-| `BN_ENTERPRISE_SERVER` / `_USERNAME` / `_PASSWORD` | Binary Ninja Enterprise license checkout |
-| `CLEW_CAPA_RULES` / `CLEW_CAPA_SIGS` | capa rules checkout and its signatures (Channel 0) |
-| `CAPE_BASE_URL` | CAPE instance, used only by the dynamic commands (Channel 3) |
-
-`CLEW_BN_API` matters when Clew is installed in an isolated environment. Binary
-Ninja's `install_api.py` writes a `binaryninja.pth` into one specific
-`site-packages`, which a pipx or uv install does not share, so pointing this at
-the API directory is what makes `import binaryninja` resolve. Leave it unset if
-Binary Ninja already imports in Clew's environment.
-
-The static pipeline needs a Binary Ninja 4.2.6455 Ultimate Enterprise license
-checked out for the process; the credentials above are what the in-process
-checkout uses.
+The command reference and the end-to-end workflow. To install Clew and point it
+at Binary Ninja, capa, and CAPE first, see [installation.md](installation.md).
+For the problem Clew solves and its approach, see [theory.md](theory.md). For the
+record it produces, see [schema.md](schema.md).
 
 ## The pipeline end to end
 
