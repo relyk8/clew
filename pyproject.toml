@@ -1,6 +1,6 @@
 [project]
 name = "clew"
-version = "0.4.0"
+version = "0.4.1"
 description = "Extracts a per-sample seed corpus of the values a PE32 sample's environment checks compare against, keyed to the API call sites that consume them."
 readme = "README.md"
 requires-python = ">=3.10"
