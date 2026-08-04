@@ -28,7 +28,9 @@ configuration below exists to locate them:
 - **capa rules and signatures**, as a checkout. capa 9.4.0 ships its signatures
   in its source tree rather than the installed package, so the two paths differ.
 - **A CAPE instance** with the cmplog DynamoRIO package, for the dynamic
-  commands only. The static pipeline runs without it.
+  commands only. The static pipeline runs without it. Standing this up is more
+  involved than the others, because the component doing the logging is Clew's
+  own: see [channel3_setup.md](channel3_setup.md).
 
 capa and CAPE are enrichment: if they are missing or misconfigured, Clew degrades
 rather than failing. Binary Ninja is not.
