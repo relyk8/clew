@@ -39,6 +39,16 @@ class CapaRunError(CapaError):
     """capa ran but returned a nonzero exit code."""
 
 
+class CapaTimeoutError(CapaError):
+    """capa did not finish within its timeout.
+
+    A CapaError subclass on purpose. subprocess raises TimeoutExpired, which
+    descends from SubprocessError and so slipped past every `except CapaError`
+    in the pipeline, crashing a run that the degradation policy says should
+    continue with no capa signal.
+    """
+
+
 class CapaParseError(CapaError):
     """capa returned output that wasn't parseable JSON."""
 
@@ -89,6 +99,12 @@ def run_capa(
         )
     except FileNotFoundError as e:
         raise CapaNotFoundError(f"capa binary not found: {capa_bin}") from e
+    except subprocess.TimeoutExpired as e:
+        # Convert to the channel's own error type so the pipeline's
+        # `except CapaError` degrades to no_capa_signal, which is what the
+        # degradation policy promises. The message keeps the words "timed out"
+        # because scripts/batch_channel0.py sniffs for them.
+        raise CapaTimeoutError(f"capa timed out after {timeout}s on {sample_path}") from e
 
     if proc.returncode != 0:
         stderr = proc.stderr.decode("utf-8", errors="replace")

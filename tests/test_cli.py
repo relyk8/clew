@@ -6,6 +6,7 @@ heavy import, and the stale-cache / success paths monkeypatch
 run_static_pipeline so main()'s contract is tested in isolation.
 """
 
+import argparse
 import copy
 import json
 import logging
@@ -806,3 +807,49 @@ def test_run_parser_carries_merged_flags():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# --- --capa: one flag carrying both the on/off switch and the timeout --------
+
+
+def test_capa_off_by_default():
+    args = cli.build_parser().parse_args(["static", "s.exe"])
+    assert args.capa_timeout is None
+
+
+def test_capa_bare_uses_the_default_timeout():
+    args = cli.build_parser().parse_args(["static", "s.exe", "--capa"])
+    assert args.capa_timeout == cli.DEFAULT_CAPA_TIMEOUT
+
+
+def test_capa_accepts_an_explicit_timeout():
+    args = cli.build_parser().parse_args(["static", "s.exe", "--capa", "900"])
+    assert args.capa_timeout == 900
+
+
+def test_capa_accepts_the_equals_form_before_the_sample():
+    # The only way to give a value ahead of the positional, since nargs="?"
+    # would otherwise eat the sample.
+    args = cli.build_parser().parse_args(["static", "--capa=900", "s.exe"])
+    assert args.capa_timeout == 900
+
+
+def test_capa_swallowing_the_sample_gives_an_actionable_error(capsys):
+    # `clew static --capa sample.exe` is the ordering argparse cannot
+    # disambiguate. It must fail, but the message has to name the two forms
+    # that work rather than saying "invalid int value".
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["static", "--capa", "s.exe"])
+    err = capsys.readouterr().err
+    assert "timeout in seconds" in err
+    assert "--capa=600" in err
+
+
+def test_capa_timeout_rejects_nonsense_but_explains():
+    with pytest.raises(argparse.ArgumentTypeError) as excinfo:
+        cli._capa_timeout("banana")
+    assert "timeout in seconds" in str(excinfo.value)
+
+
+def test_capa_timeout_parses_an_integer():
+    assert cli._capa_timeout("42") == 42

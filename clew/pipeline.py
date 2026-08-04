@@ -155,6 +155,7 @@ def run_static_pipeline(
     capa_sigs_path: Path,
     floss_sigs_path: Optional[Path] = None,
     capa_bin: str = "capa",
+    capa_timeout: Optional[int] = None,
     include_unresolved: bool = True,
     run_license_checkout: bool = True,
     quiet_floss: bool = True,
@@ -181,17 +182,27 @@ def run_static_pipeline(
     cache_dir = Path(floss_cache_dir) if floss_cache_dir else Path(DEFAULT_FLOSS_CACHE)
     _log.info("sample %s (sha256 %s)", sample.name, sha[:12])
 
-    _log.info("capa: detecting techniques...")
-    t = time.perf_counter()
-    capa_techniques, derivation_status = _run_capa_stage(
-        sample, capa_rules_path, capa_sigs_path, capa_bin
-    )
-    _log.info(
-        "capa: %d technique(s), derivation_status=%s (%.1fs)",
-        len(capa_techniques),
-        derivation_status,
-        time.perf_counter() - t,
-    )
+    if capa_timeout is None:
+        # capa is off unless asked for. It is the most expensive stage by a wide
+        # margin and contributes no candidate values: it classifies the sample
+        # rather than extracting from it. derivation_status stays null, which the
+        # schema already defines as "classification was skipped" and which is
+        # deliberately distinct from no_capa_signal, i.e. capa ran and found
+        # nothing usable.
+        capa_techniques, derivation_status = [], None
+        _log.info("capa: skipped (pass --capa to enable)")
+    else:
+        _log.info("capa: detecting techniques...")
+        t = time.perf_counter()
+        capa_techniques, derivation_status = _run_capa_stage(
+            sample, capa_rules_path, capa_sigs_path, capa_bin, capa_timeout
+        )
+        _log.info(
+            "capa: %d technique(s), derivation_status=%s (%.1fs)",
+            len(capa_techniques),
+            derivation_status,
+            time.perf_counter() - t,
+        )
 
     t = time.perf_counter()
     floss_index = _run_floss_stage(
@@ -219,15 +230,24 @@ def run_static_pipeline(
     )
 
 
-def _run_capa_stage(sample, rules_path, sigs_path, capa_bin):
+def _run_capa_stage(sample, rules_path, sigs_path, capa_bin, timeout):
     from clew.channels import capa
 
     try:
         result = capa.run_capa(
-            sample, rules_path=rules_path, sigs_path=sigs_path, capa_bin=capa_bin
+            sample,
+            rules_path=rules_path,
+            sigs_path=sigs_path,
+            capa_bin=capa_bin,
+            timeout=timeout,
         )
-    except capa.CapaError:
-        return [], "no_capa_signal"  # capa error/timeout == no usable signal
+    except capa.CapaError as e:
+        # capa ran (or tried to) and produced nothing usable. Distinct from the
+        # skip path above, which leaves derivation_status null. Logged because a
+        # silent downgrade to no_capa_signal is indistinguishable in the record
+        # from a sample capa genuinely had nothing to say about.
+        _log.warning("capa: %s -- continuing with no_capa_signal", e)
+        return [], "no_capa_signal"
     return capa_techniques_and_status(result)
 
 

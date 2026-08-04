@@ -39,6 +39,27 @@ from clew.pipeline import (
     run_static_pipeline,
 )
 
+# Timeout used when --capa is given without a value. capa is a subprocess and a
+# hostile or merely large sample can hang it; 300s proved too tight in practice
+# (autoit3 exceeded it on a loaded box), so the default that applies when the
+# analyst opts in is deliberately generous.
+DEFAULT_CAPA_TIMEOUT = 600
+
+
+def _capa_timeout(value: str):
+    # --capa takes an optional value, so `clew static --capa sample.exe` makes
+    # argparse swallow the sample as the timeout. That is unavoidable with
+    # nargs="?", but the stock error ("invalid int value: 'sample.exe'") explains
+    # nothing, so name both working forms instead.
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"expected a timeout in seconds, got {value!r}. If that is your sample, "
+            f"put --capa after it (clew static SAMPLE --capa) or attach the value "
+            f"with '=' (--capa=600)."
+        ) from None
+
 
 def _add_static_flags(parser) -> None:
     # The static-stage flags, shared by the `static` and `run` verbs. Factored so
@@ -67,6 +88,21 @@ def _add_static_flags(parser) -> None:
         default=default_capa_bin(),
         help="capa executable to invoke (default: the capa installed alongside clew, "
         "else capa on PATH)",
+    )
+    # One flag, two jobs: presence enables Channel 0, and the optional value is
+    # its timeout. capa is off by default because it is the slowest stage and
+    # contributes no candidate values.
+    parser.add_argument(
+        "--capa",
+        dest="capa_timeout",
+        nargs="?",
+        type=_capa_timeout,
+        const=DEFAULT_CAPA_TIMEOUT,
+        default=None,
+        metavar="SECONDS",
+        help=f"run capa (Channel 0), optionally with a timeout in seconds "
+        f"(default {DEFAULT_CAPA_TIMEOUT}); omitted entirely, capa does not run and "
+        f"derivation_status is null",
     )
     parser.add_argument(
         "--no-license-checkout",
@@ -479,6 +515,7 @@ def _cmd_static(args) -> int:
             capa_sigs_path=args.capa_sigs,
             floss_sigs_path=args.floss_sigs,
             capa_bin=args.capa_bin,
+            capa_timeout=args.capa_timeout,
             include_unresolved=not args.exclude_unresolved,
             run_license_checkout=not args.no_license_checkout,
             quiet_floss=not args.verbose_floss,
@@ -498,11 +535,16 @@ def _cmd_static(args) -> int:
         for c in record["candidates"]
         if any(v.get("value") is not None for v in c["candidate_values"])
     )
-    summary = (
-        f"{len(record['candidates'])} candidates ({resolved} with values), "
-        f"derivation_status={record['derivation_status']}, "
-        f"{len(record['capa_techniques'])} capa techniques"
-    )
+    # A null derivation_status means capa was not run at all. Printing the bare
+    # None would read as a failure rather than a deliberate skip.
+    if record["derivation_status"] is None:
+        capa_part = "capa not run"
+    else:
+        capa_part = (
+            f"derivation_status={record['derivation_status']}, "
+            f"{len(record['capa_techniques'])} capa techniques"
+        )
+    summary = f"{len(record['candidates'])} candidates ({resolved} with values), {capa_part}"
     _emit_record(record, args.output, summary)
     log.info("done")
     return 0
@@ -797,6 +839,7 @@ def _cmd_run(args) -> int:
             capa_sigs_path=args.capa_sigs,
             floss_sigs_path=args.floss_sigs,
             capa_bin=args.capa_bin,
+            capa_timeout=args.capa_timeout,
             include_unresolved=not args.exclude_unresolved,
             run_license_checkout=not args.no_license_checkout,
             quiet_floss=not args.verbose_floss,
