@@ -61,10 +61,10 @@ pipx install git+https://github.com/relyk8/clew
 Or install a pinned build from the
 [releases page](https://github.com/relyk8/clew/releases).
 
-Clew needs a licensed Binary Ninja, a capa rules checkout, and, for the dynamic
-step, a CAPE instance. Configure them once and check the result with `clew
-doctor`. See [docs/installation.md](docs/installation.md) for every installation
-and configuration method.
+Clew needs a licensed Binary Ninja. capa (`--capa`) and the dynamic step need a
+capa rules checkout and a CAPE instance respectively. Configure once and check
+with `clew doctor`. See [docs/installation.md](docs/installation.md) for every
+installation and configuration method.
 
 ## Usage
 

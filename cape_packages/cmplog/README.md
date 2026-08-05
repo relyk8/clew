@@ -21,7 +21,7 @@ kind+hex value) to a per-thread file `cmplog.<pid>.<tid>.log` under
 `C:\cmp_logs` (overridable via `-logdir`).
 
 `OP_sub`, the `cmov*` / `set*` families, `cmpxchg`, and string compares are
-documented candidate future additions; the draft deliberately starts narrow
+documented candidate future additions; the client deliberately starts narrow
 (`cmp`/`test`) for signal-to-noise.
 
 ## Status

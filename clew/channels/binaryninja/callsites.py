@@ -6,7 +6,7 @@ sample. Channel 2 is the *call-site* channel: it contributes the
 `evidence.channels == ["bn_xref"]` half of a clew record — *where* an API
 is called and *how* it was resolved — never the string values that flow
 into those calls (that is Channel 1 / FLOSS) and never the dataflow that
-joins the two (that is Unit 4, `clew/channels/binaryninja/dataflow.py`).
+joins the two (the dataflow bridge, `clew/channels/binaryninja/dataflow.py`).
 
 Resolution modes detected in v1 (maps onto the schema `api_resolution`
 enum):
@@ -28,7 +28,7 @@ Output: this module produces an *intermediate* artifact (BNCallSites ->
 JSON), NOT finished clew schema records. It has no values, no dataflow,
 no comparison operators — those fields get filled by later units once
 FLOSS values and MLIL dataflow exist to fill them. The intermediate JSON
-is independently testable and is the clean input to Unit 4's bridge.
+is independently testable and is the clean input to the dataflow bridge.
 A thin `to_partial_candidates()` helper is provided for the eventual
 schema mapping, but it emits call-site stubs only and is not the
 module's primary product.
@@ -172,7 +172,7 @@ class BNCallSites:
         """Emit call-site *stubs* in the shape of schema candidate records,
         with value/dataflow/comparison fields left for later units to fill.
 
-        NOT the module's primary output. This exists so Unit 4 can attach
+        NOT the module's primary output. This exists so the bridge can attach
         FLOSS values and dataflow paths to a ready-made skeleton rather
         than rebuilding it. Only schema-emittable resolutions are included.
         """
@@ -184,7 +184,7 @@ class BNCallSites:
                     "function_va": f"0x{cs.function_va:08x}",
                     "api_name": cs.api_name,
                     "api_resolution": cs.api_resolution,
-                    # everything below is a placeholder filled by Unit 4+:
+                    # everything below is a placeholder filled by the bridge:
                     "parameter_index": None,
                     "comparison_operator": "unknown",
                     "evidence": {
@@ -277,7 +277,8 @@ def run_bn_callsites(
         except Exception as exc:  # noqa: BLE001
             raise BNNotAvailableError(
                 f"Enterprise license checkout failed: {exc}. "
-                "Did you source bn_env.sh? See the setup doc."
+                "Are the Binary Ninja Enterprise credentials set? "
+            "See docs/binary_ninja_headless_setup.md."
             ) from exc
     else:
         return _enumerate()
@@ -289,7 +290,7 @@ def enumerate_with_view(
     sample_path: str = "",
     sample_sha256: Optional[str] = None,
 ) -> BNCallSites:
-    """Unit 3 against an already-open, already-analysed BinaryView.
+    """Enumerate call sites in an already-open, already-analysed BinaryView.
 
     The single-analysis orchestrator entry point, mirroring
     clew.channels.binaryninja.dataflow.bridge_with_view. The orchestrator opens the view
@@ -432,7 +433,7 @@ def _getprocaddress_call_sites(bv, MediumLevelILOperation, SymbolType) -> list:
 
     v1 scope: shallow, same-function association (a GetProcAddress whose
     constant string arg precedes an indirect call in the same function).
-    Deep SSA tracing of the resolved pointer to its exact use is Unit 4's
+    Deep SSA tracing of the resolved pointer to its exact use is the bridge's
     job; here we only recover enough to NAME the call.
     """
     sites: list[CallSite] = []
@@ -505,7 +506,7 @@ def _is_forwarder_thunk(func) -> bool:
 
     Heuristic: one basic block of exactly ONE instruction. A true import thunk is
     a single `jmp [IAT]`; a two-instruction `call [IAT]; ret` is a real wrapper
-    function, not a thunk, and must keep its call site (scout #6).
+    function, not a thunk, and must keep its call site.
     """
     try:
         blocks = list(func.basic_blocks)

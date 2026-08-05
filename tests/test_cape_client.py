@@ -58,7 +58,7 @@ def test_list_tasks_status_filter(client, monkeypatch):
 def test_list_tasks_sorts_newest_first(client, monkeypatch):
     # CAPE's native order isn't reliably newest-first (observed live: older
     # failed tasks leading), so list_tasks sorts by id desc before slicing
-    # (D3 / CLI-conformance finding).
+    #.
     unsorted = [
         {"id": 3, "status": "failed_analysis"},
         {"id": 2, "status": "failed_analysis"},

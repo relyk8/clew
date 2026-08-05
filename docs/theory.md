@@ -53,7 +53,7 @@ step joins them into the final record.
 
 | Channel | Contribution |
 |---|---|
-| 0. Technique detection | Identify which evasion techniques the sample exhibits, so the pipeline knows where to look. |
+| 0. Technique detection | Identify which evasion techniques the sample exhibits. Optional, and off unless requested. |
 | 1. String recovery | Recover candidate string values, including obfuscated ones that appear only after the sample decodes them at runtime. |
 | 2. Call sites and dataflow | Enumerate every targeted Windows-API call site and trace, backward through the binary's dataflow, which values flow into each one. |
 | 3. Dynamic operands | Where static analysis cannot resolve a value, detonate the sample and capture the operands it compares against as it runs. |
