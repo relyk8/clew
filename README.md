@@ -1,3 +1,9 @@
+[![Last release](https://img.shields.io/github/v/release/relyk8/clew)](https://github.com/relyk8/clew/releases)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+
+<img src="resources/clew-logo.png" alt="Clew logo" width="200">
+
 # Clew
 
 Clew reads a single PE32 malware sample once and emits a per-sample seed corpus
