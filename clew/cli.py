@@ -192,6 +192,13 @@ def _add_detonate_subparser(sub, parent) -> None:
         help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
     )
     s.add_argument(
+        "--sample-args",
+        default=None,
+        help="command line to pass to the sample itself, e.g. al-khaser's "
+        "'--check VBOX --check DEBUG --sleep 5'. Commas are not allowed: CAPE's "
+        "option string is comma-separated",
+    )
+    s.add_argument(
         "--timeout",
         type=int,
         default=120,
@@ -289,6 +296,13 @@ def _add_run_subparser(sub, parent) -> None:
         "--package",
         default="exe_drtrace",
         help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
+    )
+    s.add_argument(
+        "--sample-args",
+        default=None,
+        help="command line to pass to the sample itself, e.g. al-khaser's "
+        "'--check VBOX --check DEBUG --sleep 5'. Commas are not allowed: CAPE's "
+        "option string is comma-separated",
     )
     s.add_argument(
         "--timeout",
@@ -570,6 +584,24 @@ def _cmd_correlate(args) -> int:
     return 0
 
 
+def _submit_options(args) -> dict[str, str]:
+    """CAPE package options for a Channel 3 submission.
+
+    `free=yes` is mandatory and not negotiable: capemon otherwise injects into
+    drrun.exe, corrupts DynamoRIO, and the run yields no logs at all.
+
+    `arguments` is how a sample's own command line reaches it. That matters for
+    samples whose behaviour is selectable -- al-khaser runs only the check groups
+    named by `--check`, which is what lets it exercise the target APIs without
+    the groups that defeat instrumentation.
+    """
+    options = {"free": "yes"}
+    sample_args = getattr(args, "sample_args", None)
+    if sample_args:
+        options["arguments"] = sample_args
+    return options
+
+
 def _cmd_detonate(args) -> int:
     # Lazy import: keep the CAPE client (which pulls requests) out of `clew
     # static` and the offline suite.
@@ -586,7 +618,7 @@ def _cmd_detonate(args) -> int:
             package=args.package,
             timeout=args.timeout,
             enforce_timeout=args.enforce_timeout,
-            options={"free": "yes"},
+            options=_submit_options(args),
         )
     except FileNotFoundError:
         log.error("sample not found: %s", args.sample)
@@ -843,7 +875,7 @@ def _cmd_run(args) -> int:
             package=args.package,
             timeout=args.timeout,
             enforce_timeout=args.enforce_timeout,
-            options={"free": "yes"},
+            options=_submit_options(args),
         )
     except FileNotFoundError:
         log.error("sample not found: %s", args.sample)

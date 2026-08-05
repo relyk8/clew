@@ -891,3 +891,31 @@ def test_correlate_missing_logs_warns_and_still_writes(tmp_path, capsys):
     assert rc == 0
     assert "nothing to correlate" in capsys.readouterr().err
     assert json.loads(out.read_text())["candidates"]
+
+
+# ---------- passing a command line to the sample ----------
+
+
+def test_sample_args_reach_cape_as_the_arguments_option(monkeypatch):
+    """al-khaser only runs the check groups named by --check, which is what lets
+    it exercise the target APIs without the groups that defeat DynamoRIO."""
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+    monkeypatch.setattr(cape_client.CapeClient, "submit",
+                        lambda self, s, **k: (seen.update(k), 7)[1])
+    assert cli.main(["detonate", "x.exe", "--sample-args",
+                     "--check VBOX --check DEBUG --sleep 5"]) == 0
+    assert seen["options"] == {"free": "yes",
+                               "arguments": "--check VBOX --check DEBUG --sleep 5"}
+
+
+def test_free_mode_survives_sample_args(monkeypatch):
+    """free=yes is not negotiable -- without it capemon corrupts DynamoRIO."""
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+    monkeypatch.setattr(cape_client.CapeClient, "submit",
+                        lambda self, s, **k: (seen.update(k), 7)[1])
+    cli.main(["detonate", "x.exe"])
+    assert seen["options"] == {"free": "yes"}

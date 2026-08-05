@@ -249,3 +249,18 @@ def test_poll_progress_callback_no_stdout(client, monkeypatch, capsys):
     assert out == "reported"
     assert seen == ["running", "reported"]
     assert capsys.readouterr().out == ""
+
+
+def test_submit_rejects_a_comma_in_an_option_value(tmp_path):
+    """CAPE splits its option string on commas, so a comma inside a value would
+    silently become a bogus extra option rather than fail."""
+    import pytest
+
+    from clew.channels.cape.client import CapeClient, CapeError
+
+    sample = tmp_path / "s.exe"
+    sample.write_bytes(b"MZ")
+    with pytest.raises(CapeError, match="comma"):
+        CapeClient("http://127.0.0.1:8000").submit(
+            sample, options={"free": "yes", "arguments": "--check VBOX,--check KVM"}
+        )

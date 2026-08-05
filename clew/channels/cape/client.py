@@ -75,6 +75,15 @@ class CapeClient:
             "enforce_timeout": "1" if enforce_timeout else "0",
         }
         if options:
+            # CAPE parses this string on commas, so a comma inside a value would
+            # silently split into a bogus extra option rather than fail. Reject
+            # it here instead of shipping a submission that means something else.
+            bad = [k for k, v in options.items() if "," in str(v)]
+            if bad:
+                raise CapeError(
+                    f"option value(s) {bad} contain a comma; CAPE's option string is "
+                    f"comma-separated, so the value cannot be passed through intact"
+                )
             data["options"] = ",".join(f"{k}={v}" for k, v in options.items())
         if machine:
             data["machine"] = machine
