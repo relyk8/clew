@@ -581,3 +581,170 @@ def test_function_va_is_null_never_absent():
     fresh = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
     assert all("function_va" in c for c in fresh)
     assert fresh[0]["function_va"] is None
+
+
+# --- temporal join ----------------------------------------------------------
+
+
+def _cmp_at(seq, tid=1, pc=0x401100, opcode="cmp", jcc="jz", a=0x1, b=0x2):
+    from clew.channels.cape.cmplog_parse import CmpRecord, Operand
+
+    return CmpRecord(
+        tid=tid, pc=pc, opcode=opcode, seq=seq, jcc=jcc,
+        operands=[Operand("reg", value=a, reg="eax"), Operand("imm", value=b)],
+    )
+
+
+def _retval_record(csva="0x00401000"):
+    return {
+        "candidates": [
+            {
+                "call_site_va": csva,
+                "function_va": "0x00400f00",
+                "api_name": "GetTickCount",
+                "api_resolution": "import",
+                "parameter_index": -1,
+                "comparison_operator": "unknown",
+                "candidate_values": [],
+                "evidence": {"channels": ["bn_xref"], "cmp_operand_a": None,
+                             "cmp_operand_b": None},
+            }
+        ]
+    }
+
+
+def test_comparison_after_a_return_binds_to_that_call():
+    """The channel's stated purpose: operands captured *after* an API returns."""
+    from clew.channels.cape.correlate import merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x4a3f)],
+        comparisons=[_cmp_at(seq=12, a=0x4a3f, b=0x1388)],
+    )
+    merge_temporal_comparisons(record, trace)
+
+    (cc,) = record["candidates"][0]["comparison_candidates"]
+    assert cc["binding"] == "temporal"
+    assert (cc["cmp_operand_a"], cc["cmp_operand_b"]) == ("0x4a3f", "0x1388")
+    # Above anything the proximity pass can produce (BASE_CONFIDENCE is 0.6).
+    assert cc["confidence"] > 0.6
+    assert record["candidates"][0]["comparison_operator"] == "equality"
+
+
+def test_comparison_before_the_return_is_not_bound():
+    from clew.channels.cape.correlate import merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x1)],
+        comparisons=[_cmp_at(seq=5)],  # ran before the call returned (seq 11)
+    )
+    merge_temporal_comparisons(record, trace)
+    assert record["candidates"][0].get("comparison_candidates", []) == []
+
+
+def test_another_traced_call_ends_the_window():
+    """Once a second API is entered, later comparisons are about that one."""
+    from clew.channels.cape.correlate import merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[
+            _call(api="GetTickCount", site=0x401005, seq=10, retval=0x1),
+            _call(api="Sleep", site=0x402005, seq=20, retval=0x0),
+        ],
+        comparisons=[_cmp_at(seq=12, a=0xaa), _cmp_at(seq=25, a=0xbb)],
+    )
+    merge_temporal_comparisons(record, trace)
+    ops = [c["cmp_operand_a"] for c in record["candidates"][0]["comparison_candidates"]]
+    assert ops == ["0xaa"]
+
+
+def test_comparisons_on_another_thread_are_not_bound():
+    from clew.channels.cape.correlate import merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x1)],
+        comparisons=[_cmp_at(seq=12, tid=99)],
+    )
+    merge_temporal_comparisons(record, trace)
+    assert record["candidates"][0].get("comparison_candidates", []) == []
+
+
+def test_nearer_comparisons_outrank_later_ones():
+    from clew.channels.cape.correlate import merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x1)],
+        comparisons=[_cmp_at(seq=12, a=0xaa), _cmp_at(seq=13, a=0xbb),
+                     _cmp_at(seq=14, a=0xcc)],
+    )
+    merge_temporal_comparisons(record, trace)
+    ops = [c["cmp_operand_a"] for c in record["candidates"][0]["comparison_candidates"]]
+    assert ops == ["0xaa", "0xbb", "0xcc"]
+
+
+def test_window_is_bounded():
+    from clew.channels.cape.correlate import TEMPORAL_WINDOW, merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x1)],
+        comparisons=[_cmp_at(seq=12 + n, a=n) for n in range(TEMPORAL_WINDOW * 3)],
+    )
+    merge_temporal_comparisons(record, trace)
+    assert len(record["candidates"][0]["comparison_candidates"]) == TEMPORAL_WINDOW
+
+
+def test_a_proximity_guess_the_ordering_confirms_is_upgraded_not_duplicated():
+    """Same comparison, better evidence for it -- one entry, promoted."""
+    from clew.channels.cape.correlate import correlate_trace
+    from clew.channels.cape.drtrace_parse import ModuleRecord, Trace
+
+    record = _retval_record()
+    # PC sits inside the proximity window after 0x401000 AND executes right
+    # after the call returns, so both passes see it.
+    shared = _cmp_at(seq=12, pc=0x401010, a=0x4a3f, b=0x1388)
+    trace = Trace(
+        modules=[ModuleRecord(seq=1, base=0x400000, end=0x410000, name="s.exe")],
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x4a3f)],
+        comparisons=[shared],
+    )
+    correlate_trace(record, trace)
+
+    ccs = record["candidates"][0]["comparison_candidates"]
+    assert len(ccs) == 1, "the proximity entry should be upgraded, not duplicated"
+    assert ccs[0]["binding"] == "temporal"
+    assert ccs[0]["confidence"] > 0.6
+
+
+def test_legacy_cmplog_comparisons_have_no_seq_and_bind_only_by_proximity():
+    """A cmplog log carries no ordering, so the temporal pass must be a no-op
+    rather than binding everything to the first call it sees."""
+    from clew.channels.cape.cmplog_parse import CmpRecord, Operand
+    from clew.channels.cape.correlate import merge_temporal_comparisons
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _retval_record()
+    trace = Trace(
+        calls=[_call(api="GetTickCount", site=0x401005, seq=10, retval=0x1)],
+        comparisons=[CmpRecord(tid=1, pc=0x401010, opcode="cmp",
+                               operands=[Operand("imm", value=1)])],
+    )
+    merge_temporal_comparisons(record, trace)
+    assert record["candidates"][0].get("comparison_candidates", []) == []
+
+
+def test_binding_is_recorded_on_proximity_entries_too():
+    rec = correlate_record(_load_input(), _load_records())
+    ccs = _by_va(rec)["0x00401000"]["comparison_candidates"]
+    assert ccs and all(c["binding"] == "proximity" for c in ccs)

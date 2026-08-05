@@ -159,7 +159,12 @@
           "minimum": 0,
           "maximum": 1
         },
-        "source_channels": { "$ref": "#/$defs/ChannelArray" }
+        "source_channels": { "$ref": "#/$defs/ChannelArray" },
+        "binding": {
+          "type": "string",
+          "enum": ["temporal", "proximity"],
+          "description": "How this comparison was tied to the candidate. 'temporal' means it executed after the traced API call returned, in the same thread, before any other traced call -- an ordering the instrumentation observed. 'proximity' means its address merely fell in a window after the static call site, which is a guess. Absent on records produced before this distinction existed."
+        }
       },
       "description": "One Channel-3-correlated runtime comparison for a candidate. Ranked entries collect in the candidate's comparison_candidates array."
     },
@@ -233,7 +238,10 @@
       ],
       "properties": {
         "call_site_va": { "$ref": "#/$defs/VA" },
-        "function_va": { "$ref": "#/$defs/VA" },
+        "function_va": {
+          "anyOf": [{ "$ref": "#/$defs/VA" }, { "type": "null" }],
+          "description": "Start of the function containing the call site, for grouping a routine's candidates and for cross-referencing back into Binary Ninja. Null when nothing determines it: Channel 3 can observe exactly where a call happened, but which function an address belongs to is a product of static analysis, and for a call site Channel 2 never reached there is often no function it identified at all."
+        },
         "api_name": {
           "type": "string",
           "minLength": 1

@@ -1,13 +1,30 @@
-"""Proximity join of runtime cmp/test operands onto static candidates.
+"""Join Channel 3's runtime observations onto a static clew record.
 
-Channel 3 correlation. The static pipeline emits candidates with placeholder
-comparison fields (comparison_operator="unknown", cmp_operand_a/_b=null). This
-module fills them from the DynamoRIO cmplog logs by a proximity heuristic:
-comparisons whose runtime PC lands just after a candidate's call site are the
-values that check likely tested against. It is a first cut, not a forward
-slice, so it emits every plausible comparison ranked by confidence and lets the
-downstream fuzzer prune. Pure, stdlib plus cmplog_parse only, so its test runs
-offline with no network and no monkeypatch.
+The static pipeline emits candidates with placeholder comparison fields
+(comparison_operator="unknown", cmp_operand_a/_b=null). This module fills them
+from the DynamoRIO logs, and — for `drtrace` logs — adds candidates of its own.
+Pure, stdlib plus the two parsers only, so its test runs offline with no network
+and no monkeypatch.
+
+Three passes, weakest evidence first so later ones can improve on it:
+
+1. `correlate_record` — the **proximity** join, and all a `cmplog` log supports.
+   A comparison whose runtime PC lands in a window after a candidate's call site
+   is probably the check that call feeds. It is a guess about code layout, not a
+   forward slice, so it emits everything plausible and ranks rather than drops.
+2. `merge_observed_calls` — the observed API calls. A call at a site the static
+   pass found fills that candidate's unresolved values; a call at a site it never
+   enumerated becomes a new candidate. This is what makes Channel 3 a producer
+   rather than an annotator of Channel 2.
+3. `merge_temporal_comparisons` — the **temporal** join, which needs `drtrace`'s
+   global sequence number. A comparison that executed after a traced call
+   returned, on the same thread, before any other traced call, is bound to that
+   call's result. That is an ordering the instrumentation observed rather than an
+   address landing in a guessed window, so it outranks proximity and upgrades any
+   proximity guess it confirms.
+
+Every entry records which of the two bindings produced it, because a bare
+confidence number hides the difference.
 """
 
 from __future__ import annotations
@@ -114,6 +131,23 @@ def _has_unreadable_mem(record: CmpRecord) -> bool:
 def _clamp(value: float) -> float:
     """Bound a confidence to [0, 1]."""
     return max(0.0, min(1.0, value))
+
+
+def _comparison_entry(record: CmpRecord, confidence: float, binding: str) -> dict:
+    """One entry for a candidate's comparison_candidates array.
+
+    `binding` records how the comparison was tied to the candidate, because the
+    two ways are not equally good evidence and a bare confidence number hides
+    which one produced it.
+    """
+    return {
+        "comparison_operator": _operator_for(record),
+        "cmp_operand_a": _render_operand(record, 0),
+        "cmp_operand_b": _render_operand(record, 1),
+        "confidence": _clamp(confidence),
+        "source_channels": list(_SOURCE_CHANNELS),
+        "binding": binding,
+    }
 
 
 def _warn_if_unrebased(
@@ -266,16 +300,8 @@ def correlate_record(
             else:
                 proximity = 0.5 + 0.5 * (1 - dist / NARROW)
             readability = 0.7 if _has_unreadable_mem(r) else 1.0
-            confidence = _clamp(BASE_CONFIDENCE * proximity * readability)
-            comparisons.append(
-                {
-                    "comparison_operator": _operator_for(r),
-                    "cmp_operand_a": _render_operand(r, 0),
-                    "cmp_operand_b": _render_operand(r, 1),
-                    "confidence": confidence,
-                    "source_channels": list(_SOURCE_CHANNELS),
-                }
-            )
+            confidence = BASE_CONFIDENCE * proximity * readability
+            comparisons.append(_comparison_entry(r, confidence, "proximity"))
 
         comparisons.sort(key=lambda c: c["confidence"], reverse=True)
         candidate["comparison_candidates"] = comparisons
@@ -535,4 +561,165 @@ def correlate_trace(
     base = resolve_module_base(trace, record, module_base)
     correlate_record(record, trace.comparisons, module_base=base, image_base=image_base)
     merge_observed_calls(record, trace, module_base=base, image_base=image_base)
+    # Last, so it can upgrade the proximity pass's guesses in place and attach to
+    # the return-value candidates merge_observed_calls has just created.
+    merge_temporal_comparisons(record, trace, module_base=base, image_base=image_base)
+    return record
+
+
+# How many comparisons after an API return are treated as checks on what that
+# call produced. The check on a return value is normally within a handful of
+# instructions; this is generous enough to survive a few intervening compares
+# without reaching into unrelated code.
+TEMPORAL_WINDOW = 32
+
+# A temporally-bound comparison starts here, above every proximity confidence
+# (BASE_CONFIDENCE 0.6 scaled down by distance), because it rests on an ordering
+# the instrumentation actually observed rather than on an address falling inside
+# a guessed window.
+TEMPORAL_BASE_CONFIDENCE = 0.9
+
+
+def _thread_timeline(trace) -> dict[int, list]:
+    """Per-thread comparisons ordered by the client's global sequence number.
+
+    Comparisons with no seq (a legacy cmplog log) are excluded: without ordering
+    there is nothing to bind temporally, and the proximity join already covers
+    them.
+    """
+    timeline: dict[int, list] = {}
+    for record in trace.comparisons:
+        if record.seq is None:
+            continue
+        timeline.setdefault(record.tid, []).append(record)
+    for records in timeline.values():
+        records.sort(key=lambda r: r.seq)
+    return timeline
+
+
+def _next_call_seq(trace) -> dict[int, list[int]]:
+    """Per-thread sorted seqs at which a traced call was entered.
+
+    Used as the stop bound: once another traced API is entered, subsequent
+    comparisons are about that call, not the previous one.
+    """
+    starts: dict[int, list[int]] = {}
+    for call in trace.calls:
+        starts.setdefault(call.tid, []).append(call.seq)
+    for seqs in starts.values():
+        seqs.sort()
+    return starts
+
+
+def merge_temporal_comparisons(
+    record: dict,
+    trace,
+    *,
+    module_base: int | None = None,
+    image_base: int = IMAGE_BASE,
+) -> dict:
+    """Bind comparisons to the API return that produced the value they test.
+
+    This is what Channel 3 is nominally for: "the comparison operands captured
+    *after* an API returns". The proximity join can only ask whether a
+    comparison's address sits near a call site, which is a guess about layout.
+    With the client's global sequence number the question becomes an observed
+    fact -- this comparison executed after that call returned, on that thread,
+    before any other traced call -- so it is bound and ranked above proximity.
+
+    Comparisons already found by the proximity pass are upgraded in place rather
+    than duplicated: same comparison, better evidence for it.
+    """
+    timeline = _thread_timeline(trace)
+    call_starts = _next_call_seq(trace)
+    if not timeline:
+        return record
+
+    by_key: dict[tuple[int, int], dict] = {}
+    call_site_vas: set[int] = set()
+    for candidate in record.get("candidates", []):
+        csva = int(candidate["call_site_va"], 16)
+        call_site_vas.add(csva)
+        by_key[(csva, candidate.get("parameter_index"))] = candidate
+
+    bound = upgraded = 0
+    for call in trace.calls:
+        if not call.returned:
+            continue
+        records = timeline.get(call.tid)
+        if not records:
+            continue
+
+        # Stop at the next traced call entered on this thread: past that point
+        # the comparisons belong to it.
+        limit = None
+        for seq in call_starts.get(call.tid, []):
+            if seq > call.return_seq:
+                limit = seq
+                break
+
+        following = []
+        for r in records:
+            if r.seq <= call.return_seq:
+                continue
+            if limit is not None and r.seq >= limit:
+                break
+            following.append(r)
+            if len(following) >= TEMPORAL_WINDOW:
+                break
+        if not following:
+            continue
+
+        site = rebase(call.site, module_base, image_base)
+        matched = match_call_site(site, call_site_vas)
+        if matched is None:
+            continue
+        # The check is on what the call produced, so it belongs to the
+        # return-value candidate; fall back to any candidate at the site.
+        candidate = by_key.get((matched, -1))
+        if candidate is None:
+            candidate = next(
+                (c for c in record["candidates"] if int(c["call_site_va"], 16) == matched), None
+            )
+        if candidate is None:
+            continue
+
+        comparisons = candidate.setdefault("comparison_candidates", [])
+        existing = {
+            (c["comparison_operator"], c["cmp_operand_a"], c["cmp_operand_b"]): c
+            for c in comparisons
+        }
+        for position, r in enumerate(following):
+            # Decay with distance from the return: the first comparison after it
+            # is the likeliest consumer of the value.
+            nearness = 1.0 - (position / TEMPORAL_WINDOW)
+            readability = 0.7 if _has_unreadable_mem(r) else 1.0
+            entry = _comparison_entry(
+                r, TEMPORAL_BASE_CONFIDENCE * nearness * readability, "temporal"
+            )
+            key = (entry["comparison_operator"], entry["cmp_operand_a"], entry["cmp_operand_b"])
+            prior = existing.get(key)
+            if prior is None:
+                comparisons.append(entry)
+                existing[key] = entry
+                bound += 1
+            elif entry["confidence"] > prior["confidence"] or prior.get("binding") != "temporal":
+                # Same comparison the proximity pass already guessed at, now with
+                # ordering evidence behind it. Upgrade rather than duplicate.
+                prior["confidence"] = max(prior["confidence"], entry["confidence"])
+                prior["binding"] = "temporal"
+                upgraded += 1
+
+        comparisons.sort(key=lambda c: c["confidence"], reverse=True)
+        top = comparisons[0]
+        candidate["comparison_operator"] = top["comparison_operator"]
+        candidate.setdefault("evidence", {})["cmp_operand_a"] = top["cmp_operand_a"]
+        candidate["evidence"]["cmp_operand_b"] = top["cmp_operand_b"]
+
+    logger.info(
+        "correlate: temporal join bound %d comparisons to a traced API return, "
+        "upgraded %d the proximity pass had already guessed",
+        bound,
+        upgraded,
+    )
     return record
