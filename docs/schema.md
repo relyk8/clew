@@ -178,7 +178,7 @@ Clew's confidence that this candidate is real and correctly characterized. The n
 
 ### `source_channels` (required, array, min length 1)
 
-Which channels contributed to this specific value. Each entry is one of `capa`, `floss`, `bn_xref`, `drio`, or `cape_config`. Multiple channels for the same value increase confidence.
+Which channels contributed to this specific value. Each entry is one of `capa`, `floss`, `bn_xref`, or `drio`. Multiple channels for the same value increase confidence.
 
 ## `coordination_constraint`
 
@@ -238,7 +238,7 @@ For quick reference:
 | `api_resolution` | `import`, `getprocaddress`, `ordinal`, `hashed` (reserved) |
 | `comparison_operator` | `equality`, `inequality`, `greater_than`, `less_than`, `greater_equal`, `less_equal`, `bitwise_and`, `bitwise_or`, `contains`, `unknown` |
 | `represents` | `sandbox_detected`, `vm_detected`, `debugger_detected`, `analysis_tool_detected`, `clean_environment`, `threshold_value`, `unknown` |
-| `source_channels`, `evidence.channels` | `capa`, `floss`, `bn_xref`, `drio`, `cape_config` |
+| `source_channels`, `evidence.channels` | `capa`, `floss`, `bn_xref`, `drio` |
 | `string_source` | `static`, `stackstring`, `tightstring`, `decoded` |
 
 ## Examples

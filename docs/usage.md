@@ -180,9 +180,10 @@ round trip, which is the check worth running before a long batch.
 
 ## Channel 3 requirements
 
-The dynamic commands (`detonate`, `run`, and `correlate --task`) need a CAPE
-instance with the cmplog DynamoRIO analysis package deployed, reachable at
-`CAPE_BASE_URL`. To build and deploy that from scratch, see
+`detonate` and `run` need a CAPE instance with the cmplog DynamoRIO analysis
+package deployed, reachable at `CAPE_BASE_URL`. `correlate --task` instead reads
+the logs from CAPE's storage directory, so it must run on the CAPE host but makes
+no API call. To build and deploy all of this, see
 [channel3_setup.md](channel3_setup.md). The package runs the sample under DynamoRIO and records its
 runtime comparison operands, which CAPE stores per task under
 `storage/analyses/<id>/files/`.
