@@ -37,7 +37,7 @@ def test_run_capa_integration(fixtures_dir, capa_paths):
 
 
 def test_parse_capa_json_banner_preamble_fallback():
-    # scout #10: capa CLI output can be preceded by log/banner lines; the
+    # capa CLI output can be preceded by log/banner lines; the
     # brace-finder fallback must still parse it.
     from clew.channels.capa import _parse_capa_json
 
@@ -57,7 +57,7 @@ def test_parse_capa_json_error_branches():
 
 
 def test_run_capa_nonzero_exit_raises(monkeypatch, tmp_path):
-    # scout #10: a nonzero capa exit must raise CapaRunError (untested before).
+    # a nonzero capa exit must raise CapaRunError (untested before).
     from clew.channels import capa as capa_mod
 
     sample = tmp_path / "s.exe"

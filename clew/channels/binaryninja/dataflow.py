@@ -1,11 +1,11 @@
-"""Channel 2 / Unit 4: the MLIL-SSA dataflow bridge.
+"""Channel 2: the MLIL-SSA dataflow bridge.
 
 This is the *bridge* that joins the two halves clew already has:
 
-    Unit 2 (Channel 1 / FLOSS)  -> string *values*, but not where used
-    Unit 3 (Channel 2 / bn_xref) -> API *call sites*, but not the values
+    Channel 1 (FLOSS)            -> string *values*, but not where used
+    Channel 2 (call sites)       -> API *call sites*, but not the values
 
-For every call site Unit 3 enumerated, this unit traces the arguments of
+For every call site enumeration found, the bridge traces the arguments of
 that call backward through Binary Ninja's Medium-Level IL in SSA form to
 whatever flows into them. When an argument resolves to a string constant
 (static, or an obfuscated stack/tight/decoded string FLOSS recovered), the
@@ -33,23 +33,23 @@ earlier scoping flagged):
     * comparison semantics (comparison_operator / cmp_operand_a / _b) --
       that is Channel 3 (DynamoRIO cmp-logging), left null here.
     * semantic classification (represents / retarget_to / evasion_tier)
-      and derivation_status -- that is the derivation stage (Person B).
+      and derivation_status -- those belong to the downstream derivation stage.
       The bridge emits `represents == "unknown"` and no evasion_tier.
-    * `hashed` API-name resolution -- a v2 item, same as Unit 3. The bridge
-      only ever consumes the schema-emittable call sites Unit 3 produced.
+    * `hashed` API-name resolution -- a v2 item, as for enumeration. The bridge
+      only ever consumes the schema-emittable call sites enumeration produced.
     * deep inter-procedural tracing. A value flowing in from a *caller*
       (parameter of the containing function) or out of another API's return
       is reported as *unresolved* -- evidence that this call needs Channel 3,
       not a guessed value.
 
-Output: like Unit 3, this is an *intermediate* artifact (BNDataflow ->
+Output: like enumeration, this is an *intermediate* artifact (BNDataflow ->
 JSON), NOT finished clew schema records. `to_partial_candidates()` emits
 enriched candidate dicts (parameter_index + candidate_values + evidence
 dataflow fields filled) that are one derivation pass short of a schema
 `Candidate`; they are the clean input to that pass.
 
-Orchestration note: bridging needs the *same* analysed BinaryView Unit 3
-used. The orchestrator should open the view once, run Unit 3 enumeration,
+Orchestration note: bridging needs the *same* analysed BinaryView enumeration
+used. The orchestrator should open the view once, enumerate call sites,
 then call `bridge_with_view(bv, call_sites, floss_index)` to avoid a second
 `update_analysis_and_wait`. `run_bn_dataflow()` is the standalone path that
 re-opens the sample (offline tests use `load_dataflow_results` and never
@@ -72,7 +72,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-# Reuse Unit 3's types and error hierarchy so the channel stays one family
+# Reuse the enumeration types and error hierarchy so the channel stays one family
 # (mirrors capa.py / floss.py). Dual import: package layout in the repo (the
 # sibling `callsites` module), flat layout for standalone tests.
 try:  # pragma: no cover - trivial import shim
@@ -181,7 +181,7 @@ class FlossIndex:
 
     @classmethod
     def from_floss_result(cls, floss_result) -> "FlossIndex":
-        """Adapter over Unit 2's `FlossResult` (any object exposing
+        """Adapter over Channel 1's `FlossResult` (any object exposing
         `all_strings()`/`values()`, or an iterable of `FlossString`).
 
         Reads `FlossString`'s real fields: `value`; `source` (already a schema
@@ -426,7 +426,7 @@ class BNDataflow:
         Path(path).write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True))
 
     def to_partial_candidates(self, *, include_unresolved: bool = False) -> list[dict]:
-        """Enrich Unit 3's stubs into intermediate candidate dicts.
+        """Enrich the enumeration stubs into intermediate candidate dicts.
 
         Fills parameter_index, candidate_values (value + source_channels +
         confidence), and the evidence dataflow fields. Intentionally leaves
@@ -543,7 +543,7 @@ def _match_obfuscated(function_va: int, floss: FlossIndex) -> Optional[tuple[str
     FLOSS reported exactly one obfuscated string in this function, use it.
 
     Ambiguity (more than one) is left unresolved rather than guessed -- same
-    conservatism as Unit 3's GetProcAddress pairing. Returns (value, source).
+    conservatism as the GetProcAddress pairing in enumeration. Returns (value, source).
     """
     candidates = floss.obfuscated_for_function(function_va)
     if len(candidates) == 1:
@@ -565,7 +565,7 @@ def run_bn_dataflow(
     schema-emittable call site in `call_sites`.
 
     Prefer `bridge_with_view` from the orchestrator, which reuses the view
-    Unit 3 already analysed instead of paying `update_analysis_and_wait`
+    enumeration already analysed instead of paying `update_analysis_and_wait`
     twice. Imports binaryninja lazily so offline tests never need it.
     """
     try:
@@ -612,7 +612,8 @@ def run_bn_dataflow(
         except Exception as exc:  # noqa: BLE001
             raise BNNotAvailableError(
                 f"Enterprise license checkout failed: {exc}. "
-                "Did you source bn_env.sh? See the setup doc."
+                "Are the Binary Ninja Enterprise credentials set? "
+            "See docs/binary_ninja_headless_setup.md."
             ) from exc
     return _run()
 
@@ -625,7 +626,7 @@ def bridge_with_view(
     """Bridge against an already-open, already-analysed BinaryView.
 
     This is the orchestrator entry point: one `binaryninja.load` +
-    `update_analysis_and_wait` shared with Unit 3.
+    `update_analysis_and_wait` shared with enumeration.
     """
     from binaryninja import MediumLevelILOperation
 

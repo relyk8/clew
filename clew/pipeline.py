@@ -1,21 +1,19 @@
 """clew static pipeline: run the static channels and assemble one record.
 
 Runs Channel 0/1 (capa), Channel 1 (FLOSS), and Channel 2 (Binary Ninja:
-Unit 3 call-site enumeration + Unit 4 dataflow bridge) over a single sample and
+call-site enumeration + the dataflow bridge) over a single sample and
 assembles the sample-level *intermediate* clew record.
 
 Single analysis: the BN view is opened and analysed ONCE, inside one Enterprise
-license checkout, and both Unit 3 (`enumerate_with_view`) and Unit 4
-(`bridge_with_view`) run on it -- not two `update_analysis_and_wait` passes.
+license checkout, and both `enumerate_with_view` and `bridge_with_view` run on it -- not two `update_analysis_and_wait` passes.
 
 Boundary: this produces an INTERMEDIATE record. The sample-level fields that are
 statically available -- `sample_sha256`, `capa_techniques`, `derivation_status`
 -- are filled here. The candidates are the bridge's `to_partial_candidates()`
 output: call site + argument dataflow + values, with the three derivation-owned
 fields (`evasion_tier`, `iteration_number`, `coordination_constraint`) and the
-Channel-3 comparison operands deliberately absent. The derivation stage (Person
-B) completes each candidate and Channel 3 adds comparison semantics. This is the
-same boundary the oracle grader validated.
+Channel-3 comparison operands deliberately absent. A downstream derivation
+stage completes each candidate, and Channel 3 adds comparison semantics.
 
 Degradation: capa and FLOSS are enrichment. If capa fails or times out the
 record gets `derivation_status = "no_capa_signal"` and no techniques (the same
@@ -167,7 +165,7 @@ def run_static_pipeline(
 
     capa and FLOSS run as ordinary subprocess/library calls; only the Binary
     Ninja stage takes the license checkout, and it opens + analyses the view
-    exactly once for both Unit 3 and Unit 4.
+    exactly once for both enumeration and the bridge.
 
     FLOSS output is cached (by default under `.floss_cache/`, keyed on
     sample+FLOSS-version+min_length+sigs+flags): a matching entry is reused
@@ -326,7 +324,7 @@ def _sigs_identity(sigs_path) -> str:
     """Content fingerprint of the signatures used.
 
     Hashes sorted (relative-path, content-hash) pairs -- file *content*, NOT size
-    (a same-size edit must still trigger a stale; scout #14), and NOT mtime (a git
+    (a same-size edit must still trigger a stale), and NOT mtime (a git
     checkout or `cp -p` changes mtime without changing bytes and must not trigger
     a false stale). `None` means FLOSS's bundled sigs, which are version-locked to
     the FLOSS version already in the key, so a stable sentinel is sufficient.

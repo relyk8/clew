@@ -94,7 +94,7 @@ The zero-indexed parameter of the API whose value is the fingerprint of the envi
 
 For `GetModuleHandleW(L"SbieDll.dll")`, the parameter at index 0 (`lpModuleName`) carries the fingerprint string, so `parameter_index = 0`. For `IsDebuggerPresent()`, which has no parameters and is checked solely by its return, `parameter_index = -1`.
 
-For APIs that write to output parameters (`GetSystemInfo` writing into a `SYSTEM_INFO` struct), `parameter_index` is the index of that output parameter. Sub-field selection within compound structs is handled by `clew/api_knowledge/` in the producer, not by the schema. This is a documented v1 limitation.
+For APIs that write to output parameters (`GetSystemInfo` writing into a `SYSTEM_INFO` struct), `parameter_index` is the index of that output parameter. The schema does not express sub-field selection within compound structs, so a candidate identifies the parameter but not which member of it. This is a documented v1 limitation.
 
 ### `comparison_operator` (required, string enum)
 
@@ -369,7 +369,7 @@ Both example records above must validate against the schema. They function as th
 - **Hashed API resolution.** The `hashed` enum value is reserved but unused.
 - **Static gate group detection.** `coordination_constraint` fields are always null in v1.
 - **Iterative refinement.** `iteration_number` and `total_iterations` are scaffolding-only.
-- **Compound output parameters.** Sub-field selection within structs (e.g. `SYSTEM_INFO.dwNumberOfProcessors`) is handled in `clew/api_knowledge/` rather than the schema. v2 may introduce a `parameter_path` field.
+- **Compound output parameters.** Sub-field selection within structs (e.g. `SYSTEM_INFO.dwNumberOfProcessors`) cannot be expressed; a candidate names the parameter, not the member. v2 may introduce a `parameter_path` field.
 - **Multi-comparison call sites.** Delivered by the candidate-level `comparison_candidates` array, which holds all runtime comparisons for a call site in one candidate ranked by confidence, retiring the earlier split-into-multiple-records approach.
 - **Confidence calibration.** v1's `confidence` is heuristic and uncalibrated.
 - **Per-value provenance fields.** v1 places string_source, string_va, and string_function_va in the per-candidate evidence block, which cannot represent multi-value candidates where each value's literal lives at a different address. Record #2 (al-khaser loaded_dlls) surfaces this, with 12 wide-string values, 12 distinct .rdata addresses, and one schema field. v2 should move these three fields into each candidate_values entry. The homogeneous case (record #1, where there is no string at all) still works, and each entry just sets the field to null or "static" as appropriate.

@@ -2,11 +2,10 @@
  * cmplog.c  --  Clew Channel 3: comparison-operand logging DynamoRIO client
  *
  * Built for DynamoRIO 11.91.20651, 32-bit (target guest is PE32 / x86).
- * FIRST DRAFT -- COMPILE-UNVERIFIED: there is no MSVC toolchain on the Linux
- * dev host; this must be built inside a Windows dev snapshot (see BUILD_RECIPE.md).
- * Every DR API call below was checked against the headers in
- *   /home/relyk8/dr-sdk/DynamoRIO-Windows-11.91.20651/include (+ ext/include)
- * and the shipped samples (instrcalls.c, memtrace_simple.c, utils.c).
+ * MSVC only: DynamoRIO's CMake refuses any other compiler on Windows, so this
+ * builds on Windows rather than on the Linux analysis host (see BUILD_RECIPE.md).
+ * The DynamoRIO API calls below follow the 11.91.20651 headers and the shipped
+ * samples (instrcalls.c, memtrace_simple.c, utils.c).
  *
  * WHAT IT DOES
  *   For every executed OP_cmp / OP_test application instruction, it decodes the
@@ -182,7 +181,7 @@ at_compare(app_pc pc)
                 dr_fprintf(f, " src%d=mem[" PFX "]=<unreadable>", i, addr);
             }
         } else {
-            /* pc-relative, far, float/SIMD, etc. -- out of scope for the draft. */
+            /* pc-relative, far, float/SIMD, etc. -- out of scope for v1. */
             dr_fprintf(f, " src%d=other", i);
         }
     }

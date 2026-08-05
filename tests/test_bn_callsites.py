@@ -75,7 +75,7 @@ def bn_fixture(fixtures_dir):
 
 
 def test_collect_call_sites_drops_forwarder_thunk_ref(monkeypatch):
-    # scout #2: the offline suite only asserts a frozen post-filter fixture, so a
+    # the offline suite only asserts a frozen post-filter fixture, so a
     # thunk-filter regression stays green. Drive _collect_call_sites' real loop +
     # thunk guard (and the real _is_forwarder_thunk) over controlled fakes, with
     # only the BN-touching helpers monkeypatched.
@@ -113,7 +113,7 @@ def test_collect_call_sites_drops_forwarder_thunk_ref(monkeypatch):
 
 def test_is_forwarder_thunk_rejects_call_ret_wrapper():
     # A 2-instruction `call [IAT]; ret` wrapper is a real function, not a
-    # forwarder thunk; its call site must be kept (B3 / scout #6).
+    # forwarder thunk; its call site must be kept.
     from clew.channels.binaryninja.callsites import _is_forwarder_thunk
 
     class _BB:

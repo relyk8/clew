@@ -192,7 +192,7 @@ def test_record_plus_derivation_validates_against_schema():
 
 
 def test_run_capa_stage_degrades_on_capa_error(monkeypatch):
-    # scout #11: any CapaError must degrade to no_capa_signal, never abort the
+    # any CapaError must degrade to no_capa_signal, never abort the
     # pipeline -- guards against narrowing the `except capa.CapaError` clause.
     from clew.channels import capa as capa_mod
 
@@ -268,7 +268,7 @@ def test_capa_techniques_and_status_from_capa_result():
     assert "get OS version" not in techniques
     # classify runs over the evasion-FILTERED techniques, so the lone actionable
     # anti-analysis rule yields fully_derivable -- NOT partially_derivable, which
-    # classifying the full (unfiltered) rule set used to give (scout #1).
+    # classifying the full (unfiltered) rule set used to give.
     assert status == "fully_derivable"
 
 
@@ -315,7 +315,7 @@ def test_sigs_identity_stable_and_content_sensitive(tmp_path):
     first = pipeline._sigs_identity(d)
     assert first == pipeline._sigs_identity(d)  # deterministic
     (d / "a.sig").write_bytes(b"yyyy")  # SAME size, different bytes
-    assert pipeline._sigs_identity(d) != first  # scout #14: same-size edit detected
+    assert pipeline._sigs_identity(d) != first  # same-size edit detected
 
 
 def test_sigs_identity_stable_across_mtime_only_change(tmp_path):

@@ -118,7 +118,7 @@ def test_legacy_fields_mirror_top_entry():
 
 
 def test_narrow_edge_hit_outranks_wide_just_past_boundary():
-    # scout #7: previously a wide hit just past NARROW could out-score a narrow
+    # previously a wide hit just past NARROW could out-score a narrow
     # hit near the NARROW edge (non-monotonic). Both must still be emitted, but
     # the narrow one must rank first.
     from clew.channels.cape.cmplog_parse import CmpRecord, Operand

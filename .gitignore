@@ -219,11 +219,11 @@ results/*
 # Stray clew record dumps
 *.clew.json
 
-# Local Claude Code working instructions (internal; not for public release)
+# Local editor/assistant working instructions
 CLAUDE.md
 
-# Superpowers planning artifacts (plans/specs; internal, not for public release)
+# Local planning artifacts
 docs/superpowers/
 
-# Research-trail notes (retrospectives, brainstorm, DEF CON materials, PII briefing); internal, not for public release
+# Local working notes
 docs/notes/
