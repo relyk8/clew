@@ -748,3 +748,68 @@ def test_binding_is_recorded_on_proximity_entries_too():
     rec = correlate_record(_load_input(), _load_records())
     ccs = _by_va(rec)["0x00401000"]["comparison_candidates"]
     assert ccs and all(c["binding"] == "proximity" for c in ccs)
+
+
+# --- scoping produced candidates to the sample ------------------------------
+
+
+def _module_trace(calls, base=0x400000, end=0x410000, name="s.exe"):
+    from clew.channels.cape.drtrace_parse import ModuleRecord, Trace
+
+    return Trace(modules=[ModuleRecord(seq=1, base=base, end=end, name=name)],
+                 calls=list(calls))
+
+
+def test_call_from_outside_the_sample_produces_no_candidate():
+    """A system DLL calling a wrapped API on the sample's behalf reports a site
+    inside that DLL. Real, but not something a consumer can act on: the address
+    relocates every boot and the sample did not write that call."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(csva="0x00401000")
+    before = len(record["candidates"])
+    merge_observed_calls(
+        record,
+        _module_trace([_call(api="NtQueryInformationProcess", site=0x75A4BF49, retval=0)]),
+    )
+    assert len(record["candidates"]) == before
+
+
+def test_call_from_inside_the_sample_still_produces_a_candidate():
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(csva="0x00401000")
+    merge_observed_calls(
+        record, _module_trace([_call(api="GetTickCount", site=0x00405000, retval=0x1234)])
+    )
+    produced = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert [c["api_name"] for c in produced] == ["GetTickCount"]
+
+
+def test_a_matched_static_site_is_never_scoped_out():
+    """Matching a static candidate means the site is in the sample by
+    construction, so the filter must not second-guess it."""
+    from clew.channels.cape.correlate import merge_observed_calls
+
+    record = _stub_record(csva="0x00401000")
+    # Module table deliberately excludes 0x401000 to prove matching wins.
+    merge_observed_calls(
+        record,
+        _module_trace([_call(argstr={0: "SbieDll.dll"}, returned=False)],
+                      base=0x900000, end=0x910000),
+    )
+    matched = next(c for c in record["candidates"] if c["parameter_index"] == 0)
+    assert "SbieDll.dll" in [v["value"] for v in matched["candidate_values"]]
+
+
+def test_no_module_table_disables_scoping():
+    """A legacy log has no module table, so there is nothing to scope against
+    and the filter must not silently drop everything."""
+    from clew.channels.cape.correlate import merge_observed_calls
+    from clew.channels.cape.drtrace_parse import Trace
+
+    record = _stub_record(csva="0x00401000")
+    merge_observed_calls(record, Trace(calls=[_call(api="GetTickCount", site=0x75A4BF49,
+                                                    retval=1)]))
+    produced = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert produced

@@ -215,6 +215,14 @@ def match_call_site(retaddr: int, call_site_vas) -> int | None:
     return best
 
 
+def sample_name(record: dict | None) -> str | None:
+    """Basename of the analysed sample, for picking its module out of the table."""
+    if not record:
+        return None
+    path = record.get("sample_path") or ""
+    return path.replace("\\", "/").rsplit("/", 1)[-1] or None
+
+
 def resolve_module_base(
     trace, record: dict | None = None, explicit: int | None = None
 ) -> int | None:
@@ -233,11 +241,7 @@ def resolve_module_base(
     """
     if explicit is not None:
         return explicit
-    sample_name = None
-    if record:
-        sample_path = record.get("sample_path") or ""
-        sample_name = sample_path.replace("\\", "/").rsplit("/", 1)[-1] or None
-    main = trace.main_module(sample_name)
+    main = trace.main_module(sample_name(record))
     if main is None:
         return None
     logger.info(
@@ -474,14 +478,30 @@ def merge_observed_calls(
             function_va_by_site[csva] = candidate["function_va"]
     spans = build_function_spans(candidates)
 
+    # A traced call's site is wherever the caller was, which is not always the
+    # sample: a system DLL calling a wrapped API on the sample's behalf reports a
+    # site inside that DLL (autoit3 task 19: KERNELBASE calling
+    # NtQueryInformationProcess in ntdll). Such a site is real, but it cannot
+    # become a candidate -- the consumer cannot act on an address in a Microsoft
+    # DLL that relocates every boot, and the sample did not write that call.
+    # Values still merge onto matched static candidates, which are in the sample
+    # by construction; only *new* candidates are scoped.
+    sample_module = trace.main_module(sample_name(record)) if trace.modules else None
+
     seen: set[tuple[int, int, object]] = set()
     enriched = added = 0
     unmatched_sites: set[int] = set()
     placed = unplaced = 0
+    foreign_sites: set[int] = set()
 
     for call in trace.calls:
         site = rebase(call.site, module_base, image_base)
         matched = match_call_site(site, call_site_vas)
+        # Scoped on the raw runtime address: the module table is in runtime space.
+        in_sample = sample_module is None or sample_module.contains(call.site)
+        if matched is None and not in_sample:
+            foreign_sites.add(call.site)
+            continue
         for param_index, value in _observed_values(call):
             if value is None:
                 continue
@@ -534,6 +554,12 @@ def merge_observed_calls(
             placed,
             added,
             unplaced,
+        )
+    if foreign_sites:
+        logger.info(
+            "correlate: %d observed call site(s) lie outside the sample's module "
+            "(a system DLL called the API on its behalf); no candidates emitted for them",
+            len(foreign_sites),
         )
     if trace.capped:
         logger.warning(
