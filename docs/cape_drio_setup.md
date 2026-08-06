@@ -1,4 +1,4 @@
-# Channel 3 setup — CAPE and DynamoRIO
+# CAPE and DynamoRIO setup
 
 Channel 3 records the comparison operands a sample evaluates at runtime, which is
 where the values a static pass could not resolve become visible. It runs the
