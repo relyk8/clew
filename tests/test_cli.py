@@ -1067,3 +1067,19 @@ def test_regression_exits_1_through_main(monkeypatch, tmp_path):
     target.write_text(json.dumps(_correlated_record("aa")))
     assert cli.main(["static", "x.exe", "--no-license-checkout"]) == 1
     assert cli.main(["static", "x.exe", "--no-license-checkout", "--force"]) == 0
+
+
+def test_run_checkpoint_does_not_clobber_a_correlated_record(monkeypatch, tmp_path):
+    """`run` parks the static record on the default path before detonating, so
+    it can regress a correlated record the same way `static` can -- and it does
+    it before the detonation that would put runtime data back."""
+    rec = dict(_static_record("bb"), derivation_status=None, capa_techniques=[])
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "results" / "bb.clew.json"
+    target.parent.mkdir()
+    target.write_text(json.dumps(_correlated_record("bb")))
+
+    assert cli.main(["run", "x.exe", "--no-license-checkout"]) == 1
+    # Untouched: the guard fires before the checkpoint write.
+    assert cli._has_runtime_data(json.loads(target.read_text()))

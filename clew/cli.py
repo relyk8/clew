@@ -1001,6 +1001,17 @@ def _cmd_run(args) -> int:
     # reaches terminal), and without this the static analysis is discarded on
     # every one of those paths. The final _emit_record overwrites this file.
     checkpoint = _run_checkpoint_path(args, record)
+    # The checkpoint is a *static* record, and it lands on the default path, so
+    # it can regress an existing correlated one exactly as `clew static` can --
+    # and it does so before the detonation that would replace the runtime data.
+    # Same guard, checked here because this write does not go through
+    # _emit_record.
+    if not args.force and _would_regress(record, checkpoint):
+        raise RecordRegression(
+            f"{checkpoint} already holds Channel 3 runtime data, and `run` would "
+            f"overwrite it with the static record before detonating. Re-run with "
+            f"--force to replace it, or -o <path> to write elsewhere."
+        )
     checkpoint.parent.mkdir(parents=True, exist_ok=True)
     checkpoint.write_text(json.dumps(record, indent=2))
     log.info("checkpointed static record to %s", checkpoint)
