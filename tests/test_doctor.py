@@ -109,9 +109,12 @@ def test_bn_credentials_partial_names_what_is_missing(monkeypatch):
 
 
 def test_capa_rules_unset_is_a_warning():
+    # Still only a warning, but the reason changed: capa is opt-in now, so the
+    # message must point at --capa rather than claim a degradation that only
+    # happens if you asked for capa in the first place.
     check = doctor.check_capa_rules()
     assert check.status == doctor.WARN
-    assert "no_capa_signal" in check.detail
+    assert "--capa" in check.detail
 
 
 def test_capa_rules_missing_directory(tmp_path, monkeypatch):

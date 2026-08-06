@@ -1,3 +1,9 @@
+[![Last release](https://img.shields.io/github/v/release/relyk8/clew)](https://github.com/relyk8/clew/releases)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+
+<img src="resources/clew-logo.png" alt="Clew logo" width="200">
+
 # Clew
 
 Clew reads a single PE32 malware sample once and emits a per-sample seed corpus
@@ -61,10 +67,10 @@ pipx install git+https://github.com/relyk8/clew
 Or install a pinned build from the
 [releases page](https://github.com/relyk8/clew/releases).
 
-Clew needs a licensed Binary Ninja, a capa rules checkout, and, for the dynamic
-step, a CAPE instance. Configure them once and check the result with `clew
-doctor`. See [docs/installation.md](docs/installation.md) for every installation
-and configuration method.
+Clew needs a licensed Binary Ninja. capa (`--capa`) and the dynamic step need a
+capa rules checkout and a CAPE instance respectively. Configure once and check
+with `clew doctor`. See [docs/installation.md](docs/installation.md) for every
+installation and configuration method.
 
 ## Usage
 
@@ -82,6 +88,8 @@ command reference and the end-to-end workflow.
 - [docs/installation.md](docs/installation.md) — installing, configuring, and
   verifying a setup, plus running the tests.
 - [docs/usage.md](docs/usage.md) — the command reference and end-to-end workflow.
+- [docs/channel3_setup.md](docs/channel3_setup.md) — standing up CAPE and
+  DynamoRIO for the dynamic channel.
 - [docs/schema.md](docs/schema.md) — the record contract. The machine-checkable
   version is `schema/clew_record.schema.json`.
 - [docs/binary_ninja_headless_setup.md](docs/binary_ninja_headless_setup.md) —

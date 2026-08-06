@@ -25,13 +25,18 @@ configuration below exists to locate them:
   core channel: without it the static pipeline cannot run at all. See
   [binary_ninja_headless_setup.md](binary_ninja_headless_setup.md) for the
   headless setup.
-- **capa rules and signatures**, as a checkout. capa 9.4.0 ships its signatures
-  in its source tree rather than the installed package, so the two paths differ.
+- **capa rules and signatures**, as a checkout, needed only when you pass
+  `--capa`. Channel 0 is off by default. capa 9.4.0 ships its signatures in its
+  source tree rather than the installed package, so the two paths differ. Pin the
+  checkout: `clew/channels/capa.py` records the validated rules and sigs commits,
+  and a mismatch silently changes which rules fire.
 - **A CAPE instance** with the cmplog DynamoRIO package, for the dynamic
-  commands only. The static pipeline runs without it.
+  commands only. The static pipeline runs without it. Standing this up is more
+  involved than the others, because the component doing the logging is Clew's
+  own: see [channel3_setup.md](channel3_setup.md).
 
-capa and CAPE are enrichment: if they are missing or misconfigured, Clew degrades
-rather than failing. Binary Ninja is not.
+Binary Ninja is required. capa and CAPE are not: capa does not run unless asked
+for, and CAPE only serves the dynamic commands.
 
 ## Configuration
 
@@ -99,14 +104,18 @@ batch.
 A configured install looks like this:
 
 ```
+clew 0.4.1  (/path/to/clew)
+
   +  python            3.12.3
-  +  config            ~/.config/clew/config.env (6 key(s))
+  +  config            ~/.config/clew/config.env (7 key(s))
   +  binary ninja api  /path/to/binaryninja/python
-  +  bn credentials    server https://binaryninja.example, username set, password set
+  +  bn credentials    server https://binaryninja.example.com, username set, password set
   +  capa rules        /path/to/capa-rules
+  +  capa sigs         /path/to/capa-src/sigs
   +  capa binary       /path/to/venv/bin/capa (installed alongside clew)
   +  floss             importable
   +  cape              http://127.0.0.1:8000 reachable (1 task(s) visible)
+  +  cape storage      /opt/CAPEv2/storage/analyses
 
 All checks passed.
 ```

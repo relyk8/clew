@@ -6,6 +6,7 @@ heavy import, and the stale-cache / success paths monkeypatch
 run_static_pipeline so main()'s contract is tested in isolation.
 """
 
+import argparse
 import copy
 import json
 import logging
@@ -39,7 +40,7 @@ _RECORD_WITH_VALUES = {
 
 def test_emit_record_creates_missing_parent_dir(tmp_path):
     # `-o <newdir>/f.json` into a non-existent dir must create the parent, not
-    # crash after computing the record (D1 / scout #8).
+    # crash after computing the record.
     target = tmp_path / "newdir" / "out.clew.json"
     cli._emit_record({"sample_sha256": "abc123"}, target, "summary")
     assert target.is_file()
@@ -48,7 +49,7 @@ def test_emit_record_creates_missing_parent_dir(tmp_path):
 
 def test_detonate_dash_o_streams_to_stdout(monkeypatch, capsys, tmp_path):
     # `detonate -o -` must stream the task-id JSON to stdout, not create a file
-    # literally named "-" (M1 / scout #13).
+    # literally named "-".
     import clew.channels.cape.client as capeclient
 
     monkeypatch.setattr(capeclient.CapeClient, "submit", lambda self, *a, **k: 42)
@@ -61,7 +62,7 @@ def test_detonate_dash_o_streams_to_stdout(monkeypatch, capsys, tmp_path):
 
 def test_detonate_wait_poll_error_returns_2(monkeypatch):
     # poll() raising CapeError under --wait (timeout / CAPE down) must be a clean
-    # exit 2, not an uncaught traceback (M4 / scout #3).
+    # exit 2, not an uncaught traceback.
     import clew.channels.cape.client as capeclient
 
     def boom(self, *a, **k):
@@ -74,7 +75,7 @@ def test_detonate_wait_poll_error_returns_2(monkeypatch):
 
 def test_poll_timeout_raises_capeerror():
     # poll() must raise CapeError (not builtin TimeoutError) so callers' existing
-    # `except CapeError` handles it (M4 / scout #3).
+    # `except CapeError` handles it.
     import clew.channels.cape.client as capeclient
 
     c = capeclient.CapeClient("http://x")
@@ -84,7 +85,7 @@ def test_poll_timeout_raises_capeerror():
 
 def test_correlate_rejects_cape_url(monkeypatch):
     # --cape-url was inert on correlate (its --task path reads local disk, not
-    # REST) and has been removed (D2 cleanup): argparse must reject it.
+    # REST) and has been removed: argparse must reject it.
     with pytest.raises(SystemExit):
         cli.main(["correlate", "--record", "r.json", "--task", "1", "--cape-url", "http://x"])
 
@@ -107,7 +108,7 @@ def test_records_computed_for_all_terminal_states(tmp_path):
 
 
 def test_humanize_age_iso_tz_and_future(monkeypatch):
-    # scout #17: the fromisoformat fallback, tz-aware drop, and future clamp were
+    # the fromisoformat fallback, tz-aware drop, and future clamp were
     # untested (only the strptime buckets + garbage were covered).
     assert cli._humanize_age("2020-01-01T00:00:00.123456+00:00").endswith("d")  # ISO + offset
     assert cli._humanize_age("2020-01-01T00:00:00+00:00").endswith("d")  # tz-aware, tzinfo dropped
@@ -651,7 +652,7 @@ def test_tasks_json_includes_records(monkeypatch, capsys):
     assert isinstance(rows, list) and rows
     assert rows[0]["sample"] == "signtool.exe"
     assert rows[0]["records"] == "24429"
-    # failed_analysis is terminal too, so its RECORDS are counted (M2).
+    # failed_analysis is terminal too, so its RECORDS are counted.
     assert rows[1]["records"] == "24429"
 
 
@@ -806,3 +807,49 @@ def test_run_parser_carries_merged_flags():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# --- --capa: one flag carrying both the on/off switch and the timeout --------
+
+
+def test_capa_off_by_default():
+    args = cli.build_parser().parse_args(["static", "s.exe"])
+    assert args.capa_timeout is None
+
+
+def test_capa_bare_uses_the_default_timeout():
+    args = cli.build_parser().parse_args(["static", "s.exe", "--capa"])
+    assert args.capa_timeout == cli.DEFAULT_CAPA_TIMEOUT
+
+
+def test_capa_accepts_an_explicit_timeout():
+    args = cli.build_parser().parse_args(["static", "s.exe", "--capa", "900"])
+    assert args.capa_timeout == 900
+
+
+def test_capa_accepts_the_equals_form_before_the_sample():
+    # The only way to give a value ahead of the positional, since nargs="?"
+    # would otherwise eat the sample.
+    args = cli.build_parser().parse_args(["static", "--capa=900", "s.exe"])
+    assert args.capa_timeout == 900
+
+
+def test_capa_swallowing_the_sample_gives_an_actionable_error(capsys):
+    # `clew static --capa sample.exe` is the ordering argparse cannot
+    # disambiguate. It must fail, but the message has to name the two forms
+    # that work rather than saying "invalid int value".
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["static", "--capa", "s.exe"])
+    err = capsys.readouterr().err
+    assert "timeout in seconds" in err
+    assert "--capa=600" in err
+
+
+def test_capa_timeout_rejects_nonsense_but_explains():
+    with pytest.raises(argparse.ArgumentTypeError) as excinfo:
+        cli._capa_timeout("banana")
+    assert "timeout in seconds" in str(excinfo.value)
+
+
+def test_capa_timeout_parses_an_integer():
+    assert cli._capa_timeout("42") == 42

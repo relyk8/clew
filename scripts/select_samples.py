@@ -7,12 +7,15 @@ PE32 via libmagic, and writes paths to a manifest file.
 from __future__ import annotations
 
 import argparse
+import os
 import random
 import subprocess
 import sys
 from pathlib import Path
 
-CORPUS_ROOT = Path("/home/user/Documents/VirusTotal Academic Malware Samples")
+# No default: this is a licensed corpus whose layout is site-specific. Set
+# CLEW_CORPUS_ROOT or pass --corpus-root.
+DEFAULT_CORPUS_ROOT = os.environ.get("CLEW_CORPUS_ROOT")
 ARCHIVE_DATES = [
     ("2017", "2017-10-20"),
     ("2017", "2017-11-20"),
@@ -48,6 +51,13 @@ def list_candidates(archive_dir: Path) -> list[Path]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--corpus-root",
+        type=Path,
+        default=Path(DEFAULT_CORPUS_ROOT) if DEFAULT_CORPUS_ROOT else None,
+        help="root of the sample corpus, laid out as <year>/<date>/extracted/Win32_EXE "
+        "(default: $CLEW_CORPUS_ROOT)",
+    )
     ap.add_argument("--per-date", type=int, default=125, help="samples per archive date")
     ap.add_argument("--seed", type=int, default=42, help="RNG seed for reproducibility")
     ap.add_argument(
@@ -63,13 +73,16 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    if args.corpus_root is None:
+        ap.error("no corpus root: pass --corpus-root or set CLEW_CORPUS_ROOT")
+
     rng = random.Random(args.seed)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     chosen: list[Path] = []
     counts: dict[str, int] = {}
 
     for year, date in ARCHIVE_DATES:
-        archive_dir = CORPUS_ROOT / year / date / "extracted" / "Win32_EXE"
+        archive_dir = args.corpus_root / year / date / "extracted" / "Win32_EXE"
         if not archive_dir.is_dir():
             print(f"WARN: missing {archive_dir}", file=sys.stderr)
             continue

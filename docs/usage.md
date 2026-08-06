@@ -10,10 +10,10 @@ record it produces, see [schema.md](schema.md).
 Clew has a static half that runs locally and a dynamic half that runs a sample in
 a sandbox. The two are separate commands joined by the record on disk.
 
-`static` runs capa (Channel 0), FLOSS (Channel 1), and Binary Ninja (Channel 2)
-over the sample and writes an intermediate record: candidate values tied to API
-call sites, each with provenance and a confidence score. The Channel 3 comparison
-operands are left as placeholders at this stage.
+`static` runs FLOSS (Channel 1) and Binary Ninja (Channel 2) over the sample and
+writes an intermediate record: candidate values tied to API call sites, each with
+provenance and a confidence score. capa (Channel 0) is opt-in through `--capa`.
+The Channel 3 comparison operands are left as placeholders at this stage.
 
 `detonate` submits the sample to CAPE under the cmplog DynamoRIO package, which
 logs the runtime `cmp`/`test` operands the sample compares against as it executes.
@@ -50,18 +50,39 @@ The `results/` directory is gitignored.
 `clew <sample>` is a shorthand for `clew static <sample>`. Every command accepts
 `-v` (debug logging), `-q` (warnings only), and `-h`.
 
-### static — run the static pipeline (Channels 0-2)
+### static — run the static pipeline (Channels 1-2, and 0 on request)
 
 ```bash
 clew static SAMPLE [-o OUTPUT]
 ```
 
+capa (Channel 0) does not run unless you ask for it with `--capa`. It is the
+slowest stage by a wide margin and contributes no candidate values: it classifies
+the sample rather than extracting from it, so skipping it leaves the candidates
+identical and cuts a run roughly in half.
+
+Without `--capa`, `derivation_status` is `null` and `capa_techniques` is empty.
+That null is defined by the schema as "classification was skipped", and it is
+deliberately distinct from `no_capa_signal`, which means capa did run and found
+nothing usable. A consumer can tell the two apart.
+
+Because the value is optional, put `--capa` after the sample or attach the value
+with `=`. `clew static --capa sample.exe` is ambiguous, and argparse reads the
+sample as the timeout:
+
+```bash
+clew static sample.exe --capa          # default timeout
+clew static sample.exe --capa 900      # explicit
+clew static --capa=900 sample.exe      # explicit, before the sample
+```
+
 | Option | Meaning |
 |---|---|
-| `--capa-rules DIR` | capa rules dir (default `$CLEW_CAPA_RULES`) |
-| `--capa-sigs DIR` | capa signatures dir (default `$CLEW_CAPA_SIGS`) |
+| `--capa [SECONDS]` | run capa; optional timeout, default 600s. Omitted, capa does not run |
+| `--capa-rules DIR` | capa rules dir (default `$CLEW_CAPA_RULES`), used only with `--capa` |
+| `--capa-sigs DIR` | capa signatures dir (default `$CLEW_CAPA_SIGS`), used only with `--capa` |
 | `--floss-sigs PATH` | FLOSS signature file (default: FLOSS built-in) |
-| `--capa-bin BIN` | capa executable to invoke (default `capa` on PATH) |
+| `--capa-bin BIN` | capa executable (default: the capa installed alongside clew) |
 | `--no-license-checkout` | assume a Binary Ninja license is already checked out |
 | `--exclude-unresolved` | omit located-but-unresolved call sites (the Channel 3 work list) |
 | `--verbose-floss` | don't suppress vivisect/FLOSS emulator logging |
@@ -159,9 +180,11 @@ round trip, which is the check worth running before a long batch.
 
 ## Channel 3 requirements
 
-The dynamic commands (`detonate`, `run`, and `correlate --task`) need a CAPE
-instance with the cmplog DynamoRIO analysis package deployed, reachable at
-`CAPE_BASE_URL`. The package runs the sample under DynamoRIO and records its
+`detonate` and `run` need a CAPE instance with the cmplog DynamoRIO analysis
+package deployed, reachable at `CAPE_BASE_URL`. `correlate --task` instead reads
+the logs from CAPE's storage directory, so it must run on the CAPE host but makes
+no API call. To build and deploy all of this, see
+[channel3_setup.md](channel3_setup.md). The package runs the sample under DynamoRIO and records its
 runtime comparison operands, which CAPE stores per task under
 `storage/analyses/<id>/files/`.
 

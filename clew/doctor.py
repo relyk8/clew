@@ -193,8 +193,8 @@ def _check_dir(name: str, env_var: str, what: str) -> Check:
         return Check(
             name,
             WARN,
-            f"{env_var} not set; capa is enrichment, so the pipeline degrades to "
-            "derivation_status=no_capa_signal",
+            f"{env_var} not set; only needed when you pass --capa, which is off "
+            "by default",
             fix=f"set {env_var} to your {what} in {_short(user_config_path())}",
         )
     path = Path(raw).expanduser()
@@ -225,7 +225,7 @@ def check_capa_bin() -> Check:
     return Check(
         "capa binary",
         WARN,
-        "capa not found; Channel 0 will fail and degrade to no_capa_signal",
+        "capa not found; only needed when you pass --capa, which is off by default",
         fix="pip install 'flare-capa>=9.4.0,<10' into the same environment as clew",
     )
 

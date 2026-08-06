@@ -18,7 +18,7 @@ __all__ = ["CapeClient", "CapeError"]
 def __getattr__(name: str) -> Any:
     # Lazy re-export so importing this package (or its dependency-free
     # cmplog_parse/correlate siblings) does not pull in `client`, which needs
-    # `requests`. See clew-conventions.md (heavy deps imported lazily).
+    # `requests`: heavy dependencies are imported lazily inside the CLI verbs.
     if name in __all__:
         from clew.channels.cape import client
 

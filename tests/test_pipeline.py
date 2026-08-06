@@ -192,7 +192,7 @@ def test_record_plus_derivation_validates_against_schema():
 
 
 def test_run_capa_stage_degrades_on_capa_error(monkeypatch):
-    # scout #11: any CapaError must degrade to no_capa_signal, never abort the
+    # any CapaError must degrade to no_capa_signal, never abort the
     # pipeline -- guards against narrowing the `except capa.CapaError` clause.
     from clew.channels import capa as capa_mod
 
@@ -200,8 +200,50 @@ def test_run_capa_stage_degrades_on_capa_error(monkeypatch):
         raise capa_mod.CapaRunError("nonzero exit")
 
     monkeypatch.setattr(capa_mod, "run_capa", boom)
-    techniques, status = pipeline._run_capa_stage("s.exe", "rules", "sigs", "capa")
+    techniques, status = pipeline._run_capa_stage("s.exe", "rules", "sigs", "capa", 300)
     assert techniques == [] and status == "no_capa_signal"
+
+
+def test_run_capa_stage_degrades_on_timeout(monkeypatch):
+    # The timeout used to escape as subprocess.TimeoutExpired, which is not a
+    # CapaError, so it crashed the whole run instead of degrading. Observed for
+    # real: capa exceeded 300s on autoit3 and `clew static` died with a
+    # traceback. CapaTimeoutError is what keeps it inside the policy.
+    from clew.channels import capa as capa_mod
+
+    def slow(*a, **k):
+        raise capa_mod.CapaTimeoutError("capa timed out after 300s on s.exe")
+
+    monkeypatch.setattr(capa_mod, "run_capa", slow)
+    techniques, status = pipeline._run_capa_stage("s.exe", "rules", "sigs", "capa", 300)
+    assert techniques == [] and status == "no_capa_signal"
+
+
+def test_capa_timeout_error_is_a_capa_error():
+    # The whole fix rests on this relationship: subprocess.TimeoutExpired
+    # descends from SubprocessError, so it slipped past every except CapaError.
+    from clew.channels import capa as capa_mod
+
+    assert issubclass(capa_mod.CapaTimeoutError, capa_mod.CapaError)
+
+
+def test_capa_timeout_is_converted_not_propagated(monkeypatch):
+    # Guards the conversion at its source: run_capa must never let a raw
+    # TimeoutExpired escape to its callers.
+    import subprocess
+
+    from clew.channels import capa as capa_mod
+
+    def fake_run(*a, **k):
+        raise subprocess.TimeoutExpired(cmd=["capa"], timeout=300)
+
+    monkeypatch.setattr(capa_mod.subprocess, "run", fake_run)
+    with pytest.raises(capa_mod.CapaTimeoutError) as excinfo:
+        capa_mod.run_capa(
+            pathlib.Path("s.exe"), rules_path=pathlib.Path("r"), sigs_path=pathlib.Path("s")
+        )
+    # batch_channel0.py sniffs the message for these words.
+    assert "timed out" in str(excinfo.value)
 
 
 def test_capa_techniques_and_status_from_capa_result():
@@ -226,7 +268,7 @@ def test_capa_techniques_and_status_from_capa_result():
     assert "get OS version" not in techniques
     # classify runs over the evasion-FILTERED techniques, so the lone actionable
     # anti-analysis rule yields fully_derivable -- NOT partially_derivable, which
-    # classifying the full (unfiltered) rule set used to give (scout #1).
+    # classifying the full (unfiltered) rule set used to give.
     assert status == "fully_derivable"
 
 
@@ -273,7 +315,7 @@ def test_sigs_identity_stable_and_content_sensitive(tmp_path):
     first = pipeline._sigs_identity(d)
     assert first == pipeline._sigs_identity(d)  # deterministic
     (d / "a.sig").write_bytes(b"yyyy")  # SAME size, different bytes
-    assert pipeline._sigs_identity(d) != first  # scout #14: same-size edit detected
+    assert pipeline._sigs_identity(d) != first  # same-size edit detected
 
 
 def test_sigs_identity_stable_across_mtime_only_change(tmp_path):
