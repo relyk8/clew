@@ -15,15 +15,23 @@ writes an intermediate record: candidate values tied to API call sites, each wit
 provenance and a confidence score. capa (Channel 0) is opt-in through `--capa`.
 The Channel 3 comparison operands are left as placeholders at this stage.
 
-`detonate` submits the sample to CAPE under the cmplog DynamoRIO package, which
-logs the runtime `cmp`/`test` operands the sample compares against as it executes.
-Submission returns a task id immediately. The detonation runs in the sandbox on
-its own schedule, so you can submit and come back to it.
+`detonate` submits the sample to CAPE under the drtrace DynamoRIO package. As the
+sample executes, drtrace records the environment-sensitive API calls it makes --
+call site, arguments, out-parameters and return values -- alongside the runtime
+`cmp`/`test` operands those values are checked against. Submission returns a task
+id immediately. The detonation runs in the sandbox on its own schedule, so you can
+submit and come back to it.
 
-`correlate` reads those cmplog logs, matches each runtime comparison to the static
-call site it sits after, and fills the record's `comparison_candidates`. It reads
-logs either from a CAPE task id or from a local directory, so you can re-correlate
-a record without detonating again.
+`correlate` reads those logs and folds them into the record two ways. Runtime
+comparisons attach to the static call site they sit after, filling
+`comparison_candidates`. Observed API calls fill in the values the static pass
+could not resolve, and a call at a site the static pass never enumerated becomes a
+new candidate of its own (`api_resolution: "runtime"`). It reads logs either from a
+CAPE task id or from a local directory, so you can re-correlate a record without
+detonating again.
+
+Logs from the older `cmplog` client are still accepted; they carry comparisons
+only, so they fill `comparison_candidates` and produce no new candidates.
 
 `run` chains all three for one sample.
 
@@ -99,7 +107,7 @@ clew detonate SAMPLE [--wait]
 
 | Option | Meaning |
 |---|---|
-| `--package PKG` | CAPE analysis package (default `exe_cmplog`) |
+| `--package PKG` | CAPE analysis package (default `exe_drtrace`) |
 | `--timeout SECS` | guest analysis timeout (default 120) |
 | `--wait` | block until the task reaches a terminal state, then report status |
 | `--enforce-timeout` / `--no-enforce-timeout` | kill the guest at the timeout vs wait for self-exit (default on) |
@@ -109,20 +117,23 @@ clew detonate SAMPLE [--wait]
 ### correlate — join runtime operands onto a record (Channel 3)
 
 ```bash
-clew correlate --record RECORD (--cmplog-dir DIR | --task N)
+clew correlate --record RECORD (--log-dir DIR | --task N)
 ```
 
 | Option | Meaning |
 |---|---|
 | `--record PATH` | the static record to enrich (required) |
-| `--cmplog-dir DIR` | a local dir of `cmplog.*.log` files (offline, no CAPE) |
+| `--log-dir DIR` | a local dir of `drtrace.*.log` or `cmplog.*.log` files (offline, no CAPE). `--cmplog-dir` is accepted as an alias |
 | `--task N` | a CAPE task id; reads the logs from CAPE storage |
 | `--module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
 | `--storage-root DIR` | CAPE analyses storage root (with `--task`) |
 | `--max-cmp-records N` | cap comparison records loaded from the logs (`0` = unlimited; default 5,000,000) — guards host memory/CPU on an oversized log |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
 
-`--cmplog-dir` and `--task` are mutually exclusive, and one is required.
+`--log-dir` and `--task` are mutually exclusive, and one is required. When a
+directory or task holds both log families, the drtrace logs are used: they are a
+superset, and silently correlating against the older comparison-only logs would
+lose every observed API call.
 
 ### tasks — the CAPE detonation dashboard (Channel 3)
 
@@ -180,16 +191,18 @@ round trip, which is the check worth running before a long batch.
 
 ## Channel 3 requirements
 
-`detonate` and `run` need a CAPE instance with the cmplog DynamoRIO analysis
+`detonate` and `run` need a CAPE instance with the drtrace DynamoRIO analysis
 package deployed, reachable at `CAPE_BASE_URL`. `correlate --task` instead reads
 the logs from CAPE's storage directory, so it must run on the CAPE host but makes
 no API call. To build and deploy all of this, see
-[channel3_setup.md](channel3_setup.md). The package runs the sample under DynamoRIO and records its
-runtime comparison operands, which CAPE stores per task under
+[channel3_setup.md](channel3_setup.md). The package runs the sample under DynamoRIO and records
+the environment-sensitive API calls it makes along with the comparison operands
+those values are checked against, which CAPE stores per task under
 `storage/analyses/<id>/files/`.
 
-`correlate --cmplog-dir` needs none of this. Given a directory of `cmplog.*.log`
-files, it runs fully offline, which is the path the correlation tests exercise.
+`correlate --log-dir` needs none of this. Given a directory of `drtrace.*.log` (or
+`cmplog.*.log`) files, it runs fully offline, which is the path the correlation
+tests exercise.
 
 A sample whose anti-instrumentation checks defeat DynamoRIO produces no logs, so
 correlation yields an empty `comparison_candidates` for it. That is expected and
