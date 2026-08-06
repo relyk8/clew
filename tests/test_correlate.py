@@ -336,7 +336,7 @@ def _stub_record(csva="0x00401000", param=0, api="GetModuleHandleW", value=None,
 
 
 def test_return_address_joins_to_the_call_instruction_not_past_it():
-    """drwrap logs the address the API returns to; Unit 3 records the address of
+    """drwrap logs the address the API returns to; enumeration records the address of
     the call instruction. Matching on equality would find nothing, on every
     sample, while looking exactly like a sample that was never observed."""
     from clew.channels.cape.correlate import match_call_site
@@ -422,7 +422,7 @@ def test_an_unchanged_argument_is_not_reported_twice():
 
 
 def test_call_at_an_unenumerated_site_becomes_a_new_candidate():
-    """Channel 3 producing rather than annotating: a site Unit 3 never found."""
+    """Channel 3 producing rather than annotating: a site enumeration never found."""
     from clew.channels.cape.correlate import merge_observed_calls
 
     record = _stub_record()
@@ -535,7 +535,7 @@ def test_site_inside_a_known_function_extent_is_placed():
 def test_site_beyond_the_known_extent_is_null_not_guessed():
     """Past the last call site the record evidences there is nothing to say the
     function still runs -- BN may not have carved a function there at all, which
-    is the usual reason Unit 3 missed the site."""
+    is the usual reason enumeration missed the site."""
     from clew.channels.cape.correlate import build_function_spans, function_va_for
 
     spans = build_function_spans(_spans_record())

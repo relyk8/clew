@@ -6,7 +6,7 @@
 #
 # MSVC ONLY: DynamoRIO's DynamoRIOConfig.cmake hard-fails (FATAL_ERROR, ~L561-564)
 # if the compiler is not MSVC. This cannot be configured/built on the Linux host;
-# build it inside the win10_dev Windows snapshot. See BUILD_RECIPE.md.
+# build it on Windows. See BUILD_RECIPE.md.
 #
 # Intended 32-bit build (from a "x86 Native Tools" VS prompt or with -A Win32):
 #   cmake -G "Ninja" ^
@@ -23,10 +23,11 @@ cmake_minimum_required(VERSION 3.14)
 
 project(clew_drtrace C)
 
-# Default to the durable dev-kit copy on the Linux host; override on the guest
-# with -DDynamoRIO_DIR=<pushed-kit>\cmake .
-if (NOT DEFINED DynamoRIO_DIR)
-  set(DynamoRIO_DIR "/home/relyk8/dr-sdk/DynamoRIO-Windows-11.91.20651/cmake"
+# Point this at the dev kit's cmake/ directory, either with
+# -DDynamoRIO_DIR=<kit>\cmake or by setting DYNAMORIO_HOME. There is no default:
+# a wrong one silently builds against the wrong headers.
+if (NOT DEFINED DynamoRIO_DIR AND DEFINED ENV{DYNAMORIO_HOME})
+  set(DynamoRIO_DIR "$ENV{DYNAMORIO_HOME}/cmake"
       CACHE PATH "DynamoRIO installation's cmake directory")
 endif ()
 

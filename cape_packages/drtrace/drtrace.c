@@ -2,11 +2,10 @@
  * drtrace.c  --  Clew Channel 3: API-tracing + comparison-logging DR client
  *
  * Built for DynamoRIO 11.91.20651, 32-bit (target guest is PE32 / x86).
- * COMPILE-UNVERIFIED ON THE HOST: DynamoRIO's CMake config hard-fails on any
- * non-MSVC compiler, so this must be built inside a Windows dev snapshot (see
- * BUILD_RECIPE.md). Every DR API call below was checked against the headers in
- *   /home/relyk8/dr-sdk/DynamoRIO-Windows-11.91.20651/include (+ ext/include)
- * and against the shipped samples (wrap.c, instrcalls.c, memtrace_simple.c).
+ * MSVC only: DynamoRIO's CMake refuses any other compiler on Windows, so this
+ * builds on Windows rather than on the Linux analysis host (see BUILD_RECIPE.md).
+ * The DynamoRIO API calls below follow the 11.91.20651 headers and the shipped
+ * samples (wrap.c, instrcalls.c, memtrace_simple.c).
  *
  * WHAT IT DOES
  *   Successor to cmplog.c. It still logs the runtime operands of every executed

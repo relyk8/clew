@@ -15,8 +15,8 @@ Three things it captures that static analysis structurally cannot:
 2. **Site and value together.** FLOSS produces a bag of strings with no location.
    It knows `"SbieDll.dll"` exists; it cannot know it is argument 0 to
    `GetModuleHandleW` at `0x412a3f`. That binding is what fills the unresolved
-   stubs Unit 4 leaves behind.
-3. **Calls Unit 3 never enumerated** — hash-resolved imports, ordinal
+   stubs the dataflow bridge leaves behind.
+3. **Calls static enumeration never found** — hash-resolved imports, ordinal
    `GetProcAddress`, packed or runtime-unpacked code, indirect vtable/COM
    dispatch. Wrapping the callee means how the call site was reached stops
    mattering.
@@ -101,7 +101,7 @@ log, and existing `cmplog` logs keep parsing unchanged.
 ## Build
 
 MSVC only — DynamoRIO's CMake config hard-fails on any other compiler, so this
-cannot be built on the Linux host. See `BUILD_RECIPE.md`.
+cannot be built on Linux. See `BUILD_RECIPE.md`.
 
 The wrapped API set is generated from `clew/tiers.py`'s `TARGET_ENV_APIS` by
 `scripts/gen_api_table.py` into `api_table.h`, so the client and the pipeline

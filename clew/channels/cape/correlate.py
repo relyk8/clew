@@ -185,7 +185,7 @@ def _warn_if_unrebased(
 RUNTIME_CONFIDENCE = 0.95
 
 # The client logs a call site as drwrap_get_retaddr -- the address the API
-# returns to. Unit 3 records call_site_va as the address of the call
+# returns to. Enumeration records call_site_va as the address of the call
 # *instruction*. They differ by the length of that instruction, so the two never
 # join on equality, and a naive match yields zero hits on every sample while
 # looking like a sample that simply was not observed.
@@ -203,7 +203,7 @@ def match_call_site(retaddr: int, call_site_vas) -> int | None:
 
     The nearest call site below `retaddr` that sits within one call instruction
     of it. Returns None when nothing is close enough, which is the honest answer
-    for a call site Unit 3 never enumerated -- exactly the case that becomes a
+    for a call site static enumeration never found -- exactly the case that becomes a
     new runtime candidate.
     """
     best = None
@@ -405,7 +405,7 @@ def function_va_for(site: int, spans: list[tuple[int, int, str]]) -> str | None:
     `site` automatically disqualifies it.
 
     Beyond that bound there is no evidence: Binary Ninja may simply not have
-    carved a function there at all, which is the usual reason Unit 3 missed the
+    carved a function there at all, which is the usual reason enumeration missed the
     call site in the first place. Returning None there is deliberate -- inventing
     a value would corrupt exactly what the field is for, grouping candidates by
     routine and cross-referencing back into BN.

@@ -39,10 +39,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-# Machine-specific, so overridable. The default is this box's mount.
-DEFAULT_CORPUS_ROOT = Path(
-    os.environ.get("CLEW_CORPUS_ROOT", "/home/shared/virustotal")
-)
+# Site-specific, so there is no default: set CLEW_CORPUS_ROOT or pass
+# --corpus-root. A baked-in path only ever resolves on one machine.
+_env_corpus = os.environ.get("CLEW_CORPUS_ROOT")
+DEFAULT_CORPUS_ROOT = Path(_env_corpus) if _env_corpus else None
 
 # Below this many total imports, the import table is almost certainly a packer
 # stub rather than the real program.
@@ -196,6 +196,9 @@ def main() -> int:
     ap.add_argument("-o", "--output", type=Path, default=None)
     args = ap.parse_args()
 
+    if args.corpus_root is None:
+        print("no corpus root: set CLEW_CORPUS_ROOT or pass --corpus-root", file=sys.stderr)
+        return 1
     if not args.corpus_root.is_dir():
         print(f"corpus root not found: {args.corpus_root}", file=sys.stderr)
         print("set CLEW_CORPUS_ROOT or pass --corpus-root", file=sys.stderr)

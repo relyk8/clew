@@ -1,17 +1,16 @@
-# drtrace build recipe (Windows guest)
+# Building drtrace.dll
 
-Copy-paste steps to build `drtrace.dll` inside the `win10_dev` snapshot. **This
-cannot be built on the Linux host** — DynamoRIO's CMake config `FATAL_ERROR`s on
-any non-MSVC compiler (`DynamoRIOConfig.cmake` L563), and its headers need
-`windows.h`. Target build: **32-bit / x86**, DR **11.91.20651**.
+Steps to build `drtrace.dll` on a Windows machine with MSVC. **It cannot be built
+on Linux** — DynamoRIO's CMake config `FATAL_ERROR`s on any non-MSVC compiler
+(`DynamoRIOConfig.cmake` L563), and its headers need `windows.h`. Target build:
+**32-bit / x86**, DynamoRIO **11.91.20651**.
 
-This is the `cmplog` recipe with the deltas for `drtrace`. That build succeeded
-on 2026-07-21 and the toolchain is banked in `win10_dev`, so this should be a
-rebuild rather than a fresh provision.
+This is the `cmplog` recipe plus the deltas for `drtrace`. Keep the build machine
+separate from the CAPE analysis guest, and snapshot it once the toolchain is
+installed so provisioning is a one-time cost.
 
-Legend: **[USER]** needs capeadmin / VM-state control (revert a snapshot, take a
-snapshot, `qemu-img`, sudo). **[AGENT]** is drivable over the CAPE agent
-`/execute` + `/extract` from the host (`192.168.122.1`) once the guest is up.
+For the whole Channel 3 path, of which this is one step, see
+[docs/cape_drio_setup.md](../../docs/cape_drio_setup.md).
 
 ---
 
@@ -32,16 +31,16 @@ snapshot, `qemu-img`, sudo). **[AGENT]** is drivable over the CAPE agent
 
 ---
 
-## Pre-flight: syntax-check on the Linux host  [AGENT]
+## Pre-flight: syntax-check on Linux
 
-Do this before booting the guest. It will not produce a `.dll` — DR's CMake is
+Worth doing before booting the build machine. It will not produce a `.dll` — DR's CMake is
 MSVC-only — but MinGW supplies `windows.h` and targets 32-bit Windows, so the DR
 headers parse and the client gets a real syntax and type check. That is the
-difference between finding a typo here and burning a VM session on it.
+difference between finding a typo here and burning a build session on it.
 
 ```bash
 sudo apt install gcc-mingw-w64-i686        # one time
-SDK=/home/relyk8/dr-sdk/DynamoRIO-Windows-11.91.20651
+SDK=/path/to/DynamoRIO-Windows-11.91.20651   # the extracted dev kit
 cd cape_packages/drtrace
 python ../../scripts/gen_api_table.py       # api_table.h must be current
 i686-w64-mingw32-gcc -fsyntax-only -DWINDOWS -DX86_32 -Wall -Wextra \
@@ -63,47 +62,38 @@ diagnostics, and anything about DR's runtime behaviour.
 
 ---
 
-## 0. Prereqs / state  [USER]
+## 0. Prerequisites
 
-Revert to a **running/agent-up** snapshot so the CAPE agent comes up:
+A Windows machine with the DynamoRIO dev kit, VS Build Tools (C++ workload),
+cmake and ninja. If you build inside a VM, bring it up so you have a working
+control channel before starting.
 
-```
-virsh snapshot-revert win10 win10_dev --running
-```
+## 1. Get the source onto the build machine
 
-Do **not** cold-boot — the agent does not auto-start, and there is no other
-headless control channel into the guest.
+Copy `cape_packages/drtrace/` (`drtrace.c`, `CMakeLists.txt`, **`api_table.h`**)
+to e.g. `C:\clew\drtrace`.
 
-`win10_dev` already banks the DR SDK, VS Build Tools, cmake and ninja.
+If you are driving the machine over CAPE's agent, note it parses commands with
+POSIX `shlex.split`, so backslashes get stripped: wrap Windows commands in
+**single quotes + `cmd /c`**. Nested `"` get mangled — push a `.bat` and run it
+rather than fighting inline quoting.
 
-## 1. Push the source  [AGENT]
-
-Zip `cape_packages/drtrace/` (`drtrace.c`, `CMakeLists.txt`, **`api_table.h`**)
-on the host and push it via the agent's `/extract` with `dirpath=C:\clew\drtrace`.
-
-The agent parses commands with POSIX `shlex.split`, so backslashes get stripped:
-wrap Windows commands in **single quotes + `cmd /c`**. Nested `"` get mangled —
-push a `.bat` and run it rather than fighting inline quoting. This bit the
-cmplog build repeatedly.
-
-## 2. Configure + build 32-bit  [AGENT]
+## 2. Configure + build 32-bit
 
 ```
 cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x86 && cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDynamoRIO_DIR=C:\dynamorio-sdk\cmake -S C:\clew\drtrace -B C:\clew\drtrace\build && cmake --build C:\clew\drtrace\build --target drtrace'
 ```
 
-Output: `C:\clew\drtrace\build\drtrace.dll`.
+Output: `C:\clew\drtrace\build\drtrace.dll`. Putting the above in a `.bat` and
+running that is more reliable than retyping it through a remote shell.
 
-Adapt `/home/relyk8/ch3-staging/build.bat` rather than retyping this — it is the
-form that actually worked.
-
-## 3. Smoke it standalone  [AGENT]
+## 3. Smoke it standalone
 
 ```
 cmd /c 'C:\dynamorio\bin32\drrun.exe -c C:\clew\drtrace\build\drtrace.dll -logdir C:\drtrace_logs -- C:\Windows\SysWOW64\hostname.exe'
 ```
 
-**The smoke target must be 32-bit** — the guest is 64-bit Windows, so
+**The smoke target must be 32-bit** — on 64-bit Windows,
 `System32\hostname.exe` is 64-bit and 32-bit `drrun` cannot instrument it. Use
 `SysWOW64`. drrun prints cosmetic *"not a valid DynamoRIO root"* and missing
 lib64/debug warnings against the lean install; harmless.
@@ -122,22 +112,21 @@ What to check in `C:\drtrace_logs\`, beyond "a log exists":
 Instrumentation is slow (a clean call per comparison, now plus wrapping), so
 `hostname.exe` can take minutes to self-exit. That is expected.
 
-## 4. Pull `drtrace.dll` back to the host  [AGENT]
+## 4. Retrieve drtrace.dll
 
-Retrieve it to `/home/relyk8/ch3-staging/drtrace.dll` (next to the banked
-`cmplog.dll`).
+Copy the built DLL back off the build machine.
 
-## 5. Deploy for CAPE runs  [USER for snapshot steps]
+## 5. Deploy for CAPE runs
 
-- **[AGENT]** push `drtrace.dll` into the **analysis** snapshot's guest at
+- Place `drtrace.dll` in the analysis guest at
   `C:\dynamorio\tools\lib32\release\drtrace.dll` (the path hardcoded in
   `exe_drtrace.py`).
-- **[USER]** re-take the running analysis snapshot so CAPE reverts to a state
-  that already has `drtrace.dll` in place, and repoint `kvm.conf` `snapshot=` at
-  it. Keep `clean_drio_cmplog` as the fallback.
-- **[USER]** deploy `exe_drtrace.py` to
-  `/opt/CAPEv2/analyzer/windows/modules/packages/exe_drtrace.py` (cape-owned;
-  sudo). No CAPE restart needed — the analyzer payload is assembled per task.
+- **Re-take the analysis snapshot** so CAPE reverts to a state that already has
+  the DLL, and point CAPE's machinery config at it. Keep the previous snapshot as
+  a fallback.
+- Deploy `exe_drtrace.py` to
+  `/opt/CAPEv2/analyzer/windows/modules/packages/`. That directory is owned by the
+  CAPE user. No CAPE restart is needed — the analyzer payload is assembled per task.
 
 Then submit with `package=exe_drtrace` **and `options=free=yes`**:
 
