@@ -30,7 +30,7 @@ configuration below exists to locate them:
   source tree rather than the installed package, so the two paths differ. Pin the
   checkout: `clew/channels/capa.py` records the validated rules and sigs commits,
   and a mismatch silently changes which rules fire.
-- **A CAPE instance** with the cmplog DynamoRIO package, for the dynamic
+- **A CAPE instance** with the drtrace DynamoRIO package, for the dynamic
   commands only. The static pipeline runs without it. Standing this up is more
   involved than the others, because the component doing the logging is Clew's
   own: see [cape_drio_setup.md](cape_drio_setup.md).
