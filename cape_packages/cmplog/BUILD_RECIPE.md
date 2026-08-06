@@ -14,7 +14,7 @@ Windows box, and copy the resulting DLL across. If you build in a VM, snapshot i
 once the toolchain is installed so the setup is a one-time cost.
 
 For the whole Channel 3 path, of which this is one step, see
-[docs/channel3_setup.md](../../docs/channel3_setup.md).
+[docs/cape_drio_setup.md](../../docs/cape_drio_setup.md).
 
 ## 1. Install the toolchain
 
@@ -105,4 +105,4 @@ simpler to reason about.
 Once built, `cmplog.dll` has to reach the analysis guest and CAPE has to know
 about the package. Both steps, and the `free=yes` submission requirement that
 makes the difference between logs and an empty directory, are covered in
-[docs/channel3_setup.md](../../docs/channel3_setup.md).
+[docs/cape_drio_setup.md](../../docs/cape_drio_setup.md).

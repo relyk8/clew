@@ -88,7 +88,7 @@ command reference and the end-to-end workflow.
 - [docs/installation.md](docs/installation.md) — installing, configuring, and
   verifying a setup, plus running the tests.
 - [docs/usage.md](docs/usage.md) — the command reference and end-to-end workflow.
-- [docs/channel3_setup.md](docs/channel3_setup.md) — standing up CAPE and
+- [docs/cape_drio_setup.md](docs/cape_drio_setup.md) — standing up CAPE and
   DynamoRIO for the dynamic channel.
 - [docs/schema.md](docs/schema.md) — the record contract. The machine-checkable
   version is `schema/clew_record.schema.json`.

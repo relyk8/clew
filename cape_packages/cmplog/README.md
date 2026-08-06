@@ -66,4 +66,4 @@ The static pipeline never invokes this client. It emits the comparison fields as
 placeholders, and correlation is a separate step, which is what lets a record be
 re-correlated without re-detonating.
 
-To set this up from scratch, see [docs/channel3_setup.md](../../docs/channel3_setup.md).
+To set this up from scratch, see [docs/cape_drio_setup.md](../../docs/cape_drio_setup.md).

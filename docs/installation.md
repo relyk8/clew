@@ -33,7 +33,7 @@ configuration below exists to locate them:
 - **A CAPE instance** with the cmplog DynamoRIO package, for the dynamic
   commands only. The static pipeline runs without it. Standing this up is more
   involved than the others, because the component doing the logging is Clew's
-  own: see [channel3_setup.md](channel3_setup.md).
+  own: see [cape_drio_setup.md](cape_drio_setup.md).
 
 Binary Ninja is required. capa and CAPE are not: capa does not run unless asked
 for, and CAPE only serves the dynamic commands.

@@ -195,7 +195,7 @@ round trip, which is the check worth running before a long batch.
 package deployed, reachable at `CAPE_BASE_URL`. `correlate --task` instead reads
 the logs from CAPE's storage directory, so it must run on the CAPE host but makes
 no API call. To build and deploy all of this, see
-[channel3_setup.md](channel3_setup.md). The package runs the sample under DynamoRIO and records
+[cape_drio_setup.md](cape_drio_setup.md). The package runs the sample under DynamoRIO and records
 the environment-sensitive API calls it makes along with the comparison operands
 those values are checked against, which CAPE stores per task under
 `storage/analyses/<id>/files/`.
