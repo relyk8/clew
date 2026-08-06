@@ -88,7 +88,7 @@ def novel_items(baseline: dict[str, set[str]], mutated: dict[str, set[str]]) -> 
 
 
 def load_stable_baseline(path) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
-    """Load a .stable.json produced by build_stable_baseline.py.
+    """Load a .stable.json baseline of IOCs seen without Clew candidates.
 
     Returns (persistent, volatile) as dicts of sets.
     """

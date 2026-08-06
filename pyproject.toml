@@ -1,12 +1,45 @@
 [project]
 name = "clew"
-version = "0.4.0"
+version = "0.4.1"
+description = "Extracts a per-sample seed corpus of the values a PE32 sample's environment checks compare against, keyed to the API call sites that consume them."
+readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Kyler McElroy" },
+    { name = "Anita Ding" },
+]
+keywords = [
+    "malware-analysis",
+    "reverse-engineering",
+    "binary-analysis",
+    "evasion",
+    "fuzzing",
+    "binary-ninja",
+    "dynamorio",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
 dependencies = [
     "flare-capa>=9.4.0,<10",
     "flare-floss==3.1.1",
     "requests>=2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/relyk8/clew"
+Issues = "https://github.com/relyk8/clew/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "jsonschema>=4", "ruff>=0.15"]
@@ -16,7 +49,10 @@ analysis = ["matplotlib>=3.8", "pandas>=2.0"]
 clew = "clew.cli:main"
 
 [build-system]
-requires = ["setuptools>=61"]
+# >=77 for PEP 639: the SPDX `license` expression and `license-files` above.
+# Older setuptools silently ignores both, producing a wheel with no license
+# metadata.
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

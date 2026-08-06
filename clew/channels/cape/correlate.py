@@ -298,7 +298,7 @@ def correlate_record(
             # Two disjoint proximity bands so a narrow hit ALWAYS ranks above any
             # wide hit, and within each band a closer hit ranks higher (monotonic
             # in dist): narrow -> (0.5, 1.0], wide -> [0, 0.5). Nothing is dropped;
-            # every comparison is still emitted, just ranked (scout #7).
+            # every comparison is still emitted, just ranked.
             if wide:
                 proximity = 0.5 * (1 - (dist - NARROW) / (WIDE - NARROW))
             else:

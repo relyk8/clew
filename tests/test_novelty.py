@@ -1,7 +1,7 @@
 """Offline tests for clew.eval.novelty (pure IoC extraction + novelty scoring).
 
 The module is a reusable public helper but previously had zero coverage; these
-lock in the core behavior and the asymmetric-dict fix (scout #16).
+lock in the core behavior and the asymmetric-dict fix.
 """
 
 from clew.eval.novelty import (
@@ -22,7 +22,7 @@ def test_novelty_score_and_items_count_new():
 
 def test_asymmetric_dicts_do_not_keyerror():
     # A category present in one dict but missing from the other must be treated
-    # as empty, not raise KeyError (scout #16).
+    # as empty, not raise KeyError.
     base = {"apis": {"a"}, "files_written": {"y"}}
     assert novelty_score(base, {"apis": {"a", "b"}}) == {"apis": 1, "files_written": 0}
     assert novel_items(base, {}) == {"apis": set(), "files_written": set()}

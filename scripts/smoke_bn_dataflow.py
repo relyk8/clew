@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Live Binary Ninja smoke test for Channel 2 / Unit 4 (the dataflow bridge).
+"""Live Binary Ninja smoke test for the Channel 2 dataflow bridge.
 
 This is the one piece the offline suite cannot cover: the MLIL-SSA walk needs
 a real, analysed BinaryView. Point it at a fixture that contains a known
-environment check -- the Day-7 al-khaser sample works, since al-khaser's
+environment check -- the al-khaser sample works, since al-khaser's
 Sandboxie check is GetModuleHandle(_T("SbieDll.dll")).
 
     source bn_env.sh                       # so the Enterprise license checks out
@@ -14,8 +14,8 @@ Sandboxie check is GetModuleHandle(_T("SbieDll.dll")).
 
 What it validates, layer by layer (each printed so a failure localises):
     1. BN loads + analyses the fixture, core version == BN_PINS.
-    2. Unit 3 enumerates the target call site(s)      -> input to the bridge.
-    3. Unit 4 locates the SSA call, walks the argument -> value + dataflow_path.
+    2. call-site enumeration finds the target call site(s) -> input to the bridge.
+    3. the bridge locates the SSA call, walks the argument -> value + dataflow_path.
     4. The recovered value matches the expected string.
 
 This uses the standalone entry points (each opens its own view) for
@@ -51,8 +51,8 @@ def main() -> int:
     target_api = argv[1] if len(argv) > 1 else "GetModuleHandleW"
     expect = argv[2] if len(argv) > 2 else None
 
-    # 1) Unit 3 against the fixture (opens + analyses its own view + checks out).
-    print(f"[*] Unit 3: enumerating call sites in {sample} ...")
+    # 1) call-site enumeration against the fixture (opens + analyses its own view).
+    print(f"[*] enumerating call sites in {sample} ...")
     cs = bn_callsites.run_bn_callsites(sample, run_license_checkout=True)
     core = cs.bn_core_version
     pin = BN_PINS.get("core_version")
@@ -65,7 +65,7 @@ def main() -> int:
     targets = cs.for_api(target_api)
     if not targets:
         print(
-            f"[FAIL] Unit 3 found no call sites to {target_api}. "
+            f"[FAIL] no call sites to {target_api} were found. "
             f"Nothing for the bridge to work on. APIs present include: "
             f"{sorted(list(cs.api_names()))[:15]} ..."
         )
@@ -76,17 +76,17 @@ def main() -> int:
             f"func=0x{s.function_va:08x}  res={s.api_resolution}"
         )
 
-    # 2) Unit 4 bridge (standalone entry point; re-opens the view).
+    # 2) the dataflow bridge (standalone entry point; re-opens the view).
     floss_index = None
     if floss_path:
         floss_index = dataflow.FlossIndex.from_floss_json(floss_path)
         print(
-            f"[*] Unit 4: bridging WITH FLOSS index from {floss_path} "
+            f"[*] bridging WITH FLOSS index from {floss_path} "
             f"({len(floss_index.static_values)} static values, "
             f"{len(floss_index.obfuscated_by_function)} obfuscated functions) ..."
         )
     else:
-        print("[*] Unit 4: bridging (no FLOSS index -> BN-only static strings) ...")
+        print("[*] bridging (no FLOSS index -> BN-only static strings) ...")
     df = dataflow.run_bn_dataflow(cs, sample, floss_index=floss_index, run_license_checkout=True)
     print(
         f"[+] {len(df.bridged)} bridged records: "

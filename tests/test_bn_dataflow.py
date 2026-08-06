@@ -1,4 +1,4 @@
-"""Offline tests for Channel 2 / Unit 4 (bn_dataflow).
+"""Offline tests for the Channel 2 dataflow bridge (bn_dataflow).
 
 No Binary Ninja, no license: everything here exercises the serialization
 round-trips, the FLOSS adapter, the pure decision helpers, and the
@@ -334,7 +334,7 @@ def test_partial_candidate_va_pattern_matches_schema():
 
 def test_unit3_stub_and_bridge_agree_on_keys():
     """The bridge's enriched candidate must be a superset-compatible shape of
-    Unit 3's stub for the fields they share, so the orchestrator can merge."""
+    the enumeration stub for the fields they share, so the orchestrator can merge."""
     cs = BNCallSites(
         sample_path="/x/s.exe",
         sample_sha256="d" * 64,
