@@ -187,6 +187,7 @@ def parse_drtrace_lines(lines: Iterable[str], max_records: int | None = None) ->
     # Per-thread stack of in-flight calls, so nesting pairs correctly.
     pending: dict[int, list[dict]] = {}
     total = 0
+    forwarder_hops = 0
 
     for line in lines:
         if len(line) > MAX_LINE_LEN:
@@ -234,7 +235,22 @@ def parse_drtrace_lines(lines: Iterable[str], max_records: int | None = None) ->
                     "args": {int(i): int(v, 16) for i, v in _ARG_RE.findall(tail)},
                     "arg_strings": at_call,
                 }
-                pending.setdefault(entry["tid"], []).append(entry)
+                stack = pending.setdefault(entry["tid"], [])
+                # Collapse a forwarder hop. Several system DLLs export one name
+                # at different addresses, the outer tail-jumping to the inner
+                # (kernel32!GetNativeSystemInfo into kernelbase's), and the
+                # client wraps both so a sample calling either is seen. One
+                # application call then fires two pre-callbacks reporting the
+                # *same* site, because a jmp pushes no return address.
+                #
+                # In isolation that pair is indistinguishable from two real
+                # calls. In sequence it is not: the second arrives while the
+                # first is still in flight on this thread, with no return
+                # between them, and two genuine calls cannot overlap that way.
+                if any(e["api"] == entry["api"] and e["site"] == entry["site"] for e in stack):
+                    forwarder_hops += 1
+                    continue
+                stack.append(entry)
                 total += 1
             continue
 
@@ -288,6 +304,12 @@ def parse_drtrace_lines(lines: Iterable[str], max_records: int | None = None) ->
                 )
             )
     trace.calls.sort(key=lambda c: c.seq)
+    if forwarder_hops:
+        logger.debug(
+            "collapsed %d forwarder hop(s): one call reaching a wrapped API through "
+            "both an export forwarder and its target",
+            forwarder_hops,
+        )
     return trace
 
 
