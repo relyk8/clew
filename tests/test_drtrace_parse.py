@@ -98,12 +98,18 @@ def test_capped_notice_is_surfaced_not_swallowed():
 
 
 def test_nested_calls_pair_innermost_first():
-    """A wrapped API that re-enters, or one that calls another wrapped API, must
-    pair by nesting rather than by nearest match."""
+    """One wrapped API calling another must pair by nesting, not nearest match.
+
+    Nesting is keyed on (api, site), so this is the real case: a *different*
+    wrapped API entered before the outer one returns. The same (api, site)
+    re-entering is treated as a forwarder hop instead -- see
+    test_forwarder_hop_collapses_to_one_call. A Windows API cannot recurse
+    through the same application call site, so nothing genuine is lost.
+    """
     log = """\
 C seq=1 T1 api=CreateFileW site=0x00401000 a0=0x0
-C seq=2 T1 api=CreateFileW site=0x00401000 a0=0x1
-R seq=3 T1 api=CreateFileW site=0x00401000 rv=0x10
+C seq=2 T1 api=NtCreateFile site=0x75a01000 a0=0x1
+R seq=3 T1 api=NtCreateFile site=0x75a01000 rv=0x10
 R seq=4 T1 api=CreateFileW site=0x00401000 rv=0x20
 """
     calls = sorted(_parse(log).calls, key=lambda c: c.seq)
@@ -223,3 +229,42 @@ def test_unreadable_file_is_skipped(tmp_path):
     good.write_text("T1 pc=0x401000 cmp seq=5 src0=imm=0x1 src1=imm=0x2\n")
     trace = parse_drtrace_files([tmp_path / "missing.log", good])
     assert len(trace.comparisons) == 1
+
+
+def test_forwarder_hop_collapses_to_one_call():
+    """kernel32!X tail-jumps into kernelbase!X and the client wraps both, so one
+    application call fires two pre-callbacks reporting the same site. The second
+    arrives while the first is still in flight, which two real calls cannot do."""
+    log = """\
+C seq=10 T1 api=GetNativeSystemInfo site=0x00401005 a0=0x19fb14
+C seq=11 T1 api=GetNativeSystemInfo site=0x00401005 a0=0x19fb14
+R seq=12 T1 api=GetNativeSystemInfo site=0x00401005 rv=0x0
+R seq=13 T1 api=GetNativeSystemInfo site=0x00401005 rv=0x0
+"""
+    (call,) = _parse(log).calls
+    assert call.seq == 10 and call.returned
+
+
+def test_two_real_calls_to_the_same_site_are_both_kept():
+    """The counterpart: sequential calls do not overlap, so a return separates
+    them and both must survive."""
+    log = """\
+C seq=10 T1 api=GetTickCount site=0x00401005
+R seq=11 T1 api=GetTickCount site=0x00401005 rv=0x1
+C seq=12 T1 api=GetTickCount site=0x00401005
+R seq=13 T1 api=GetTickCount site=0x00401005 rv=0x2
+"""
+    calls = sorted(_parse(log).calls, key=lambda c: c.seq)
+    assert [(c.seq, c.retval) for c in calls] == [(10, 0x1), (12, 0x2)]
+
+
+def test_forwarder_collapse_is_per_site_not_per_api():
+    """The same API reached through two different call sites is two real calls."""
+    log = """\
+C seq=10 T1 api=GetTickCount site=0x00401005
+C seq=11 T1 api=GetTickCount site=0x00402005
+R seq=12 T1 api=GetTickCount site=0x00402005 rv=0x2
+R seq=13 T1 api=GetTickCount site=0x00401005 rv=0x1
+"""
+    calls = sorted(_parse(log).calls, key=lambda c: c.seq)
+    assert [(c.site, c.retval) for c in calls] == [(0x401005, 0x1), (0x402005, 0x2)]
