@@ -966,3 +966,104 @@ def test_capa_timeout_parses_an_integer():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# ---------- refusing to overwrite a correlated record ----------
+
+
+def _correlated_record(sha="deadbeef"):
+    return {
+        "sample_sha256": sha,
+        "candidates": [
+            {
+                "call_site_va": "0x00401000",
+                "comparison_candidates": [
+                    {"comparison_operator": "equality", "cmp_operand_a": "0x1",
+                     "cmp_operand_b": "0x2", "confidence": 0.9,
+                     "source_channels": ["drio"], "binding": "temporal"}
+                ],
+            }
+        ],
+    }
+
+
+def _static_record(sha="deadbeef"):
+    return {
+        "sample_sha256": sha,
+        "candidates": [{"call_site_va": "0x00401000", "candidate_values": [
+            {"value": None, "confidence": 0.0, "source_channels": ["bn_xref"]}]}],
+    }
+
+
+def test_static_refuses_to_clobber_a_correlated_record(tmp_path):
+    """static and correlate share a default path keyed on the sample hash, so a
+    re-run of static silently replaced a detonation's worth of observation."""
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_correlated_record()))
+    with pytest.raises(cli.RecordRegression, match="--force"):
+        cli._emit_record(_static_record(), out, "summary")
+    # The correlated record is still there, untouched.
+    assert cli._has_runtime_data(json.loads(out.read_text()))
+
+
+def test_force_allows_the_overwrite(tmp_path):
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_correlated_record()))
+    cli._emit_record(_static_record(), out, "summary", force=True)
+    assert not cli._has_runtime_data(json.loads(out.read_text()))
+
+
+def test_recorrelating_over_a_correlated_record_is_allowed(tmp_path):
+    """Like replacing like: correlate must not be blocked by its own output."""
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_correlated_record()))
+    cli._emit_record(_correlated_record(), out, "summary")
+    assert cli._has_runtime_data(json.loads(out.read_text()))
+
+
+def test_static_over_a_static_record_is_allowed(tmp_path):
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_static_record()))
+    cli._emit_record(_static_record(), out, "summary")
+    assert out.exists()
+
+
+def test_unreadable_existing_record_does_not_block(tmp_path):
+    """Refusing on a file we cannot parse would strand the user behind
+    something they cannot inspect, and there is nothing to protect."""
+    out = tmp_path / "r.json"
+    out.write_text("not json at all")
+    cli._emit_record(_static_record(), out, "summary")
+    assert json.loads(out.read_text())["sample_sha256"] == "deadbeef"
+
+
+@pytest.mark.parametrize("shape", [
+    {"comparison_candidates": [{"confidence": 0.5}]},
+    {"api_resolution": "runtime"},
+    {"candidate_values": [{"value": "x", "source_channels": ["drio"]}]},
+])
+def test_all_three_shapes_of_runtime_data_are_protected(shape):
+    """Correlation produces runtime data three ways: comparisons joined onto a
+    candidate, a candidate Channel 3 made itself, and a value it contributed."""
+    assert cli._has_runtime_data({"candidates": [dict(call_site_va="0x1", **shape)]})
+
+
+def test_a_purely_static_record_is_not_mistaken_for_runtime_data():
+    assert not cli._has_runtime_data(_static_record())
+
+
+def test_dash_o_stdout_is_never_blocked(capsys):
+    """Pipe mode writes no file, so there is nothing to regress."""
+    cli._emit_record(_static_record(), Path("-"), "summary")
+    assert json.loads(capsys.readouterr().out)["sample_sha256"] == "deadbeef"
+
+
+def test_regression_exits_1_through_main(monkeypatch, tmp_path):
+    rec = dict(_static_record("aa"), derivation_status=None, capa_techniques=[])
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "results" / "aa.clew.json"
+    target.parent.mkdir()
+    target.write_text(json.dumps(_correlated_record("aa")))
+    assert cli.main(["static", "x.exe", "--no-license-checkout"]) == 1
+    assert cli.main(["static", "x.exe", "--no-license-checkout", "--force"]) == 0

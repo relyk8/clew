@@ -154,6 +154,11 @@ def _add_static_subparser(sub, parent) -> None:
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
+    )
     s.set_defaults(func=_cmd_static)
 
 
@@ -211,6 +216,11 @@ def _add_correlate_subparser(sub, parent) -> None:
         type=Path,
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
+    )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
     )
     s.set_defaults(func=_cmd_correlate)
 
@@ -385,6 +395,11 @@ def _add_run_subparser(sub, parent) -> None:
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
+    )
     s.set_defaults(func=_cmd_run)
 
 
@@ -505,7 +520,49 @@ def _default_record_path(record) -> Path:
     return Path("results") / f"{record['sample_sha256']}.clew.json"
 
 
-def _emit_record(record, output, summary: str) -> None:
+class RecordRegression(Exception):
+    """Writing this record would replace observed runtime data with less."""
+
+
+def _has_runtime_data(record) -> bool:
+    """Whether a record carries Channel 3 observations.
+
+    Any of the three shapes correlation produces: comparisons joined onto a
+    candidate, a candidate Channel 3 produced itself, or a value it contributed
+    to a static candidate.
+    """
+    for candidate in record.get("candidates") or []:
+        if candidate.get("comparison_candidates"):
+            return True
+        if candidate.get("api_resolution") == "runtime":
+            return True
+        for value in candidate.get("candidate_values") or []:
+            if "drio" in (value.get("source_channels") or []):
+                return True
+    return False
+
+
+def _would_regress(record, path: Path) -> bool:
+    """True if `path` holds runtime data that `record` does not.
+
+    `static` and `correlate` share a default output path keyed on the sample
+    hash, so re-running `static` on an already-correlated sample silently
+    replaced a detonation's worth of observation with a record that never had
+    any. The check is deliberately asymmetric: re-running `static` over a
+    `static` record, or re-correlating, replaces like with like and is allowed.
+    """
+    if _has_runtime_data(record) or not path.exists():
+        return False
+    try:
+        existing = json.loads(path.read_text())
+    except (OSError, ValueError):
+        # Unreadable or not JSON: nothing to protect, and refusing here would
+        # strand the user behind a file they cannot inspect.
+        return False
+    return _has_runtime_data(existing)
+
+
+def _emit_record(record, output, summary: str, force: bool = False) -> None:
     # Resolve where a record-producing verb writes its output. The record is
     # MB-scale, so a bare stdout dump is a footgun: default to a durable file and
     # log the summary to stderr. `-o -` is the escape hatch for piping.
@@ -518,6 +575,11 @@ def _emit_record(record, output, summary: str) -> None:
         path = _default_record_path(record)
     else:
         path = output
+    if not force and _would_regress(record, path):
+        raise RecordRegression(
+            f"{path} already holds Channel 3 runtime data and this record has none. "
+            f"Re-run with --force to overwrite it, or -o <path> to write elsewhere."
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     logging.getLogger("clew.cli").info("wrote %s: %s", path, summary)
@@ -564,7 +626,7 @@ def _cmd_static(args) -> int:
             f"{len(record['capa_techniques'])} capa techniques"
         )
     summary = f"{len(record['candidates'])} candidates ({resolved} with values), {capa_part}"
-    _emit_record(record, args.output, summary)
+    _emit_record(record, args.output, summary, force=args.force)
     log.info("done")
     return 0
 
@@ -656,7 +718,7 @@ def _cmd_correlate(args) -> int:
             log.warning("task %s has no Channel 3 logs (nothing to correlate)", args.task)
 
     enriched = _apply_correlation(record, logs, kind, args, log)
-    _emit_record(enriched, args.output, _correlation_summary(enriched))
+    _emit_record(enriched, args.output, _correlation_summary(enriched), force=args.force)
     log.info("done")
     return 0
 
@@ -990,7 +1052,7 @@ def _cmd_run(args) -> int:
     enriched = _apply_correlation(record, logs, kind, args, log)
     summary = _correlation_summary(enriched)
     log.info("stage 3/3 correlate: %s", summary)
-    _emit_record(enriched, args.output, summary)
+    _emit_record(enriched, args.output, summary, force=args.force)
     if args.output == Path("-"):
         # Pipe mode: _emit_record only streamed to stdout, so refresh the
         # checkpoint rather than leaving a stale static-only record on disk.
@@ -1039,7 +1101,11 @@ def main(argv=None) -> int:
         # Bare `clew` -> show the verb menu.
         parser.print_help(sys.stderr)
         return 2
-    return args.func(args)
+    try:
+        return args.func(args)
+    except RecordRegression as exc:
+        logging.getLogger("clew.cli").error("%s", exc)
+        return 1
 
 
 if __name__ == "__main__":
