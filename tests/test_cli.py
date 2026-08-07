@@ -107,6 +107,19 @@ def test_records_computed_for_all_terminal_states(tmp_path):
     assert by_id["3"] == "-"  # non-terminal: not counted
 
 
+def test_humanize_age_reads_naive_timestamps_as_utc():
+    """CAPE writes added_on in UTC without an offset. Read as local time, every
+    task less than one UTC-offset old lands in the future and clamps to "0s" --
+    observed on a task an hour old reporting 0s next to a genuinely new one."""
+    from datetime import datetime, timedelta, timezone
+
+    an_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+    assert cli._humanize_age(an_hour_ago.strftime("%Y-%m-%d %H:%M:%S")) == "1h"
+
+    two_days = datetime.now(timezone.utc) - timedelta(days=2)
+    assert cli._humanize_age(two_days.strftime("%Y-%m-%d %H:%M:%S")) == "2d"
+
+
 def test_humanize_age_iso_tz_and_future(monkeypatch):
     # the fromisoformat fallback, tz-aware drop, and future clamp were
     # untested (only the strptime buckets + garbage were covered).
@@ -583,9 +596,11 @@ def test_format_tasks_table_headers_and_values():
 
 
 def test_humanize_age_buckets():
-    from datetime import timedelta
+    from datetime import timedelta, timezone
 
-    now = datetime.now()
+    # UTC, because that is what CAPE writes. Building these from a local now()
+    # was the assumption the age column got wrong.
+    now = datetime.now(timezone.utc)
 
     def fmt(delta):
         return (now - delta).strftime("%Y-%m-%d %H:%M:%S")

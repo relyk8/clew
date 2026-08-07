@@ -23,7 +23,7 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from clew.config import default_capa_bin, load_config, loaded_files
@@ -817,12 +817,16 @@ def _humanize_age(added_on: str | None) -> str:
             parsed = datetime.fromisoformat(added_on)
         except (ValueError, TypeError):
             return "-"
-    # A tz-aware timestamp cannot be subtracted from a naive now(); drop the
-    # tzinfo and compare in wall-clock terms (good enough for an age column).
-    if parsed.tzinfo is not None:
-        parsed = parsed.replace(tzinfo=None)
-    seconds = int((datetime.now() - parsed).total_seconds())
+    # CAPE writes added_on in UTC with no offset. Comparing that against a local
+    # now() puts every recent task in the future west of Greenwich -- the clamp
+    # below then reported them all as "0s", and older ones under-reported by the
+    # UTC offset. So a naive timestamp is read as UTC, and the comparison is done
+    # in UTC. A tz-aware one is honoured as given.
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    seconds = int((datetime.now(timezone.utc) - parsed).total_seconds())
     if seconds < 0:
+        # Still possible from clock skew between this host and the CAPE host.
         seconds = 0
     if seconds < 60:
         return f"{seconds}s"
