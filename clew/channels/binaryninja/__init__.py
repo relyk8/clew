@@ -1,6 +1,6 @@
 """Channel 2 — Binary Ninja.
 
-Unit 3 (call-site enumeration, `callsites`) and Unit 4 (MLIL-SSA dataflow
+Call-site enumeration (`callsites`) and the MLIL-SSA dataflow
 bridge, `dataflow`) form one channel and live together here. Both re-exported so
 callers can `from clew.channels.binaryninja import enumerate_with_view,
 bridge_with_view`. Imports are pure (heavy `binaryninja` is imported lazily

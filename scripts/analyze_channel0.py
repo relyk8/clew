@@ -1,7 +1,7 @@
 """Analyze Channel 0 batch results and write a markdown report + PNG charts.
 
 Inputs: malware_results.jsonl, benign_results.jsonl
-Outputs: docs/channel0_at_scale.md, results/channel0_at_scale/*.png, stats.csv
+Outputs: a markdown report, results/channel0_at_scale/*.png, stats.csv
 """
 
 from __future__ import annotations
@@ -418,7 +418,7 @@ def write_report(
     )
     w(f"- **N (malware)**: {malware.n_total} processed records.")
     w(
-        f"- **Benign control**: {benign.n_total} binaries from `~/CAPEv2/analyzer/windows/` (signed Microsoft utilities, CAPE analysis tools)."
+        f"- **Benign control**: {benign.n_total} binaries from CAPE's `analyzer/windows/` (signed Microsoft utilities, CAPE analysis tools)."
     )
     w("- **Per-sample timeout**: 120s.")
     w(
@@ -496,7 +496,7 @@ def write_report(
     w(
         f"**Unmapped-rule backlog (orthogonal to `derivation_status`):** "
         f"{n_with_unmapped} samples ({pct_with_unmapped:.1f}% of `ok`) had at least one matched capa "
-        f"rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queue work for week-9 derivation "
+        f"rule that isn't yet in `CAPA_RULE_TO_APIS`. These are queued for derivation "
         f"and do *not* lower the sample's `derivation_status` — a sample can be `fully_derivable` "
         f"on its mapped portion while still carrying unmapped rules.\n"
     )
@@ -519,7 +519,7 @@ def write_report(
     w(
         "**Important framing first.** The benign control set is intentionally a *tools in your "
         "sandbox* set, not a random benign baseline. The 11 binaries are pulled from "
-        "`~/CAPEv2/analyzer/windows/` — Microsoft-signed utilities **and CAPE's own analysis "
+        "CAPE's `analyzer/windows/` directory — Microsoft-signed utilities **and CAPE's own analysis "
         "tools**. CAPE analyzer tools *are* analysis tools, so capa's `reference analysis tools "
         "strings` and related anti-analysis rules firing on them is correct behavior, not a "
         "false-positive signal against the rules. The table below is therefore not a true "
@@ -685,7 +685,7 @@ def write_report(
             f"- **Timeout rate: {pct_to:.1f}% ({n_timeouts} samples)** hit the 120s ceiling. These are "
             f"capa-pathological samples — likely heavy packers, large overlays, or control-flow "
             f"obfuscation that defeats capa's analysis budget. **Not automatically Channel 3 territory:** "
-            f"DRIO carries 3-5x baseline-detonation overhead per the README, so a sample capa can't "
+            f"DynamoRIO instrumentation carries roughly 3-5x baseline-detonation overhead, so a sample capa can't "
             f"complete in 120s probably won't yield to dynamic analysis on a reasonable budget either. "
             f"Treat these as scope-limit findings, not as a queue handed to another channel."
         )

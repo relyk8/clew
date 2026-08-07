@@ -23,10 +23,11 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from clew.channels.cape.statuses import TERMINAL_STATUSES
+from clew.config import default_capa_bin, load_config, loaded_files
 from clew.pipeline import (
     CLEW_VERSION,
     DEFAULT_CAPA_RULES,
@@ -38,6 +39,27 @@ from clew.pipeline import (
     _default_capa_sigs,
     run_static_pipeline,
 )
+
+# Timeout used when --capa is given without a value. capa is a subprocess and a
+# hostile or merely large sample can hang it; 300s proved too tight in practice
+# (autoit3 exceeded it on a loaded box), so the default that applies when the
+# analyst opts in is deliberately generous.
+DEFAULT_CAPA_TIMEOUT = 600
+
+
+def _capa_timeout(value: str):
+    # --capa takes an optional value, so `clew static --capa sample.exe` makes
+    # argparse swallow the sample as the timeout. That is unavoidable with
+    # nargs="?", but the stock error ("invalid int value: 'sample.exe'") explains
+    # nothing, so name both working forms instead.
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"expected a timeout in seconds, got {value!r}. If that is your sample, "
+            f"put --capa after it (clew static SAMPLE --capa) or attach the value "
+            f"with '=' (--capa=600)."
+        ) from None
 
 
 DEFAULT_TASKS_LIMIT = 10
@@ -68,8 +90,24 @@ def _add_static_flags(parser) -> None:
     )
     parser.add_argument(
         "--capa-bin",
-        default="capa",
-        help="capa executable to invoke (default: capa on PATH)",
+        default=default_capa_bin(),
+        help="capa executable to invoke (default: the capa installed alongside clew, "
+        "else capa on PATH)",
+    )
+    # One flag, two jobs: presence enables Channel 0, and the optional value is
+    # its timeout. capa is off by default because it is the slowest stage and
+    # contributes no candidate values.
+    parser.add_argument(
+        "--capa",
+        dest="capa_timeout",
+        nargs="?",
+        type=_capa_timeout,
+        const=DEFAULT_CAPA_TIMEOUT,
+        default=None,
+        metavar="SECONDS",
+        help=f"run capa (Channel 0), optionally with a timeout in seconds "
+        f"(default {DEFAULT_CAPA_TIMEOUT}); omitted entirely, capa does not run and "
+        f"derivation_status is null",
     )
     parser.add_argument(
         "--no-license-checkout",
@@ -121,6 +159,11 @@ def _add_static_subparser(sub, parent) -> None:
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
+    )
     s.set_defaults(func=_cmd_static)
 
 
@@ -128,9 +171,10 @@ def _add_correlate_subparser(sub, parent) -> None:
     s = sub.add_parser(
         "correlate",
         parents=[parent],
-        help="join runtime cmp/test operands (Channel 3) onto a static clew record",
-        description="Enrich a static clew record with proximity-correlated comparison "
-        "operands from DynamoRIO cmplog logs.",
+        help="join Channel 3 runtime observations onto a static clew record",
+        description="Enrich a static clew record from DynamoRIO logs: comparison "
+        "operands, and (drtrace logs only) the observed API calls, their arguments, "
+        "out-parameters and return values.",
     )
     s.add_argument(
         "-r", "--record",
@@ -141,13 +185,17 @@ def _add_correlate_subparser(sub, parent) -> None:
     # path) or a CAPE task id (reads logs from CAPE storage on this host).
     source = s.add_mutually_exclusive_group(required=True)
     source.add_argument(
+        # --cmplog-dir kept as an alias: it is in usage.md, in the journal, and
+        # in muscle memory, and the directory may still hold cmplog logs.
+        "--log-dir",
         "--cmplog-dir",
-        help="dir of cmplog.*.log files (offline; no CAPE needed)",
+        dest="log_dir",
+        help="dir of drtrace.*.log or cmplog.*.log files (offline; no CAPE needed)",
     )
     source.add_argument(
         "-t", "--task",
         type=int,
-        help="CAPE task id; reads cmplog.*.log from CAPE storage",
+        help="CAPE task id; reads the trace logs from CAPE storage",
     )
     s.add_argument(
         "-m", "--module-base",
@@ -174,6 +222,11 @@ def _add_correlate_subparser(sub, parent) -> None:
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
+    )
     s.set_defaults(func=_cmd_correlate)
 
 
@@ -182,14 +235,21 @@ def _add_detonate_subparser(sub, parent) -> None:
         "detonate",
         parents=[parent],
         help="submit a sample to CAPE for DynamoRIO comparison logging (Channel 3)",
-        description="Submit a PE32 sample to CAPE under the exe_cmplog package and emit "
+        description="Submit a PE32 sample to CAPE under the exe_drtrace package and emit "
         "the task id (with --wait, block for the terminal status).",
     )
     s.add_argument("sample", help="path to the PE32 sample")
     s.add_argument(
         "-p", "--package",
-        default="exe_cmplog",
-        help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
+        default="exe_drtrace",
+        help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
+    )
+    s.add_argument(
+        "--sample-args",
+        default=None,
+        help="command line to pass to the sample itself, e.g. al-khaser's "
+        "'--check VBOX --check DEBUG --sleep 5'. Commas are not allowed: CAPE's "
+        "option string is comma-separated",
     )
     s.add_argument(
         "-T", "--timeout",
@@ -233,8 +293,8 @@ def _add_tasks_subparser(sub, parent) -> None:
     s = sub.add_parser(
         "tasks",
         parents=[parent],
-        help="list CAPE tasks with a cmplog RECORDS column (a dashboard for Channel 3)",
-        description="List CAPE analysis tasks as a table (or JSON), showing the cmplog "
+        help="list CAPE tasks with a trace RECORDS column (a dashboard for Channel 3)",
+        description="List CAPE analysis tasks as a table (or JSON), showing the trace "
         "record count for terminal tasks. With --watch, refresh in place.",
     )
     s.add_argument(
@@ -261,6 +321,13 @@ def _add_tasks_subparser(sub, parent) -> None:
         "-j", "--json",
         action="store_true",
         help="emit the rows as JSON instead of a table (for piping)",
+    )
+    s.add_argument(
+        "--show-drtrace",
+        type=int,
+        metavar="TASK",
+        default=None,
+        help="decode and print one task's drtrace output instead of the table",
     )
     s.add_argument(
         "-w", "--watch",
@@ -291,7 +358,7 @@ def _add_run_subparser(sub, parent) -> None:
         "run",
         parents=[parent],
         help="run static -> detonate --wait -> correlate end to end for one sample",
-        description="Chain the static pipeline, a CAPE cmplog detonation, and proximity "
+        description="Chain the static pipeline, a CAPE drtrace detonation, and "
         "correlation into one enriched clew record for a single sample.",
     )
     s.add_argument("sample", help="path to the PE32 sample")
@@ -300,8 +367,15 @@ def _add_run_subparser(sub, parent) -> None:
     # Detonate stage.
     s.add_argument(
         "-p", "--package",
-        default="exe_cmplog",
-        help="CAPE analysis package (default: exe_cmplog, the cmplog DR client)",
+        default="exe_drtrace",
+        help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
+    )
+    s.add_argument(
+        "--sample-args",
+        default=None,
+        help="command line to pass to the sample itself, e.g. al-khaser's "
+        "'--check VBOX --check DEBUG --sleep 5'. Commas are not allowed: CAPE's "
+        "option string is comma-separated",
     )
     s.add_argument(
         "-T", "--timeout",
@@ -331,7 +405,7 @@ def _add_run_subparser(sub, parent) -> None:
     s.add_argument(
         "--storage-root",
         default="/opt/CAPEv2/storage/analyses",
-        help="CAPE analyses storage root (read for the cmplog logs)",
+        help="CAPE analyses storage root (read for the trace logs)",
     )
     s.add_argument(
         "--max-cmp-records",
@@ -347,7 +421,44 @@ def _add_run_subparser(sub, parent) -> None:
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
+    )
     s.set_defaults(func=_cmd_run)
+
+
+def _add_doctor_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "doctor",
+        parents=[parent],
+        help="check that clew's prerequisites are installed and configured",
+        description="Report whether Binary Ninja, capa, FLOSS and CAPE are reachable and "
+        "correctly configured, with the fix for anything that is not.",
+    )
+    s.add_argument(
+        "--license",
+        action="store_true",
+        help="also load Binary Ninja and take a license seat (slower; consumes a seat)",
+    )
+    s.add_argument(
+        "-u", "--cape-url",
+        default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
+        help="CAPE base URL to probe (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
+    )
+    s.add_argument(
+        "--storage-root",
+        default="/opt/CAPEv2/storage/analyses",
+        help="CAPE analyses storage root to check for readability",
+    )
+    s.add_argument(
+        "-T", "--timeout",
+        type=int,
+        default=5,
+        help="seconds to wait on the CAPE probe (default: 5)",
+    )
+    s.set_defaults(func=_cmd_doctor)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -388,6 +499,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_detonate_subparser(sub, parent)
     _add_tasks_subparser(sub, parent)
     _add_run_subparser(sub, parent)
+    _add_doctor_subparser(sub, parent)
     return p
 
 
@@ -434,7 +546,49 @@ def _default_record_path(record) -> Path:
     return Path("results") / f"{record['sample_sha256']}.clew.json"
 
 
-def _emit_record(record, output, summary: str) -> None:
+class RecordRegression(Exception):
+    """Writing this record would replace observed runtime data with less."""
+
+
+def _has_runtime_data(record) -> bool:
+    """Whether a record carries Channel 3 observations.
+
+    Any of the three shapes correlation produces: comparisons joined onto a
+    candidate, a candidate Channel 3 produced itself, or a value it contributed
+    to a static candidate.
+    """
+    for candidate in record.get("candidates") or []:
+        if candidate.get("comparison_candidates"):
+            return True
+        if candidate.get("api_resolution") == "runtime":
+            return True
+        for value in candidate.get("candidate_values") or []:
+            if "drio" in (value.get("source_channels") or []):
+                return True
+    return False
+
+
+def _would_regress(record, path: Path) -> bool:
+    """True if `path` holds runtime data that `record` does not.
+
+    `static` and `correlate` share a default output path keyed on the sample
+    hash, so re-running `static` on an already-correlated sample silently
+    replaced a detonation's worth of observation with a record that never had
+    any. The check is deliberately asymmetric: re-running `static` over a
+    `static` record, or re-correlating, replaces like with like and is allowed.
+    """
+    if _has_runtime_data(record) or not path.exists():
+        return False
+    try:
+        existing = json.loads(path.read_text())
+    except (OSError, ValueError):
+        # Unreadable or not JSON: nothing to protect, and refusing here would
+        # strand the user behind a file they cannot inspect.
+        return False
+    return _has_runtime_data(existing)
+
+
+def _emit_record(record, output, summary: str, force: bool = False) -> None:
     # Resolve where a record-producing verb writes its output. The record is
     # MB-scale, so a bare stdout dump is a footgun: default to a durable file and
     # log the summary to stderr. `-o -` is the escape hatch for piping.
@@ -447,6 +601,11 @@ def _emit_record(record, output, summary: str) -> None:
         path = _default_record_path(record)
     else:
         path = output
+    if not force and _would_regress(record, path):
+        raise RecordRegression(
+            f"{path} already holds Channel 3 runtime data and this record has none. "
+            f"Re-run with --force to overwrite it, or -o <path> to write elsewhere."
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     logging.getLogger("clew.cli").info("wrote %s: %s", path, summary)
@@ -463,6 +622,7 @@ def _cmd_static(args) -> int:
             capa_sigs_path=args.capa_sigs,
             floss_sigs_path=args.floss_sigs,
             capa_bin=args.capa_bin,
+            capa_timeout=args.capa_timeout,
             include_unresolved=not args.exclude_unresolved,
             run_license_checkout=not args.no_license_checkout,
             quiet_floss=not args.verbose_floss,
@@ -482,22 +642,73 @@ def _cmd_static(args) -> int:
         for c in record["candidates"]
         if any(v.get("value") is not None for v in c["candidate_values"])
     )
-    summary = (
-        f"{len(record['candidates'])} candidates ({resolved} with values), "
-        f"derivation_status={record['derivation_status']}, "
-        f"{len(record['capa_techniques'])} capa techniques"
-    )
-    _emit_record(record, args.output, summary)
+    # A null derivation_status means capa was not run at all. Printing the bare
+    # None would read as a failure rather than a deliberate skip.
+    if record["derivation_status"] is None:
+        capa_part = "capa not run"
+    else:
+        capa_part = (
+            f"derivation_status={record['derivation_status']}, "
+            f"{len(record['capa_techniques'])} capa techniques"
+        )
+    summary = f"{len(record['candidates'])} candidates ({resolved} with values), {capa_part}"
+    _emit_record(record, args.output, summary, force=args.force)
     log.info("done")
     return 0
 
 
-def _cmd_correlate(args) -> int:
-    # Lazy imports: keep `clew static` and the offline suite free of the CAPE
-    # client (which pulls requests) and the correlator.
+def _logs_from_dir(log_dir: Path) -> tuple[list[Path], str | None]:
+    """(logs, kind) for a local directory. drtrace wins when both are present."""
+    for kind in ("drtrace", "cmplog"):
+        logs = sorted(log_dir.glob(f"{kind}.*.log"))
+        if logs:
+            return logs, kind
+    return [], None
+
+
+def _apply_correlation(record: dict, logs: list[Path], kind: str | None, args, log) -> dict:
+    """Run the Channel 3 correlation appropriate to the log family.
+
+    Shared by `correlate` and `run` so the two verbs cannot drift on which
+    parser, which entry point, or which caps they use.
+    """
+    if kind == "drtrace":
+        from clew.channels.cape.correlate import correlate_trace
+        from clew.channels.cape.drtrace_parse import parse_drtrace_files
+
+        trace = parse_drtrace_files(logs, max_records=args.max_cmp_records)
+        log.info(
+            "parsed %d comparisons, %d API calls, %d module loads from %d drtrace log(s)",
+            len(trace.comparisons),
+            len(trace.calls),
+            len(trace.modules),
+            len(logs),
+        )
+        return correlate_trace(record, trace, module_base=args.module_base)
+
     from clew.channels.cape.cmplog_parse import parse_cmplog_files
     from clew.channels.cape.correlate import correlate_record
 
+    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
+    log.info("parsed %d comparison records from %d cmplog log(s)", len(cmp_records), len(logs))
+    return correlate_record(record, cmp_records, module_base=args.module_base)
+
+
+def _correlation_summary(record: dict) -> str:
+    candidates = record["candidates"]
+    with_cmps = [c for c in candidates if c.get("comparison_candidates")]
+    total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
+    produced = [c for c in candidates if c.get("api_resolution") == "runtime"]
+    summary = (
+        f"{len(candidates)} candidates, "
+        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
+    )
+    if produced:
+        summary += f", {len(produced)} produced from observed API calls"
+    return summary
+
+
+def _cmd_correlate(args) -> int:
     log = logging.getLogger("clew.cli")
 
     record_path = Path(args.record)
@@ -507,38 +718,53 @@ def _cmd_correlate(args) -> int:
         log.error("record not found: %s", record_path)
         return 1
 
-    if args.cmplog_dir is not None:
-        cmplog_dir = Path(args.cmplog_dir)
-        if not cmplog_dir.is_dir():
-            log.error("cmplog dir not found: %s", cmplog_dir)
+    if args.log_dir is not None:
+        log_dir = Path(args.log_dir)
+        if not log_dir.is_dir():
+            log.error("log dir not found: %s", log_dir)
             return 1
-        logs = sorted(cmplog_dir.glob("cmplog.*.log"))
+        logs, kind = _logs_from_dir(log_dir)
         if not logs:
-            log.warning("no cmplog.*.log files in %s (comparisons will be empty)", cmplog_dir)
+            log.warning(
+                "no drtrace.*.log or cmplog.*.log files in %s (nothing to correlate)", log_dir
+            )
     else:
+        # Lazy import: keep the CAPE client (which pulls requests) out of `clew
+        # static` and the offline suite.
         from clew.channels.cape.client import CapeClient, CapeError
 
         try:
-            # fetch_cmplog_logs reads CAPE's on-disk storage (no REST call), so
+            # fetch_trace_logs reads CAPE's on-disk storage (no REST call), so
             # the client needs no base URL here (correlate has no --cape-url).
-            logs = CapeClient("").fetch_cmplog_logs(args.task, args.storage_root)
+            logs, kind = CapeClient("").fetch_trace_logs(args.task, args.storage_root)
         except CapeError as e:
             log.error("%s", e)
             return 2
+        if not logs:
+            log.warning("task %s has no Channel 3 logs (nothing to correlate)", args.task)
 
-    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
-    log.info("parsed %d comparison records from %d log(s)", len(cmp_records), len(logs))
-    enriched = correlate_record(record, cmp_records, module_base=args.module_base)
-
-    with_cmps = [c for c in enriched["candidates"] if c.get("comparison_candidates")]
-    total_cmps = sum(len(c["comparison_candidates"]) for c in with_cmps)
-    summary = (
-        f"{len(enriched['candidates'])} candidates, "
-        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
-    )
-    _emit_record(enriched, args.output, summary)
+    enriched = _apply_correlation(record, logs, kind, args, log)
+    _emit_record(enriched, args.output, _correlation_summary(enriched), force=args.force)
     log.info("done")
     return 0
+
+
+def _submit_options(args) -> dict[str, str]:
+    """CAPE package options for a Channel 3 submission.
+
+    `free=yes` is mandatory and not negotiable: capemon otherwise injects into
+    drrun.exe, corrupts DynamoRIO, and the run yields no logs at all.
+
+    `arguments` is how a sample's own command line reaches it. That matters for
+    samples whose behaviour is selectable -- al-khaser runs only the check groups
+    named by `--check`, which is what lets it exercise the target APIs without
+    the groups that defeat instrumentation.
+    """
+    options = {"free": "yes"}
+    sample_args = getattr(args, "sample_args", None)
+    if sample_args:
+        options["arguments"] = sample_args
+    return options
 
 
 def _cmd_detonate(args) -> int:
@@ -557,7 +783,7 @@ def _cmd_detonate(args) -> int:
             package=args.package,
             timeout=args.timeout,
             enforce_timeout=args.enforce_timeout,
-            options={"free": "yes"},
+            options=_submit_options(args),
         )
     except FileNotFoundError:
         log.error("sample not found: %s", args.sample)
@@ -610,12 +836,16 @@ def _humanize_age(added_on: str | None) -> str:
             parsed = datetime.fromisoformat(added_on)
         except (ValueError, TypeError):
             return "-"
-    # A tz-aware timestamp cannot be subtracted from a naive now(); drop the
-    # tzinfo and compare in wall-clock terms (good enough for an age column).
-    if parsed.tzinfo is not None:
-        parsed = parsed.replace(tzinfo=None)
-    seconds = int((datetime.now() - parsed).total_seconds())
+    # CAPE writes added_on in UTC with no offset. Comparing that against a local
+    # now() puts every recent task in the future west of Greenwich -- the clamp
+    # below then reported them all as "0s", and older ones under-reported by the
+    # UTC offset. So a naive timestamp is read as UTC, and the comparison is done
+    # in UTC. A tz-aware one is honoured as given.
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    seconds = int((datetime.now(timezone.utc) - parsed).total_seconds())
     if seconds < 0:
+        # Still possible from clock skew between this host and the CAPE host.
         seconds = 0
     if seconds < 60:
         return f"{seconds}s"
@@ -745,12 +975,80 @@ def _requests_exc():
         return ()
 
 
+def _display_string(text: str) -> str:
+    """Quote a logged string for display without mangling it.
+
+    repr() would double every backslash, which makes a Windows path unreadable.
+    But these bytes came from memory the sample controls, so printing them raw
+    would let a crafted string emit terminal escapes. Escape the control
+    characters, leave everything else alone.
+    """
+    safe = "".join(ch if ch.isprintable() else f"\\x{ord(ch):02x}" for ch in text)
+    return f"'{safe}'"
+
+
+def _print_trace(task_id: int, storage_root) -> int:
+    """Decode one task's logs to stdout.
+
+    The RECORDS column answers "did anything come back". This answers "what",
+    which otherwise means reading hex out of a log file by hand: the client
+    encodes logged strings because they come from memory the sample controls.
+    """
+    from clew.channels.cape.client import CapeClient, CapeError
+
+    log = logging.getLogger("clew.cli")
+    try:
+        logs, kind = CapeClient("").fetch_trace_logs(task_id, storage_root)
+    except CapeError as exc:
+        log.error("%s", exc)
+        return 2
+    if not logs:
+        log.error("task %s has no Channel 3 logs", task_id)
+        return 1
+
+    if kind == "cmplog":
+        from clew.channels.cape.cmplog_parse import parse_cmplog_files
+
+        records = parse_cmplog_files(logs)
+        print(f"task {task_id}: cmplog, {len(records)} comparisons (no API tracing)")
+        return 0
+
+    from clew.channels.cape.drtrace_parse import parse_drtrace_files
+
+    trace = parse_drtrace_files(logs)
+    main = trace.main_module()
+    print(f"task {task_id}: drtrace, {len(trace.modules)} modules, "
+          f"{len(trace.calls)} calls, {len(trace.comparisons)} comparisons")
+    if main is not None:
+        print(f"  sample module: {main.name} @ 0x{main.base:08x}-0x{main.end:08x}")
+
+    if trace.calls:
+        print("\n  observed API calls")
+        for call in trace.calls:
+            rv = f"-> 0x{call.retval:x}" if call.retval is not None else "(no return)"
+            strings = " ".join(
+                [f"arg{i}={_display_string(v)}" for i, v in sorted(call.arg_strings.items())]
+                + [f"out{i}={_display_string(v)}" for i, v in sorted(call.out_strings.items())]
+            )
+            print(f"    seq={call.seq:<7} {call.api:<28} site=0x{call.site:08x} "
+                  f"{rv} {strings}".rstrip())
+
+    resolved = [r for r in trace.comparisons if r.jcc]
+    print(f"\n  comparisons: {len(trace.comparisons)} "
+          f"({len(resolved)} carry the branch that resolves the operator)")
+    for notice in trace.capped:
+        print(f"  capped: {notice.api} at 0x{notice.site:08x} after {notice.after} calls")
+    return 0
+
+
 def _cmd_tasks(args) -> int:
     # Lazy import: keep the CAPE client (which pulls requests) out of `clew
     # static` and the offline suite.
     from clew.channels.cape.client import CapeClient, CapeError
 
     log = logging.getLogger("clew.cli")
+    if args.show_drtrace is not None:
+        return _print_trace(args.show_drtrace, args.storage_root)
     c = CapeClient(args.cape_url)
 
     # --all is the escape hatch from the default window; list_tasks treats None
@@ -800,11 +1098,10 @@ def _log_resume(log, checkpoint: Path, tid=None) -> None:
 
 
 def _cmd_run(args) -> int:
-    # Lazy import: keep the CAPE client (which pulls requests) and the correlator
-    # out of `clew static` and the offline suite.
+    # Lazy import: keep the CAPE client (which pulls requests) out of `clew
+    # static` and the offline suite. The parser and correlator are imported
+    # inside _apply_correlation, which picks them per log family.
     from clew.channels.cape.client import CapeClient, CapeError
-    from clew.channels.cape.cmplog_parse import parse_cmplog_files
-    from clew.channels.cape.correlate import correlate_record
 
     log = logging.getLogger("clew.cli")
     log.info("clew %s run starting", CLEW_VERSION)
@@ -817,6 +1114,7 @@ def _cmd_run(args) -> int:
             capa_sigs_path=args.capa_sigs,
             floss_sigs_path=args.floss_sigs,
             capa_bin=args.capa_bin,
+            capa_timeout=args.capa_timeout,
             include_unresolved=not args.exclude_unresolved,
             run_license_checkout=not args.no_license_checkout,
             quiet_floss=not args.verbose_floss,
@@ -837,6 +1135,17 @@ def _cmd_run(args) -> int:
     # reaches terminal), and without this the static analysis is discarded on
     # every one of those paths. The final _emit_record overwrites this file.
     checkpoint = _run_checkpoint_path(args, record)
+    # The checkpoint is a *static* record, and it lands on the default path, so
+    # it can regress an existing correlated one exactly as `clew static` can --
+    # and it does so before the detonation that would replace the runtime data.
+    # Same guard, checked here because this write does not go through
+    # _emit_record.
+    if not args.force and _would_regress(record, checkpoint):
+        raise RecordRegression(
+            f"{checkpoint} already holds Channel 3 runtime data, and `run` would "
+            f"overwrite it with the static record before detonating. Re-run with "
+            f"--force to replace it, or -o <path> to write elsewhere."
+        )
     checkpoint.parent.mkdir(parents=True, exist_ok=True)
     checkpoint.write_text(json.dumps(record, indent=2))
     log.info("checkpointed static record to %s", checkpoint)
@@ -851,7 +1160,7 @@ def _cmd_run(args) -> int:
             package=args.package,
             timeout=args.timeout,
             enforce_timeout=args.enforce_timeout,
-            options={"free": "yes"},
+            options=_submit_options(args),
         )
     except FileNotFoundError:
         log.error("sample not found: %s", args.sample)
@@ -880,22 +1189,15 @@ def _cmd_run(args) -> int:
     # empty log set is honest, not a failure -- some samples defeat DynamoRIO and
     # legitimately yield zero comparisons.
     try:
-        logs = c.fetch_cmplog_logs(tid, args.storage_root)
+        logs, kind = c.fetch_trace_logs(tid, args.storage_root)
     except CapeError as e:
         log.error("%s", e)
         _log_resume(log, checkpoint, tid)
         return 2
-    cmp_records = parse_cmplog_files(logs, max_records=args.max_cmp_records)
-    enriched = correlate_record(record, cmp_records, module_base=args.module_base)
-    with_cmps = [cand for cand in enriched["candidates"] if cand.get("comparison_candidates")]
-    log.info("stage 3/3 correlate: %d candidates with comparisons", len(with_cmps))
-
-    total_cmps = sum(len(cand["comparison_candidates"]) for cand in with_cmps)
-    summary = (
-        f"{len(enriched['candidates'])} candidates, "
-        f"{len(with_cmps)} with comparison_candidates ({total_cmps} total comparisons)"
-    )
-    _emit_record(enriched, args.output, summary)
+    enriched = _apply_correlation(record, logs, kind, args, log)
+    summary = _correlation_summary(enriched)
+    log.info("stage 3/3 correlate: %s", summary)
+    _emit_record(enriched, args.output, summary, force=args.force)
     if args.output == Path("-"):
         # Pipe mode: _emit_record only streamed to stdout, so refresh the
         # checkpoint rather than leaving a stale static-only record on disk.
@@ -904,17 +1206,51 @@ def _cmd_run(args) -> int:
     return 0
 
 
+def _cmd_doctor(args) -> int:
+    # Lazy import to match the other verbs; doctor pulls the CAPE client only
+    # when it actually probes CAPE.
+    from clew.doctor import format_report, has_failures, run_checks
+
+    checks = run_checks(
+        cape_url=args.cape_url,
+        storage_root=args.storage_root,
+        timeout=args.timeout,
+        license_check=args.license,
+    )
+    # The report is this verb's artifact, so it goes to stdout (as `tasks` does),
+    # leaving stderr for logging.
+    print(format_report(checks, version=CLEW_VERSION, location=str(Path(__file__).parent)))
+    return 1 if has_failures(checks) else 0
+
+
 def main(argv=None) -> int:
     raw = sys.argv[1:] if argv is None else argv
+    # Load config files into the environment before the parser is built. Several
+    # defaults (--cape-url, --capa-rules, --capa-sigs) read os.environ at parser
+    # construction time, so a load placed any later would not reach them.
+    load_config()
     parser = build_parser()
     argv2 = _inject_default_verb(raw, _known_verbs(parser))
     args = parser.parse_args(argv2)
     _configure_logging(args.verbose, args.quiet)
+    # Config loading necessarily runs before -v/-q are parsed, so it cannot log
+    # its own result. Report it here, once logging reflects the user's choice.
+    for entry in loaded_files():
+        logging.getLogger("clew.config").debug(
+            "%s: %d key(s) defined, %d applied",
+            entry.path,
+            len(entry.defined),
+            len(entry.applied),
+        )
     if getattr(args, "command", None) is None:
         # Bare `clew` -> show the verb menu.
         parser.print_help(sys.stderr)
         return 2
-    return args.func(args)
+    try:
+        return args.func(args)
+    except RecordRegression as exc:
+        logging.getLogger("clew.cli").error("%s", exc)
+        return 1
 
 
 if __name__ == "__main__":

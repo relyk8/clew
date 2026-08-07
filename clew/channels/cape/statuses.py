@@ -1,7 +1,8 @@
 """CAPE task-status vocabulary, shared by the client and the CLI.
 
 Dependency-free on purpose: `cli.py` imports this at module top, so it must not
-drag in `requests` the way `client` does (see clew-conventions.md).
+drag in `requests` the way `client` does -- that would put a Channel-3 dependency
+in the path of `clew static` and the offline test suite.
 
 The values mirror CAPE's own definitions in `lib/cuckoo/core/data/task.py`; the
 failure grouping mirrors `lib/cuckoo/common/web_utils.py`.
@@ -10,7 +11,7 @@ failure grouping mirrors `lib/cuckoo/common/web_utils.py`.
 from __future__ import annotations
 
 # CAPE's three failure states. 'failed_reporting' belongs here even though a
-# report never lands: the analysis itself ran, so its cmplog logs are on disk.
+# report never lands: the analysis itself ran, so its trace logs are on disk.
 TERMINAL_FAILURE_STATUSES = frozenset(
     {"failed_analysis", "failed_processing", "failed_reporting"}
 )

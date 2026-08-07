@@ -1,50 +1,37 @@
 # Clew — usage
 
-The command reference and the end-to-end workflow. For the problem Clew solves and
-its approach, see [theory.md](theory.md). For the record it produces, see
-[schema.md](schema.md).
-
-## Setup
-
-Install the package and its console entry point:
-
-```bash
-pip install -e '.[dev,analysis]'
-```
-
-Clew reads machine-specific paths from a local `.env` (gitignored). Copy the
-template, fill in your paths, and load it:
-
-```bash
-cp .env.example .env
-set -a; source .env; set +a
-```
-
-Three variables matter. `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS` point at your capa
-rules checkout and its signatures, read by the static pipeline. `CAPE_BASE_URL`
-points at your CAPE instance, used only by the dynamic commands. The static
-pipeline also needs a Binary Ninja 4.2.6455 Ultimate Enterprise license checked
-out for the process.
+The command reference and the end-to-end workflow. To install Clew and point it
+at Binary Ninja, capa, and CAPE first, see [installation.md](installation.md).
+For the problem Clew solves and its approach, see [theory.md](theory.md). For the
+record it produces, see [schema.md](schema.md).
 
 ## The pipeline end to end
 
 Clew has a static half that runs locally and a dynamic half that runs a sample in
 a sandbox. The two are separate commands joined by the record on disk.
 
-`static` runs capa (Channel 0), FLOSS (Channel 1), and Binary Ninja (Channel 2)
-over the sample and writes an intermediate record: candidate values tied to API
-call sites, each with provenance and a confidence score. The Channel 3 comparison
-operands are left as placeholders at this stage.
+`static` runs FLOSS (Channel 1) and Binary Ninja (Channel 2) over the sample and
+writes an intermediate record: candidate values tied to API call sites, each with
+provenance and a confidence score. capa (Channel 0) is opt-in through `--capa`.
+The Channel 3 comparison operands are left as placeholders at this stage.
 
-`detonate` submits the sample to CAPE under the cmplog DynamoRIO package, which
-logs the runtime `cmp`/`test` operands the sample compares against as it executes.
-Submission returns a task id immediately. The detonation runs in the sandbox on
-its own schedule, so you can submit and come back to it.
+`detonate` submits the sample to CAPE under the drtrace DynamoRIO package. As the
+sample executes, drtrace records the environment-sensitive API calls it makes --
+call site, arguments, out-parameters and return values -- alongside the runtime
+`cmp`/`test` operands those values are checked against. Submission returns a task
+id immediately. The detonation runs in the sandbox on its own schedule, so you can
+submit and come back to it.
 
-`correlate` reads those cmplog logs, matches each runtime comparison to the static
-call site it sits after, and fills the record's `comparison_candidates`. It reads
-logs either from a CAPE task id or from a local directory, so you can re-correlate
-a record without detonating again.
+`correlate` reads those logs and folds them into the record two ways. Runtime
+comparisons attach to the static call site they sit after, filling
+`comparison_candidates`. Observed API calls fill in the values the static pass
+could not resolve, and a call at a site the static pass never enumerated becomes a
+new candidate of its own (`api_resolution: "runtime"`). It reads logs either from a
+CAPE task id or from a local directory, so you can re-correlate a record without
+detonating again.
+
+Logs from the older `cmplog` client are still accepted; they carry comparisons
+only, so they fill `comparison_candidates` and produce no new candidates.
 
 `run` chains all three for one sample.
 
@@ -63,26 +50,57 @@ by default and log the path to stderr. Pass `-o <path>` to choose a file, or
 `{"task_id": N}` object, and `tasks` prints a table. Progress and errors always go
 to stderr, so stdout stays clean.
 
-Records are keyed by sample SHA-256, so re-running a sample overwrites its record.
-The `results/` directory is gitignored.
+Records are keyed by sample SHA-256, so re-running a sample overwrites its
+record — with one exception. If the existing record carries Channel 3 runtime
+data and the new one does not, the write is refused, because re-running `static`
+over a correlated record would otherwise discard a detonation's worth of
+observation with nothing to show for it. `--force` overrides, and `-o` writes
+elsewhere. Replacing like with like — `static` over `static`, or re-correlating —
+is never blocked. The `results/` directory is gitignored.
 
 ## Commands
 
 `clew <sample>` is a shorthand for `clew static <sample>`. Every command accepts
 `-v` (debug logging), `-q` (warnings only), and `-h`.
 
-### static — run the static pipeline (Channels 0-2)
+The options typed at a prompt carry a single-letter form; the rarely-typed
+configuration flags stay long-only, so `--help` remains scannable. A letter means
+the same thing on every verb -- `-t` is always `--task`, which is why `--timeout`
+takes `-T`.
+
+### static — run the static pipeline (Channels 1-2, and 0 on request)
 
 ```bash
 clew static SAMPLE [-o OUTPUT]
 ```
 
+capa (Channel 0) does not run unless you ask for it with `--capa`. It is the
+slowest stage by a wide margin and contributes no candidate values: it classifies
+the sample rather than extracting from it, so skipping it leaves the candidates
+identical and cuts a run roughly in half.
+
+Without `--capa`, `derivation_status` is `null` and `capa_techniques` is empty.
+That null is defined by the schema as "classification was skipped", and it is
+deliberately distinct from `no_capa_signal`, which means capa did run and found
+nothing usable. A consumer can tell the two apart.
+
+Because the value is optional, put `--capa` after the sample or attach the value
+with `=`. `clew static --capa sample.exe` is ambiguous, and argparse reads the
+sample as the timeout:
+
+```bash
+clew static sample.exe --capa          # default timeout
+clew static sample.exe --capa 900      # explicit
+clew static --capa=900 sample.exe      # explicit, before the sample
+```
+
 | Option | Meaning |
 |---|---|
-| `--capa-rules DIR` | capa rules dir (default `$CLEW_CAPA_RULES`) |
-| `--capa-sigs DIR` | capa signatures dir (default `$CLEW_CAPA_SIGS`) |
+| `--capa [SECONDS]` | run capa; optional timeout, default 600s. Omitted, capa does not run |
+| `--capa-rules DIR` | capa rules dir (default `$CLEW_CAPA_RULES`), used only with `--capa` |
+| `--capa-sigs DIR` | capa signatures dir (default `$CLEW_CAPA_SIGS`), used only with `--capa` |
 | `--floss-sigs PATH` | FLOSS signature file (default: FLOSS built-in) |
-| `--capa-bin BIN` | capa executable to invoke (default `capa` on PATH) |
+| `--capa-bin BIN` | capa executable (default: the capa installed alongside clew) |
 | `--no-license-checkout` | assume a Binary Ninja license is already checked out |
 | `--exclude-unresolved` | omit located-but-unresolved call sites (the Channel 3 work list) |
 | `--verbose-floss` | don't suppress vivisect/FLOSS emulator logging |
@@ -90,6 +108,7 @@ clew static SAMPLE [-o OUTPUT]
 | `--no-cache` | disable the FLOSS cache |
 | `--refresh-floss-cache` | force a FLOSS re-run and overwrite the cache |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
+| `--force` | overwrite an existing record even if it carries Channel 3 runtime data |
 
 ### detonate — submit to CAPE for comparison logging (Channel 3)
 
@@ -99,30 +118,34 @@ clew detonate SAMPLE [--wait]
 
 | Option | Meaning |
 |---|---|
-| `--package PKG` | CAPE analysis package (default `exe_cmplog`) |
-| `--timeout SECS` | guest analysis timeout (default 120) |
-| `--wait` | block until the task reaches a terminal state, then report status |
+| `-p, --package PKG` | CAPE analysis package (default `exe_drtrace`) |
+| `-T, --timeout SECS` | guest analysis timeout (default 120) |
+| `-w, --wait` | block until the task reaches a terminal state, then report status |
 | `--enforce-timeout` / `--no-enforce-timeout` | run the full `--timeout` window vs let the analysis end when the sample exits (default on) |
-| `--cape-url URL` | CAPE base URL (default `$CAPE_BASE_URL` or `http://127.0.0.1:8000`) |
+| `-u, --cape-url URL` | CAPE base URL (default `$CAPE_BASE_URL` or `http://127.0.0.1:8000`) |
 | `-o, --output PATH` | write the task-id JSON to a file (omit or `-` for stdout) |
 
 ### correlate — join runtime operands onto a record (Channel 3)
 
 ```bash
-clew correlate --record RECORD (--cmplog-dir DIR | --task N)
+clew correlate --record RECORD (--log-dir DIR | --task N)
 ```
 
 | Option | Meaning |
 |---|---|
-| `--record PATH` | the static record to enrich (required) |
-| `--cmplog-dir DIR` | a local dir of `cmplog.*.log` files (offline, no CAPE) |
-| `--task N` | a CAPE task id; reads the logs from CAPE storage |
-| `--module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
+| `-r, --record PATH` | the static record to enrich (required) |
+| `--log-dir DIR` | a local dir of `drtrace.*.log` or `cmplog.*.log` files (offline, no CAPE). `--cmplog-dir` is accepted as an alias |
+| `-t, --task N` | a CAPE task id; reads the logs from CAPE storage |
+| `-m, --module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
 | `--storage-root DIR` | CAPE analyses storage root (with `--task`) |
 | `--max-cmp-records N` | cap comparison records loaded from the logs (`0` = unlimited; default 5,000,000) — guards host memory/CPU on an oversized log |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
+| `--force` | overwrite an existing record even if it carries Channel 3 runtime data |
 
-`--cmplog-dir` and `--task` are mutually exclusive, and one is required.
+`--log-dir` and `--task` are mutually exclusive, and one is required. When a
+directory or task holds both log families, the drtrace logs are used: they are a
+superset, and silently correlating against the older comparison-only logs would
+lose every observed API call.
 
 ### tasks — the CAPE detonation dashboard (Channel 3)
 
@@ -132,21 +155,22 @@ clew tasks [--watch] [--json]
 
 | Option | Meaning |
 |---|---|
-| `--status STATUS` | only tasks with this status (e.g. `reported`) |
-| `--limit N` | show at most N tasks, newest first (default: 10) |
-| `--all` | show every task instead of the newest N |
-| `--json` | emit rows as JSON instead of a table |
-| `--watch` | redraw in place until Ctrl-C |
-| `--interval SECS` | refresh interval with `--watch` (default 2.0) |
-| `--cape-url URL` | CAPE base URL |
+| `-s, --status STATUS` | only tasks with this status (e.g. `reported`) |
+| `-l, --limit N` | show at most N tasks, newest first (default: 10) |
+| `-a, --all` | show every task instead of the newest N |
+| `-j, --json` | emit rows as JSON instead of a table |
+| `-w, --watch` | redraw in place until Ctrl-C |
+| `-i, --interval SECS` | refresh interval with `--watch` (default 2.0) |
+| `-u, --cape-url URL` | CAPE base URL |
 | `--storage-root DIR` | CAPE analyses storage root (read for the RECORDS column) |
+| `--show-drtrace TASK` | decode and print that task's drtrace output instead of the table |
 
 The RECORDS column shows how many comparison records each terminal task produced,
 so a sample that defeats instrumentation reads 0 at a glance.
 
 The dashboard is a recent-activity view, so it shows the newest 10 tasks by
 default; `--all` gives the full history. The window is not only cosmetic — each
-terminal row costs a filesystem read to count its cmplog records, and that
+terminal row costs a filesystem read to count its trace records, and that
 history only grows.
 
 `--watch` repaints the same table over itself each interval rather than scrolling,
@@ -161,21 +185,50 @@ but the JSON documents, so both stay consumable.
 clew run SAMPLE
 ```
 
-Takes the `static` options plus `--package`, `--timeout`, `--enforce-timeout`,
-`--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
+Takes the `static` options plus `-p/--package`, `-T/--timeout`,
+`--enforce-timeout`, `-u/--cape-url`, `-m/--module-base`, `--storage-root`,
+`--max-cmp-records`, `-o` and `--force`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
 
+### doctor — check the prerequisites
+
+```bash
+clew doctor [--license]
+```
+
+| Option | Meaning |
+|---|---|
+| `--license` | also load Binary Ninja and take a license seat |
+| `-u, --cape-url URL` | CAPE base URL to probe |
+| `--storage-root DIR` | CAPE analyses storage root to check for readability |
+| `-T, --timeout SECS` | seconds to wait on the CAPE probe (default 5) |
+
+Reports each prerequisite, and for anything missing, the line that fixes it. The
+severity follows the pipeline's degradation policy: only Binary Ninja, the core
+channel, is a blocking failure, while capa, FLOSS, and CAPE are warnings because
+Clew degrades past them rather than failing. So the exit code answers exactly one
+question, which is whether static analysis will run.
+
+By default nothing is executed and no license seat is consumed: the Binary Ninja
+check locates the package without importing it. `--license` opts into the real
+import, a core-version comparison against the pinned version, and a checkout
+round trip, which is the check worth running before a long batch.
+
 ## Channel 3 requirements
 
-The dynamic commands (`detonate`, `run`, and `correlate --task`) need a CAPE
-instance with the cmplog DynamoRIO analysis package deployed, reachable at
-`CAPE_BASE_URL`. The package runs the sample under DynamoRIO and records its
-runtime comparison operands, which CAPE stores per task under
+`detonate` and `run` need a CAPE instance with the drtrace DynamoRIO analysis
+package deployed, reachable at `CAPE_BASE_URL`. `correlate --task` instead reads
+the logs from CAPE's storage directory, so it must run on the CAPE host but makes
+no API call. To build and deploy all of this, see
+[cape_drio_setup.md](cape_drio_setup.md). The package runs the sample under DynamoRIO and records
+the environment-sensitive API calls it makes along with the comparison operands
+those values are checked against, which CAPE stores per task under
 `storage/analyses/<id>/files/`.
 
-`correlate --cmplog-dir` needs none of this. Given a directory of `cmplog.*.log`
-files, it runs fully offline, which is the path the correlation tests exercise.
+`correlate --log-dir` needs none of this. Given a directory of `drtrace.*.log` (or
+`cmplog.*.log`) files, it runs fully offline, which is the path the correlation
+tests exercise.
 
 A sample whose anti-instrumentation checks defeat DynamoRIO produces no logs, so
 correlation yields an empty `comparison_candidates` for it. That is expected and

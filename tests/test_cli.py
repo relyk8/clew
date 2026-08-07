@@ -6,6 +6,7 @@ heavy import, and the stale-cache / success paths monkeypatch
 run_static_pipeline so main()'s contract is tested in isolation.
 """
 
+import argparse
 import copy
 import json
 import logging
@@ -39,7 +40,7 @@ _RECORD_WITH_VALUES = {
 
 def test_emit_record_creates_missing_parent_dir(tmp_path):
     # `-o <newdir>/f.json` into a non-existent dir must create the parent, not
-    # crash after computing the record (D1 / scout #8).
+    # crash after computing the record.
     target = tmp_path / "newdir" / "out.clew.json"
     cli._emit_record({"sample_sha256": "abc123"}, target, "summary")
     assert target.is_file()
@@ -48,7 +49,7 @@ def test_emit_record_creates_missing_parent_dir(tmp_path):
 
 def test_detonate_dash_o_streams_to_stdout(monkeypatch, capsys, tmp_path):
     # `detonate -o -` must stream the task-id JSON to stdout, not create a file
-    # literally named "-" (M1 / scout #13).
+    # literally named "-".
     import clew.channels.cape.client as capeclient
 
     monkeypatch.setattr(capeclient.CapeClient, "submit", lambda self, *a, **k: 42)
@@ -61,7 +62,7 @@ def test_detonate_dash_o_streams_to_stdout(monkeypatch, capsys, tmp_path):
 
 def test_detonate_wait_poll_error_returns_2(monkeypatch):
     # poll() raising CapeError under --wait (timeout / CAPE down) must be a clean
-    # exit 2, not an uncaught traceback (M4 / scout #3).
+    # exit 2, not an uncaught traceback.
     import clew.channels.cape.client as capeclient
 
     def boom(self, *a, **k):
@@ -74,7 +75,7 @@ def test_detonate_wait_poll_error_returns_2(monkeypatch):
 
 def test_poll_timeout_raises_capeerror():
     # poll() must raise CapeError (not builtin TimeoutError) so callers' existing
-    # `except CapeError` handles it (M4 / scout #3).
+    # `except CapeError` handles it.
     import clew.channels.cape.client as capeclient
 
     c = capeclient.CapeClient("http://x")
@@ -84,7 +85,7 @@ def test_poll_timeout_raises_capeerror():
 
 def test_correlate_rejects_cape_url(monkeypatch):
     # --cape-url was inert on correlate (its --task path reads local disk, not
-    # REST) and has been removed (D2 cleanup): argparse must reject it.
+    # REST) and has been removed: argparse must reject it.
     with pytest.raises(SystemExit):
         cli.main(["correlate", "--record", "r.json", "--task", "1", "--cape-url", "http://x"])
 
@@ -103,7 +104,8 @@ def test_records_computed_for_all_terminal_states(tmp_path):
         {"id": 4, "status": "failed_reporting", "target": "d.exe"},
         {"id": 5, "status": "completed", "target": "e.exe"},
     ]
-    by_id = {r["task"]: r["records"] for r in cli._build_display_rows(tasks, FakeClient(), str(tmp_path))}
+    rows = cli._build_display_rows(tasks, FakeClient(), str(tmp_path))
+    by_id = {r["task"]: r["records"] for r in rows}
     assert by_id["1"] == "7"  # reported
     assert by_id["2"] == "7"  # terminal failure now also counted
     assert by_id["3"] == "-"  # non-terminal: not counted
@@ -140,8 +142,21 @@ def test_statuses_module_stays_dependency_free():
     assert subprocess.run([sys.executable, "-c", code]).returncode == 0
 
 
+def test_humanize_age_reads_naive_timestamps_as_utc():
+    """CAPE writes added_on in UTC without an offset. Read as local time, every
+    task less than one UTC-offset old lands in the future and clamps to "0s" --
+    observed on a task an hour old reporting 0s next to a genuinely new one."""
+    from datetime import datetime, timedelta, timezone
+
+    an_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+    assert cli._humanize_age(an_hour_ago.strftime("%Y-%m-%d %H:%M:%S")) == "1h"
+
+    two_days = datetime.now(timezone.utc) - timedelta(days=2)
+    assert cli._humanize_age(two_days.strftime("%Y-%m-%d %H:%M:%S")) == "2d"
+
+
 def test_humanize_age_iso_tz_and_future(monkeypatch):
-    # scout #17: the fromisoformat fallback, tz-aware drop, and future clamp were
+    # the fromisoformat fallback, tz-aware drop, and future clamp were
     # untested (only the strptime buckets + garbage were covered).
     assert cli._humanize_age("2020-01-01T00:00:00.123456+00:00").endswith("d")  # ISO + offset
     assert cli._humanize_age("2020-01-01T00:00:00+00:00").endswith("d")  # tz-aware, tzinfo dropped
@@ -250,6 +265,8 @@ _SHORT_FLAGS = [
     (["run", "s.exe", "-p", "exe_drcov"], "package", "exe_drcov"),
     (["run", "s.exe", "-m", "0x400000"], "module_base", 0x400000),
     (["run", "s.exe", "-u", "http://x"], "cape_url", "http://x"),
+    (["doctor", "-u", "http://x"], "cape_url", "http://x"),
+    (["doctor", "-T", "30"], "timeout", 30),
 ]
 
 
@@ -511,8 +528,8 @@ def test_correlate_task_path_reads_and_enriches(monkeypatch, capsys):
 
     monkeypatch.setattr(
         cape_client.CapeClient,
-        "fetch_cmplog_logs",
-        lambda self, task_id, storage_root: [FIXTURES / "cmplog_synth_01.log"],
+        "fetch_trace_logs",
+        lambda self, task_id, storage_root: ([FIXTURES / "cmplog_synth_01.log"], "cmplog"),
     )
     rc = cli.main(
         [
@@ -534,9 +551,9 @@ def test_correlate_task_cape_error_returns_2(monkeypatch):
     from clew.channels.cape import client as cape_client
 
     def boom(self, task_id, storage_root):
-        raise cape_client.CapeError("cannot read cmplog logs")
+        raise cape_client.CapeError("cannot read Channel 3 logs")
 
-    monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
+    monkeypatch.setattr(cape_client.CapeClient, "fetch_trace_logs", boom)
     rc = cli.main(
         [
             "correlate",
@@ -565,7 +582,7 @@ def test_correlate_source_is_required_and_exclusive():
 
 def test_detonate_no_wait_prints_task_id_and_submits_free_mode(monkeypatch, capsys):
     # Guards the critical free-mode requirement: without options={"free":"yes"}
-    # and package="exe_cmplog", capemon corrupts DynamoRIO and 0 logs land.
+    # and package="exe_drtrace", capemon corrupts DynamoRIO and 0 logs land.
     from clew.channels.cape import client as cape_client
 
     seen = {}
@@ -578,7 +595,7 @@ def test_detonate_no_wait_prints_task_id_and_submits_free_mode(monkeypatch, caps
     monkeypatch.setattr(cape_client.CapeClient, "submit", fake_submit)
     assert cli.main(["detonate", "x.exe"]) == 0
     assert capsys.readouterr().out.strip() == json.dumps({"task_id": 42})
-    assert seen["package"] == "exe_cmplog"
+    assert seen["package"] == "exe_drtrace"
     assert seen["options"] == {"free": "yes"}
 
 
@@ -659,9 +676,11 @@ def test_format_tasks_table_headers_and_values():
 
 
 def test_humanize_age_buckets():
-    from datetime import timedelta
+    from datetime import timedelta, timezone
 
-    now = datetime.now()
+    # UTC, because that is what CAPE writes. Building these from a local now()
+    # was the assumption the age column got wrong.
+    now = datetime.now(timezone.utc)
 
     def fmt(delta):
         return (now - delta).strftime("%Y-%m-%d %H:%M:%S")
@@ -728,7 +747,7 @@ def test_tasks_json_includes_records(monkeypatch, capsys):
     assert isinstance(rows, list) and rows
     assert rows[0]["sample"] == "signtool.exe"
     assert rows[0]["records"] == "24429"
-    # failed_analysis is terminal too, so its RECORDS are counted (M2).
+    # failed_analysis is terminal too, so its RECORDS are counted.
     assert rows[1]["records"] == "24429"
 
 
@@ -912,8 +931,8 @@ def _patch_run_stages(monkeypatch, poll_status="reported"):
     monkeypatch.setattr(cape_client.CapeClient, "poll", lambda self, tid, **k: poll_status)
     monkeypatch.setattr(
         cape_client.CapeClient,
-        "fetch_cmplog_logs",
-        lambda self, task_id, storage_root: [FIXTURES / "cmplog_synth_01.log"],
+        "fetch_trace_logs",
+        lambda self, task_id, storage_root: ([FIXTURES / "cmplog_synth_01.log"], "cmplog"),
     )
 
 
@@ -940,7 +959,7 @@ def test_run_detonation_failed_returns_2_without_correlating(monkeypatch, tmp_pa
     def boom(self, task_id, storage_root):
         raise AssertionError("correlate must not run after a failed detonation")
 
-    monkeypatch.setattr(cape_client.CapeClient, "fetch_cmplog_logs", boom)
+    monkeypatch.setattr(cape_client.CapeClient, "fetch_trace_logs", boom)
     assert cli.main(["run", "sample.exe", "--no-license-checkout"]) == 2
     # The expensive stage-1 record survives the failed detonation.
     kept = tmp_path / "results" / "runsha.clew.json"
@@ -993,7 +1012,7 @@ def test_run_parser_carries_merged_flags():
     assert ns.func is cli._cmd_run
     assert ns.sample == "x.exe"
     # Detonate stage defaults.
-    assert ns.package == "exe_cmplog"
+    assert ns.package == "exe_drtrace"
     assert ns.timeout == 120
     # Correlate stage defaults.
     assert ns.module_base is None
@@ -1004,5 +1023,294 @@ def test_run_parser_carries_merged_flags():
     assert ns.no_license_checkout is False
 
 
+
+
+# ---------- correlate: drtrace logs ----------
+
+
+def _write_drtrace(dir_path):
+    """A minimal drtrace log: a module table, and one observed call whose site
+    matches the 0x00401000 candidate in correlate_input_01.json."""
+    name = "synthetic_pe32.exe".encode("ascii").hex()
+    value = "SbieDll.dll".encode("utf-16-le").hex()
+    (dir_path / "drtrace.1.modules.log").write_text(
+        f"M seq=1 base=0x00400000 end=0x0049a000 name={name}\n"
+    )
+    (dir_path / "drtrace.1.100.log").write_text(
+        "C seq=10 T100 api=GetModuleHandleW site=0x00401005 "
+        f"a0=0x0019fb14 s0=W:{value}\n"
+        "R seq=11 T100 api=GetModuleHandleW site=0x00401005 rv=0x00000000\n"
+    )
+
+
+def test_correlate_drtrace_dir_produces_runtime_candidates(tmp_path, capsys):
+    _write_drtrace(tmp_path)
+    out = tmp_path / "out.json"
+    rc = cli.main(
+        [
+            "correlate",
+            "--record", str(FIXTURES / "correlate_input_01.json"),
+            "--log-dir", str(tmp_path),
+            "-o", str(out),
+        ]
+    )
+    assert rc == 0
+    record = json.loads(out.read_text())
+    matched = next(c for c in record["candidates"] if c["call_site_va"] == "0x00401000")
+    # The observed argument reached the static candidate at that call site.
+    assert "SbieDll.dll" in [v["value"] for v in matched["candidate_values"]]
+    # And the return value became a candidate of Channel 3's own making.
+    produced = [c for c in record["candidates"] if c["api_resolution"] == "runtime"]
+    assert produced and all(c["evidence"]["channels"] == ["drio"] for c in produced)
+
+
+def test_correlate_cmplog_dir_alias_still_accepted(tmp_path):
+    """--cmplog-dir is in usage.md, the journal, and muscle memory."""
+    _write_drtrace(tmp_path)
+    out = tmp_path / "out.json"
+    assert cli.main(
+        [
+            "correlate",
+            "--record", str(FIXTURES / "correlate_input_01.json"),
+            "--cmplog-dir", str(tmp_path),
+            "-o", str(out),
+        ]
+    ) == 0
+    assert json.loads(out.read_text())["candidates"]
+
+
+def test_drtrace_logs_win_when_both_families_are_present(tmp_path):
+    """A guest with both clients deployed must not silently correlate against
+    the older comparison-only logs."""
+    _write_drtrace(tmp_path)
+    (tmp_path / "cmplog.1.100.log").write_text(
+        "T100 pc=0x00401010 cmp src0=imm=0x1 src1=imm=0x2\n"
+    )
+    logs, kind = cli._logs_from_dir(tmp_path)
+    assert kind == "drtrace"
+    assert all(p.name.startswith("drtrace.") for p in logs)
+
+
+def test_correlate_missing_logs_warns_and_still_writes(tmp_path, capsys):
+    """An empty log set is honest, not a failure: a sample that defeats
+    DynamoRIO legitimately produces none. But it must say so, because the result
+    is otherwise indistinguishable from a sample that simply had nothing to
+    observe."""
+    out = tmp_path / "out.json"
+    rc = cli.main(
+        [
+            "correlate",
+            "--record", str(FIXTURES / "correlate_input_01.json"),
+            "--log-dir", str(tmp_path),
+            "-o", str(out),
+        ]
+    )
+    assert rc == 0
+    assert "nothing to correlate" in capsys.readouterr().err
+    assert json.loads(out.read_text())["candidates"]
+
+
+# ---------- passing a command line to the sample ----------
+
+
+def test_sample_args_reach_cape_as_the_arguments_option(monkeypatch):
+    """al-khaser only runs the check groups named by --check, which is what lets
+    it exercise the target APIs without the groups that defeat DynamoRIO."""
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+    monkeypatch.setattr(cape_client.CapeClient, "submit",
+                        lambda self, s, **k: (seen.update(k), 7)[1])
+    assert cli.main(["detonate", "x.exe", "--sample-args",
+                     "--check VBOX --check DEBUG --sleep 5"]) == 0
+    assert seen["options"] == {"free": "yes",
+                               "arguments": "--check VBOX --check DEBUG --sleep 5"}
+
+
+def test_free_mode_survives_sample_args(monkeypatch):
+    """free=yes is not negotiable -- without it capemon corrupts DynamoRIO."""
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+    monkeypatch.setattr(cape_client.CapeClient, "submit",
+                        lambda self, s, **k: (seen.update(k), 7)[1])
+    cli.main(["detonate", "x.exe"])
+    assert seen["options"] == {"free": "yes"}
+# --- --capa: one flag carrying both the on/off switch and the timeout --------
+
+
+def test_capa_off_by_default():
+    args = cli.build_parser().parse_args(["static", "s.exe"])
+    assert args.capa_timeout is None
+
+
+def test_capa_bare_uses_the_default_timeout():
+    args = cli.build_parser().parse_args(["static", "s.exe", "--capa"])
+    assert args.capa_timeout == cli.DEFAULT_CAPA_TIMEOUT
+
+
+def test_capa_accepts_an_explicit_timeout():
+    args = cli.build_parser().parse_args(["static", "s.exe", "--capa", "900"])
+    assert args.capa_timeout == 900
+
+
+def test_capa_accepts_the_equals_form_before_the_sample():
+    # The only way to give a value ahead of the positional, since nargs="?"
+    # would otherwise eat the sample.
+    args = cli.build_parser().parse_args(["static", "--capa=900", "s.exe"])
+    assert args.capa_timeout == 900
+
+
+def test_capa_swallowing_the_sample_gives_an_actionable_error(capsys):
+    # `clew static --capa sample.exe` is the ordering argparse cannot
+    # disambiguate. It must fail, but the message has to name the two forms
+    # that work rather than saying "invalid int value".
+    with pytest.raises(SystemExit):
+        cli.build_parser().parse_args(["static", "--capa", "s.exe"])
+    err = capsys.readouterr().err
+    assert "timeout in seconds" in err
+    assert "--capa=600" in err
+
+
+def test_capa_timeout_rejects_nonsense_but_explains():
+    with pytest.raises(argparse.ArgumentTypeError) as excinfo:
+        cli._capa_timeout("banana")
+    assert "timeout in seconds" in str(excinfo.value)
+
+
+def test_capa_timeout_parses_an_integer():
+    assert cli._capa_timeout("42") == 42
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# ---------- refusing to overwrite a correlated record ----------
+
+
+def _correlated_record(sha="deadbeef"):
+    return {
+        "sample_sha256": sha,
+        "candidates": [
+            {
+                "call_site_va": "0x00401000",
+                "comparison_candidates": [
+                    {"comparison_operator": "equality", "cmp_operand_a": "0x1",
+                     "cmp_operand_b": "0x2", "confidence": 0.9,
+                     "source_channels": ["drio"], "binding": "temporal"}
+                ],
+            }
+        ],
+    }
+
+
+def _static_record(sha="deadbeef"):
+    return {
+        "sample_sha256": sha,
+        "candidates": [{"call_site_va": "0x00401000", "candidate_values": [
+            {"value": None, "confidence": 0.0, "source_channels": ["bn_xref"]}]}],
+    }
+
+
+def test_static_refuses_to_clobber_a_correlated_record(tmp_path):
+    """static and correlate share a default path keyed on the sample hash, so a
+    re-run of static silently replaced a detonation's worth of observation."""
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_correlated_record()))
+    with pytest.raises(cli.RecordRegression, match="--force"):
+        cli._emit_record(_static_record(), out, "summary")
+    # The correlated record is still there, untouched.
+    assert cli._has_runtime_data(json.loads(out.read_text()))
+
+
+def test_force_allows_the_overwrite(tmp_path):
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_correlated_record()))
+    cli._emit_record(_static_record(), out, "summary", force=True)
+    assert not cli._has_runtime_data(json.loads(out.read_text()))
+
+
+def test_recorrelating_over_a_correlated_record_is_allowed(tmp_path):
+    """Like replacing like: correlate must not be blocked by its own output."""
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_correlated_record()))
+    cli._emit_record(_correlated_record(), out, "summary")
+    assert cli._has_runtime_data(json.loads(out.read_text()))
+
+
+def test_static_over_a_static_record_is_allowed(tmp_path):
+    out = tmp_path / "r.json"
+    out.write_text(json.dumps(_static_record()))
+    cli._emit_record(_static_record(), out, "summary")
+    assert out.exists()
+
+
+def test_unreadable_existing_record_does_not_block(tmp_path):
+    """Refusing on a file we cannot parse would strand the user behind
+    something they cannot inspect, and there is nothing to protect."""
+    out = tmp_path / "r.json"
+    out.write_text("not json at all")
+    cli._emit_record(_static_record(), out, "summary")
+    assert json.loads(out.read_text())["sample_sha256"] == "deadbeef"
+
+
+@pytest.mark.parametrize("shape", [
+    {"comparison_candidates": [{"confidence": 0.5}]},
+    {"api_resolution": "runtime"},
+    {"candidate_values": [{"value": "x", "source_channels": ["drio"]}]},
+])
+def test_all_three_shapes_of_runtime_data_are_protected(shape):
+    """Correlation produces runtime data three ways: comparisons joined onto a
+    candidate, a candidate Channel 3 made itself, and a value it contributed."""
+    assert cli._has_runtime_data({"candidates": [dict(call_site_va="0x1", **shape)]})
+
+
+def test_a_purely_static_record_is_not_mistaken_for_runtime_data():
+    assert not cli._has_runtime_data(_static_record())
+
+
+def test_dash_o_stdout_is_never_blocked(capsys):
+    """Pipe mode writes no file, so there is nothing to regress."""
+    cli._emit_record(_static_record(), Path("-"), "summary")
+    assert json.loads(capsys.readouterr().out)["sample_sha256"] == "deadbeef"
+
+
+def test_regression_exits_1_through_main(monkeypatch, tmp_path):
+    rec = dict(_static_record("aa"), derivation_status=None, capa_techniques=[])
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "results" / "aa.clew.json"
+    target.parent.mkdir()
+    target.write_text(json.dumps(_correlated_record("aa")))
+    assert cli.main(["static", "x.exe", "--no-license-checkout"]) == 1
+    assert cli.main(["static", "x.exe", "--no-license-checkout", "--force"]) == 0
+
+
+def test_run_checkpoint_does_not_clobber_a_correlated_record(monkeypatch, tmp_path):
+    """`run` parks the static record on the default path before detonating, so
+    it can regress a correlated record the same way `static` can -- and it does
+    it before the detonation that would put runtime data back."""
+    rec = dict(_static_record("bb"), derivation_status=None, capa_techniques=[])
+    monkeypatch.setattr(cli, "run_static_pipeline", lambda *a, **k: rec)
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "results" / "bb.clew.json"
+    target.parent.mkdir()
+    target.write_text(json.dumps(_correlated_record("bb")))
+
+    assert cli.main(["run", "x.exe", "--no-license-checkout"]) == 1
+    # Untouched: the guard fires before the checkpoint write.
+    assert cli._has_runtime_data(json.loads(target.read_text()))
+
+
+def test_display_string_keeps_windows_paths_readable():
+    """repr() would double every backslash and make a path unreadable on screen."""
+    assert cli._display_string(r"C:\Users\cape\Temp\s.exe") == r"'C:\Users\cape\Temp\s.exe'"
+
+
+def test_display_string_neutralises_terminal_escapes():
+    """Logged strings come from memory the sample controls, so a crafted one
+    must not be able to drive the terminal of whoever reads the trace."""
+    out = cli._display_string("safe\x1b[31mred\x07")
+    assert "\x1b" not in out and "\x07" not in out
+    assert "\\x1b" in out and "\\x07" in out

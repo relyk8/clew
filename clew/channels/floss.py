@@ -3,7 +3,7 @@
 Wraps flare-floss (called in-process, not via subprocess) and adapts its
 typed result objects into a FlossResult. FLOSS is a value channel: it
 contributes candidate *values* (DLL names, registry paths, VM-artifact
-strings), never call-site matches. Channel 2 (BN/Ghidra xref) is what
+strings), never call-site matches. Channel 2 (Binary Ninja xrefs) is what
 maps these values to their API call sites.
 
 FLOSS emits four string categories that map 1:1 to the schema's
@@ -16,7 +16,7 @@ FLOSS emits four string categories that map 1:1 to the schema's
 
 FLOSS additionally emits `language_strings` / `language_strings_missed`
 (Go/Rust/.NET language-specific extraction); these are outside the
-current schema enum and are deliberately dropped here. Tracked as v2 item #16.
+current schema enum and are deliberately dropped here. Deferred to v2.
 
 This channel does no semantic/regex filtering: it preserves every string
 FLOSS returns, tagged by source category and its native location fields,
@@ -165,7 +165,7 @@ def _adapt_decoded(s) -> FlossString:
 def _adapt_result_document(doc, min_length: int) -> FlossResult:
     """Adapt a floss.results.ResultDocument into a FlossResult.
 
-    Drops language_strings / language_strings_missed (v2 item #16).
+    Drops language_strings / language_strings_missed (deferred to v2).
     """
     strings = doc.strings
     return FlossResult(

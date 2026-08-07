@@ -1,3 +1,9 @@
+[![Last release](https://img.shields.io/github/v/release/relyk8/clew)](https://github.com/relyk8/clew/releases)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+
+<img src="resources/clew-logo.png" alt="Clew logo" width="200">
+
 # Clew
 
 Clew reads a single PE32 malware sample once and emits a per-sample seed corpus
@@ -52,64 +58,39 @@ string that Binary Ninja and FLOSS both confirm (confidence 0.9). A fuzzer that
 reaches this call site now knows the exact argument to supply. Fields are abridged
 here. The full contract is in [docs/schema.md](docs/schema.md).
 
-## Quickstart
-
-Install:
+## Installation
 
 ```bash
-pip install -e '.[dev,analysis]'
+pipx install git+https://github.com/relyk8/clew
 ```
 
-Run the static pipeline over a sample. A Binary Ninja license and capa rules/sigs
-are required:
+Or install a pinned build from the
+[releases page](https://github.com/relyk8/clew/releases).
+
+Clew needs a licensed Binary Ninja. capa (`--capa`) and the dynamic step need a
+capa rules checkout and a CAPE instance respectively. Configure once and check
+with `clew doctor`. See [docs/installation.md](docs/installation.md) for every
+installation and configuration method.
+
+## Usage
 
 ```bash
-export CLEW_CAPA_RULES=/path/to/capa-rules
-export CLEW_CAPA_SIGS=/path/to/capa-src/sigs
-clew suspicious.exe
-```
-
-The record is written to `results/<sha256>.clew.json` by default. Pass `-o <path>`
-to choose a location, or `-o -` to write to stdout. To add the dynamic comparison
-operands, Clew detonates the sample under DynamoRIO in CAPE and correlates the
-runtime comparisons back onto the record:
-
-```bash
+clew suspicious.exe          # writes results/<sha256>.clew.json
 clew run suspicious.exe      # static, then detonate, then correlate
 ```
 
 `clew --help` lists the commands. See [docs/usage.md](docs/usage.md) for the full
 command reference and the end-to-end workflow.
 
-## Prerequisites
-
-- Binary Ninja 4.2.6455 Ultimate with an Enterprise license, for the core static
-  analysis.
-- capa rules and signatures, via `CLEW_CAPA_RULES` and `CLEW_CAPA_SIGS` (copy
-  `.env.example` to `.env` and load it with `set -a; source .env; set +a`).
-- A CAPE instance with the cmplog DynamoRIO package, for the dynamic step
-  (`detonate`, `run`). The static pipeline runs without it.
-
-Without a Binary Ninja license, the offline test suite still runs clean on a bare
-checkout (see Tests).
-
 ## Documentation
 
 - [docs/theory.md](docs/theory.md) — the problem and Clew's approach (read first).
+- [docs/installation.md](docs/installation.md) — installing, configuring, and
+  verifying a setup, plus running the tests.
 - [docs/usage.md](docs/usage.md) — the command reference and end-to-end workflow.
+- [docs/cape_drio_setup.md](docs/cape_drio_setup.md) — standing up CAPE and
+  DynamoRIO for the dynamic channel.
 - [docs/schema.md](docs/schema.md) — the record contract. The machine-checkable
   version is `schema/clew_record.schema.json`.
 - [docs/binary_ninja_headless_setup.md](docs/binary_ninja_headless_setup.md) —
   headless Binary Ninja setup notes.
-
-## Tests
-
-```bash
-pytest        # offline, fixture-driven; no BN license or capa rules needed
-```
-
-Expensive and licensed tests are opt-in via environment variables. `BN_INTEGRATION=1`
-enables the licensed Binary Ninja analysis tests (needs a BN Enterprise license and
-the fixture `.exe`), and `CAPA_RULES_PATH` with `CAPA_SIGS_PATH` enables the capa
-integration tests. Tests skip when a required fixture is absent, so a clean checkout
-runs a reduced but green suite.
