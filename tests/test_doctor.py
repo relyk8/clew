@@ -246,8 +246,13 @@ def test_report_distinguishes_warnings_from_blockers():
     assert "1 blocking problem(s)" in blocked
 
 
-def test_cli_doctor_exits_nonzero_when_bn_is_missing(monkeypatch, capsys, tmp_path):
+def test_cli_doctor_exits_nonzero_when_the_active_backend_is_missing(
+    monkeypatch, capsys, tmp_path
+):
+    # Only the *selected* backend has to work. With Binary Ninja selected and
+    # nothing importable, doctor must fail on Binary Ninja.
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("CLEW_STATIC_BACKEND", "binaryninja")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(doctor.importlib.util, "find_spec", lambda name: None)
     monkeypatch.setattr(doctor, "check_cape", lambda url, timeout: doctor.Check("cape", doctor.SKIP, ""))
@@ -259,8 +264,57 @@ def test_cli_doctor_exits_nonzero_when_bn_is_missing(monkeypatch, capsys, tmp_pa
     assert "binary ninja api" in out
 
 
+def test_cli_doctor_exits_nonzero_when_ghidra_is_selected_but_missing(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("CLEW_STATIC_BACKEND", "ghidra")
+    monkeypatch.delenv("GHIDRA_INSTALL_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(doctor.importlib.util, "find_spec", lambda name: None)
+    monkeypatch.setattr(doctor, "check_cape", lambda url, timeout: doctor.Check("cape", doctor.SKIP, ""))
+
+    rc = cli.main(["doctor"])
+
+    assert rc == 1
+    assert "ghidra" in capsys.readouterr().out
+
+
+def test_cli_doctor_ignores_the_backend_that_is_not_in_use(monkeypatch, capsys, tmp_path):
+    # Ghidra selected and working, Binary Ninja absent: that is a complete,
+    # working open-source install and must not be reported as a failure.
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("CLEW_STATIC_BACKEND", "ghidra")
+    ghidra_home = tmp_path / "ghidra"
+    (ghidra_home / "support").mkdir(parents=True)
+    (ghidra_home / "support" / "analyzeHeadless").write_text("#!/bin/sh\n")
+    jdk = tmp_path / "jdk"
+    (jdk / "bin").mkdir(parents=True)
+    (jdk / "bin" / "javac").write_text("#!/bin/sh\n")
+    monkeypatch.setenv("GHIDRA_INSTALL_DIR", str(ghidra_home))
+    monkeypatch.setenv("JAVA_HOME", str(jdk))
+    monkeypatch.chdir(tmp_path)
+    # Nothing importable: binaryninja is missing, but pyghidra must look present.
+    monkeypatch.setattr(
+        doctor.importlib.util,
+        "find_spec",
+        lambda name: object() if name == "pyghidra" else None,
+    )
+    monkeypatch.setattr(doctor, "check_cape", lambda url, timeout: doctor.Check("cape", doctor.SKIP, ""))
+
+    rc = cli.main(["doctor"])
+
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    assert "backend not in use" in out
+
+
 def test_cli_doctor_exits_zero_when_only_warnings(monkeypatch, capsys, tmp_path):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    # Pin the backend to the one this test's find_spec mock satisfies, so the
+    # assertion is about warning-vs-failure and not about which backend is the
+    # current default.
+    monkeypatch.setenv("CLEW_STATIC_BACKEND", "binaryninja")
     monkeypatch.chdir(tmp_path)
     spec = type("Spec", (), {"origin": str(tmp_path / "binaryninja" / "__init__.py")})()
     monkeypatch.setattr(doctor.importlib.util, "find_spec", lambda name: spec)

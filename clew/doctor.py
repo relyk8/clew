@@ -1,20 +1,24 @@
 """Preflight checks for a clew installation.
 
-clew depends on things pip cannot install: a licensed Binary Ninja, a capa rules
-checkout, a CAPE instance with the cmplog DynamoRIO package. When one of them is
-missing or misconfigured the failure surfaces deep inside a run -- often minutes
-in, after a Binary Ninja seat has already been checked out -- as an error that
-names the symptom and not the cause.
+clew depends on things pip cannot install: a Ghidra install and a JDK (or a
+licensed Binary Ninja), a capa rules checkout, a CAPE instance with the cmplog
+DynamoRIO package. When one of them is missing or misconfigured the failure
+surfaces deep inside a run -- often minutes in, after a Binary Ninja seat has
+already been checked out -- as an error that names the symptom and not the cause.
 
 `clew doctor` answers "will this actually run, and if not, what do I fix" before
 any of that is spent. Every check reports what it found and, when it found a
 problem, the specific line that fixes it.
 
 Checks are ordered from the pipeline's core outward: the interpreter, then the
-configuration, then Channel 2 (Binary Ninja, the core channel), then the
+configuration, then Channel 2 (the static backend, the core channel), then the
 enrichment channels, then Channel 3's dynamic infrastructure. Only a failure
 that stops the core pipeline is a hard failure; a missing enrichment channel is
 a warning, because the pipeline is designed to degrade past it.
+
+Channel 2 has two interchangeable backends and only the selected one has to
+work, so a check for the backend that is *not* in use is reported as skipped
+rather than failing the report.
 
 Nothing here executes a sample, consumes a license seat, or loads the Binary
 Ninja core unless --license is passed, so it is safe and fast to run anywhere.
@@ -28,6 +32,7 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from clew.config import config_sources, default_capa_bin, loaded_files, user_config_path
 
@@ -126,6 +131,89 @@ def check_bn_api() -> Check:
         "not importable (Channel 2 is the core channel; static analysis cannot run)",
         fix=f"set CLEW_BN_API=/path/to/binaryninja/python in {_short(user_config_path())}",
     )
+
+
+def check_static_backend() -> Check:
+    """Which Channel 2 engine `clew static` will use, and why."""
+    from clew.pipeline import (
+        BACKEND_LABELS,
+        DEFAULT_BACKEND,
+        UnknownBackendError,
+        resolve_backend,
+    )
+
+    configured = os.environ.get("CLEW_STATIC_BACKEND")
+    try:
+        backend = resolve_backend()
+    except UnknownBackendError as e:
+        return Check(
+            "static backend",
+            FAIL,
+            str(e),
+            fix="set CLEW_STATIC_BACKEND to ghidra or binaryninja, or unset it",
+        )
+    source = f"CLEW_STATIC_BACKEND={configured}" if configured else f"default ({DEFAULT_BACKEND})"
+    return Check("static backend", OK, f"{BACKEND_LABELS[backend]} -- {source}")
+
+
+def check_ghidra() -> Check:
+    """Whether the Ghidra backend can run: pyghidra, the install, and a JDK.
+
+    Deliberately does not boot the JVM -- that costs seconds and would make
+    `clew doctor` slow for everyone. It checks the three things that actually
+    go wrong, in the order they fail.
+    """
+    try:
+        have_pyghidra = importlib.util.find_spec("pyghidra") is not None
+    except (ImportError, ValueError):
+        have_pyghidra = False
+    if not have_pyghidra:
+        return Check(
+            "ghidra",
+            FAIL,
+            "pyghidra not installed; the Ghidra backend cannot run",
+            fix="pip install pyghidra (needs Ghidra 12.0+)",
+        )
+
+    install = os.environ.get("GHIDRA_INSTALL_DIR")
+    if not install:
+        return Check(
+            "ghidra",
+            FAIL,
+            "pyghidra installed but GHIDRA_INSTALL_DIR is not set",
+            fix=f"set GHIDRA_INSTALL_DIR to your Ghidra 12.0+ install in "
+            f"{_short(user_config_path())}",
+        )
+    if not (Path(install) / "support" / "analyzeHeadless").exists():
+        return Check(
+            "ghidra",
+            FAIL,
+            f"GHIDRA_INSTALL_DIR={install} has no support/analyzeHeadless",
+            fix="point GHIDRA_INSTALL_DIR at the unpacked Ghidra directory",
+        )
+
+    # Ghidra needs a full JDK; its launcher rejects a JRE and the error it
+    # reports names neither the cause nor the fix, so check for javac here.
+    javac = _find_javac()
+    if javac is None:
+        return Check(
+            "ghidra",
+            FAIL,
+            f"{_short(Path(install))} found, but no JDK (a JRE is not enough)",
+            fix=f"install a JDK 21+ and set JAVA_HOME to it in {_short(user_config_path())}",
+        )
+    return Check("ghidra", OK, f"{_short(Path(install))}, JDK at {_short(javac.parent.parent)}")
+
+
+def _find_javac() -> Optional[Path]:
+    """The javac that Ghidra would use: JAVA_HOME first, then PATH."""
+    java_home = os.environ.get("JAVA_HOME")
+    if java_home:
+        candidate = Path(java_home) / "bin" / "javac"
+        if candidate.exists():
+            return candidate
+    found = shutil.which("javac")
+    return Path(found) if found else None
 
 
 def check_bn_credentials() -> Check:
@@ -276,11 +364,25 @@ def check_cape_storage(storage_root: str) -> Check:
 
 
 def run_checks(*, cape_url: str, storage_root: str, timeout: int, license_check: bool) -> list[Check]:
+    # Which backend is active decides how loudly a missing one is reported: the
+    # engine that will not run is informational, not a failure. Without this,
+    # an open-source install with no Binary Ninja would fail doctor for a
+    # dependency it never uses.
+    from clew.pipeline import BACKEND_BINARYNINJA, resolve_backend
+
+    try:
+        backend = resolve_backend()
+    except Exception:  # noqa: BLE001 - reported by check_static_backend()
+        backend = None
+    bn_active = backend == BACKEND_BINARYNINJA
+
     checks = [
         check_python(),
         check_config(),
-        check_bn_api(),
-        check_bn_credentials(),
+        check_static_backend(),
+        _demote(check_ghidra(), active=not bn_active),
+        _demote(check_bn_api(), active=bn_active),
+        _demote(check_bn_credentials(), active=bn_active),
     ]
     if license_check:
         checks.append(check_bn_license())
@@ -293,6 +395,18 @@ def run_checks(*, cape_url: str, storage_root: str, timeout: int, license_check:
         check_cape_storage(storage_root),
     ]
     return checks
+
+
+def _demote(check: Check, *, active: bool) -> Check:
+    """Soften a check for a backend that is installed but not in use.
+
+    A FAIL becomes SKIP and a WARN becomes SKIP when the backend is not the one
+    `clew static` would run, so doctor's exit status reflects whether the tool
+    can actually work -- not whether every optional engine is configured.
+    """
+    if active or check.status == OK:
+        return check
+    return Check(check.name, SKIP, f"{check.detail} (backend not in use)", fix=check.fix)
 
 
 def format_report(checks: list[Check], *, version: str, location: str) -> str:

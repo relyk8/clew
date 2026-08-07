@@ -54,9 +54,9 @@ clew suspicious.exe          # writes results/<sha256>.clew.json
 ```
 
 The sample looks up `SeDebugPrivilege` at `0x46e2b9`, recovered from a static
-string that Binary Ninja and FLOSS both confirm (confidence 0.9). A fuzzer that
-reaches this call site now knows the exact argument to supply. Fields are abridged
-here. The full contract is in [docs/schema.md](docs/schema.md).
+string that the static backend and FLOSS both confirm (confidence 0.9). A fuzzer
+that reaches this call site now knows the exact argument to supply. Fields are
+abridged here. The full contract is in [docs/schema.md](docs/schema.md).
 
 ## Installation
 
@@ -67,16 +67,24 @@ pipx install git+https://github.com/relyk8/clew
 Or install a pinned build from the
 [releases page](https://github.com/relyk8/clew/releases).
 
-Clew needs a licensed Binary Ninja. capa (`--capa`) and the dynamic step need a
-capa rules checkout and a CAPE instance respectively. Configure once and check
-with `clew doctor`. See [docs/installation.md](docs/installation.md) for every
-installation and configuration method.
+Clew's static analysis runs on **Ghidra** (the default; public domain, no
+licence) or on Binary Ninja. Ghidra needs the Ghidra 12.0+ install and a JDK 21+
+-- see [docs/ghidra_headless_setup.md](docs/ghidra_headless_setup.md). capa
+(`--capa`) and the dynamic step need a capa rules checkout and a CAPE instance
+respectively. Configure once and check with `clew doctor`. See
+[docs/installation.md](docs/installation.md) for every installation and
+configuration method.
+
+Both backends emit the same record, so a record does not depend on which one
+produced it. Pick per run with `--backend ghidra|binaryninja`, or set
+`CLEW_STATIC_BACKEND`.
 
 ## Usage
 
 ```bash
-clew suspicious.exe          # writes results/<sha256>.clew.json
-clew run suspicious.exe      # static, then detonate, then correlate
+clew suspicious.exe                  # writes results/<sha256>.clew.json
+clew run suspicious.exe              # static, then detonate, then correlate
+clew show results/<sha256>.clew.json # the values that were recovered
 ```
 
 `clew --help` lists the commands. See [docs/usage.md](docs/usage.md) for the full
@@ -92,5 +100,8 @@ command reference and the end-to-end workflow.
   DynamoRIO for the dynamic channel.
 - [docs/schema.md](docs/schema.md) — the record contract. The machine-checkable
   version is `schema/clew_record.schema.json`.
+- [docs/ghidra_headless_setup.md](docs/ghidra_headless_setup.md) — headless
+  Ghidra setup, the default static backend.
 - [docs/binary_ninja_headless_setup.md](docs/binary_ninja_headless_setup.md) —
   headless Binary Ninja setup notes.
+- [docs/demo.md](docs/demo.md) — a scripted walkthrough of the whole pipeline.

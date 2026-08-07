@@ -28,12 +28,16 @@ from pathlib import Path
 
 from clew.config import default_capa_bin, load_config, loaded_files
 from clew.pipeline import (
+    BACKENDS,
     CLEW_VERSION,
+    DEFAULT_BACKEND,
     DEFAULT_CAPA_RULES,
     DEFAULT_CAPA_SIGS,
     DEFAULT_FLOSS_CACHE,
+    BackendUnavailable,
     FlossCacheStale,
     SampleNotFoundError,
+    UnknownBackendError,
     _default_capa_rules,
     _default_capa_sigs,
     run_static_pipeline,
@@ -105,9 +109,17 @@ def _add_static_flags(parser) -> None:
         f"derivation_status is null",
     )
     parser.add_argument(
+        "--backend",
+        choices=BACKENDS,
+        default=None,
+        help=f"Channel 2 static-analysis engine (default: $CLEW_STATIC_BACKEND or "
+        f"{DEFAULT_BACKEND}); ghidra needs no license, binaryninja does",
+    )
+    parser.add_argument(
         "--no-license-checkout",
         action="store_true",
-        help="assume a license is already checked out for this process",
+        help="assume a license is already checked out for this process "
+        "(Binary Ninja backend only)",
     )
     parser.add_argument(
         "--exclude-unresolved",
@@ -442,6 +454,35 @@ def _add_doctor_subparser(sub, parent) -> None:
     s.set_defaults(func=_cmd_doctor)
 
 
+def _add_show_subparser(sub, parent) -> None:
+    s = sub.add_parser(
+        "show",
+        parents=[parent],
+        help="print the recovered values in a clew record",
+        description="Read a clew record and print the candidates that carry a value, "
+        "as a table. --runtime narrows it to values only Channel 3 could supply: "
+        "the ones observed at runtime that no static pass recovered.",
+    )
+    s.add_argument("record", help="path to a clew record JSON")
+    s.add_argument(
+        "--runtime",
+        action="store_true",
+        help="only candidates resolved at runtime (api_resolution == runtime)",
+    )
+    s.add_argument(
+        "--api",
+        default=None,
+        help="only candidates for this API name (substring match, case-insensitive)",
+    )
+    s.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="show at most this many rows",
+    )
+    s.set_defaults(func=_cmd_show)
+
+
 def build_parser() -> argparse.ArgumentParser:
     # A shared parent carries the global verbosity group so it works after any
     # verb (clew static -v ...). A global flag placed BEFORE an explicit verb is
@@ -480,6 +521,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_detonate_subparser(sub, parent)
     _add_tasks_subparser(sub, parent)
     _add_run_subparser(sub, parent)
+    _add_show_subparser(sub, parent)
     _add_doctor_subparser(sub, parent)
     return p
 
@@ -610,6 +652,7 @@ def _cmd_static(args) -> int:
             floss_cache_dir=args.floss_cache,
             use_floss_cache=not args.no_cache,
             refresh_floss_cache=args.refresh_floss_cache,
+            backend=args.backend,
         )
     except FlossCacheStale as e:
         log.error("%s", e)
@@ -1066,6 +1109,7 @@ def _cmd_run(args) -> int:
             floss_cache_dir=args.floss_cache,
             use_floss_cache=not args.no_cache,
             refresh_floss_cache=args.refresh_floss_cache,
+            backend=args.backend,
         )
     except FlossCacheStale as e:
         log.error("%s", e)
@@ -1151,6 +1195,112 @@ def _cmd_run(args) -> int:
     return 0
 
 
+def _value_rows(record, *, runtime_only: bool, api_filter=None) -> list[dict]:
+    """One row per (candidate, value) that carries a value.
+
+    A candidate can hold several values -- an indicator array contributes one
+    per element -- so the record's candidate list is flattened here rather than
+    showing a count the reader then has to go digging for.
+    """
+    rows = []
+    needle = api_filter.lower() if api_filter else None
+    for candidate in record.get("candidates") or []:
+        if runtime_only and candidate.get("api_resolution") != "runtime":
+            continue
+        api = candidate.get("api_name") or "-"
+        if needle and needle not in api.lower():
+            continue
+        for value in candidate.get("candidate_values") or []:
+            if value.get("value") is None:
+                continue
+            index = candidate.get("parameter_index")
+            rows.append(
+                {
+                    "api": api,
+                    "arg": "-" if index is None or index < 0 else f"arg{index}",
+                    "value": _display_value(value.get("value")),
+                    "conf": f"{value.get('confidence', 0.0):.2f}",
+                    "channels": ",".join(value.get("source_channels") or []) or "-",
+                }
+            )
+    return rows
+
+
+# Longest value rendered in the table. Recovered strings are attacker-controlled
+# and occasionally enormous -- al-khaser carries a single argument holding every
+# Win32 API name, which alone widened the table past 200KB and made every other
+# row unreadable. Truncation is marked so a clipped value is never mistaken for
+# the whole one; -o/jq on the record itself is the way to read it in full.
+_MAX_VALUE_WIDTH = 64
+
+
+def _display_value(value) -> str:
+    """Render a candidate value for a terminal.
+
+    Strings get the same control-character escaping `tasks --show-drtrace`
+    applies: these bytes came from memory the sample controls, so printing them
+    raw would let a crafted value emit terminal escapes.
+    """
+    text = _display_string(value) if isinstance(value, str) else repr(value)
+    if len(text) > _MAX_VALUE_WIDTH:
+        return text[: _MAX_VALUE_WIDTH - 3] + "..."
+    return text
+
+
+def _format_value_table(rows: list[dict]) -> str:
+    columns = [
+        ("API", "api"),
+        ("ARG", "arg"),
+        ("VALUE", "value"),
+        ("CONF", "conf"),
+        ("CHANNELS", "channels"),
+    ]
+    widths = {}
+    for header, key in columns:
+        widths[key] = max([len(header)] + [len(str(r.get(key, ""))) for r in rows])
+
+    def render(cells) -> str:
+        return "  ".join(
+            str(v).ljust(widths[key]) for (_, key), v in zip(columns, cells)
+        ).rstrip()
+
+    lines = [render([h for h, _ in columns])]
+    for r in rows:
+        lines.append(render([r.get(key, "") for _, key in columns]))
+    return "\n".join(lines)
+
+
+def _cmd_show(args) -> int:
+    log = logging.getLogger("clew.cli")
+    path = Path(args.record)
+    try:
+        record = json.loads(path.read_text())
+    except FileNotFoundError:
+        log.error("record not found: %s", path)
+        return 1
+    except ValueError as exc:
+        log.error("%s is not valid JSON: %s", path, exc)
+        return 1
+
+    rows = _value_rows(record, runtime_only=args.runtime, api_filter=args.api)
+    total = len(rows)
+    if args.limit is not None and args.limit >= 0:
+        rows = rows[: args.limit]
+
+    if not rows:
+        # An empty result is an answer, not an error: a static-only record
+        # legitimately has no runtime values.
+        what = "runtime-resolved values" if args.runtime else "values"
+        print(f"no {what} in {path}")
+        return 0
+
+    print(_format_value_table(rows))
+    shown = f"{len(rows)} of {total}" if len(rows) != total else str(total)
+    scope = "runtime-resolved value(s)" if args.runtime else "value(s)"
+    print(f"\n{shown} {scope} in {path}")
+    return 0
+
+
 def _cmd_doctor(args) -> int:
     # Lazy import to match the other verbs; doctor pulls the CAPE client only
     # when it actually probes CAPE.
@@ -1196,6 +1346,17 @@ def main(argv=None) -> int:
     except RecordRegression as exc:
         logging.getLogger("clew.cli").error("%s", exc)
         return 1
+    except UnknownBackendError as exc:
+        # Reachable via $CLEW_STATIC_BACKEND; --backend is constrained by argparse.
+        logging.getLogger("clew.cli").error("%s", exc)
+        return 2
+    except BackendUnavailable as exc:
+        # The selected backend is not installed or not configured. A traceback
+        # here says nothing the message does not, and buries the fix.
+        log = logging.getLogger("clew.cli")
+        log.error("%s", exc)
+        log.error("run `clew doctor` to check the backend, or pass --backend to switch")
+        return 2
 
 
 if __name__ == "__main__":

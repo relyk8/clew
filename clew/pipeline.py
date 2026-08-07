@@ -1,11 +1,19 @@
 """clew static pipeline: run the static channels and assemble one record.
 
-Runs Channel 0/1 (capa), Channel 1 (FLOSS), and Channel 2 (Binary Ninja:
-call-site enumeration + the dataflow bridge) over a single sample and
-assembles the sample-level *intermediate* clew record.
+Runs Channel 0/1 (capa), Channel 1 (FLOSS), and Channel 2 (call-site
+enumeration + the dataflow bridge) over a single sample and assembles the
+sample-level *intermediate* clew record.
 
-Single analysis: the BN view is opened and analysed ONCE, inside one Enterprise
-license checkout, and both `enumerate_with_view` and `bridge_with_view` run on it -- not two `update_analysis_and_wait` passes.
+Channel 2 has two interchangeable backends -- Ghidra (default, no licence) and
+Binary Ninja -- selected by `backend=` / $CLEW_STATIC_BACKEND / --backend. They
+emit the same intermediate candidates, so nothing below this module depends on
+which one ran. The chosen backend is checked for usability *before* capa and
+FLOSS run, so a missing install fails in under a second rather than minutes in.
+
+Single analysis: whichever backend runs, the sample is opened and analysed
+ONCE -- inside one Enterprise licence checkout for Binary Ninja, sharing one
+decompiler and its HighFunction cache for Ghidra -- and both the enumeration
+and the bridge run on that single analysis.
 
 Boundary: this produces an INTERMEDIATE record. The sample-level fields that are
 statically available -- `sample_sha256`, `capa_techniques`, `derivation_status`
@@ -18,11 +26,11 @@ stage completes each candidate, and Channel 3 adds comparison semantics.
 Degradation: capa and FLOSS are enrichment. If capa fails or times out the
 record gets `derivation_status = "no_capa_signal"` and no techniques (the same
 operational bucket as zero anti-analysis rules). If FLOSS fails the bridge runs
-with an empty index (BN-only static strings). Binary Ninja is the core channel:
-its errors propagate.
+with an empty index (backend-only static strings). Channel 2 is the core
+channel: its errors propagate.
 
-Heavy dependencies (capa / floss / tiers / binaryninja) are imported lazily
-inside the driver, so `assemble_record` and its tests need none of them.
+Heavy dependencies (capa / floss / tiers / binaryninja / pyghidra) are imported
+lazily inside the driver, so `assemble_record` and its tests need none of them.
 """
 
 from __future__ import annotations
@@ -36,9 +44,52 @@ import time
 from pathlib import Path
 from typing import Optional
 
+# Re-exported so the CLI can catch "backend not usable" without importing a
+# channel; it is defined in clew.channels so a backend never imports the
+# pipeline that drives it.
+from clew.channels import BackendUnavailable  # noqa: F401
+
 CLEW_VERSION = "0.4.1"
 
 _log = logging.getLogger("clew.pipeline")
+
+# --- Channel 2 backend selection ---------------------------------------------
+# Channel 2 (call sites + dataflow) has two interchangeable engines. They emit
+# the same intermediate candidates, so nothing downstream -- the schema, the
+# record, correlation -- depends on which one ran.
+#
+# Ghidra is the default because it is public-domain and needs no license, which
+# is what lets clew run for anyone. Binary Ninja remains available for
+# comparison and because its analysis resolves a few things Ghidra does not
+# (notably ordinal imports, which it maps to export names via a built-in table
+# where this Ghidra backend reports the ordinal).
+BACKEND_GHIDRA = "ghidra"
+BACKEND_BINARYNINJA = "binaryninja"
+BACKENDS = (BACKEND_GHIDRA, BACKEND_BINARYNINJA)
+DEFAULT_BACKEND = BACKEND_GHIDRA
+
+BACKEND_LABELS = {
+    BACKEND_GHIDRA: "Ghidra",
+    BACKEND_BINARYNINJA: "Binary Ninja",
+}
+
+
+class UnknownBackendError(ValueError):
+    """The requested Channel 2 backend is not one clew knows about."""
+
+
+def resolve_backend(backend: Optional[str] = None) -> str:
+    """Normalise a backend name: explicit argument, then env, then default."""
+    raw = backend or os.environ.get("CLEW_STATIC_BACKEND") or DEFAULT_BACKEND
+    name = str(raw).strip().lower()
+    # Accept the spelling people actually type for Binary Ninja.
+    if name in ("bn", "binary-ninja", "binary_ninja"):
+        name = BACKEND_BINARYNINJA
+    if name not in BACKENDS:
+        raise UnknownBackendError(
+            f"unknown static backend {raw!r}; expected one of {', '.join(BACKENDS)}"
+        )
+    return name
 
 
 class SampleNotFoundError(FileNotFoundError):
@@ -160,12 +211,19 @@ def run_static_pipeline(
     floss_cache_dir: Optional[Path] = None,
     use_floss_cache: bool = True,
     refresh_floss_cache: bool = False,
+    backend: Optional[str] = None,
 ) -> dict:
     """Run the static channels over `sample`; return the intermediate record.
 
     capa and FLOSS run as ordinary subprocess/library calls; only the Binary
-    Ninja stage takes the license checkout, and it opens + analyses the view
-    exactly once for both enumeration and the bridge.
+    Ninja stage takes the license checkout, and (whichever backend runs) the
+    sample is opened + analysed exactly once for both enumeration and the
+    bridge.
+
+    `backend` selects the Channel 2 engine: "ghidra" (open source, no license)
+    or "binaryninja" (commercial). None reads $CLEW_STATIC_BACKEND and falls
+    back to the built-in default. Both emit the same intermediate candidates,
+    so the record format does not depend on which one ran.
 
     FLOSS output is cached (by default under `.floss_cache/`, keyed on
     sample+FLOSS-version+min_length+sigs+flags): a matching entry is reused
@@ -176,6 +234,12 @@ def run_static_pipeline(
     sample = Path(sample)
     if not sample.exists():
         raise SampleNotFoundError(f"sample not found: {sample}")
+    # Settle the backend before any work: capa and FLOSS run first and together
+    # cost minutes, and discovering an unusable backend after paying that is the
+    # worst possible time to find out. Both a bad name and a missing install are
+    # checked here, up front.
+    backend = resolve_backend(backend)
+    _preflight_backend(backend)
     sha = sha256_file(sample)
     cache_dir = Path(floss_cache_dir) if floss_cache_dir else Path(DEFAULT_FLOSS_CACHE)
     _log.info("sample %s (sha256 %s)", sample.name, sha[:12])
@@ -214,10 +278,16 @@ def run_static_pipeline(
     )
     _log.info("FLOSS: done (%.1fs)", time.perf_counter() - t)
 
-    _log.info("Binary Ninja: enumerating call sites + running dataflow bridge...")
+    label = BACKEND_LABELS[backend]
+    _log.info("%s: enumerating call sites + running dataflow bridge...", label)
     t = time.perf_counter()
-    candidates = _run_bn_stage(sample, sha, floss_index, include_unresolved, run_license_checkout)
-    _log.info("Binary Ninja: %d candidate(s) (%.1fs)", len(candidates), time.perf_counter() - t)
+    if backend == BACKEND_GHIDRA:
+        candidates = _run_ghidra_stage(sample, sha, floss_index, include_unresolved)
+    else:
+        candidates = _run_bn_stage(
+            sample, sha, floss_index, include_unresolved, run_license_checkout
+        )
+    _log.info("%s: %d candidate(s) (%.1fs)", label, len(candidates), time.perf_counter() - t)
 
     return assemble_record(
         sample_sha256=sha,
@@ -418,8 +488,8 @@ def _run_floss_stage(
     refresh=False,
     quiet=True,
 ):
-    from clew.channels.binaryninja.dataflow import FlossIndex
     from clew.channels import floss
+    from clew.channels.binaryninja.dataflow import FlossIndex
 
     # cache lookup (a stale entry raises FlossCacheStale -> halts the run by design)
     if use_cache and not refresh:
@@ -445,6 +515,63 @@ def _run_floss_stage(
     if use_cache:
         _floss_cache_write(result, sha, floss_sigs_path, cache_dir)
     return FlossIndex.from_floss_result(result)
+
+
+def _preflight_backend(backend: str) -> None:
+    """Fail now, cheaply, if the chosen backend cannot run.
+
+    Checks only that the backend is importable and configured -- it does not
+    analyse anything, boot a JVM, or take a license seat. That is enough to
+    catch the two failures that actually happen (not installed, not
+    configured) before capa and FLOSS spend several minutes.
+    """
+    if backend == BACKEND_GHIDRA:
+        from clew.channels.ghidra import _api
+
+        _api.preflight()
+        return
+
+    try:
+        import binaryninja  # noqa: F401
+    except Exception as exc:  # noqa: BLE001
+        raise BackendUnavailable(
+            f"the binaryninja backend was selected but the API is not importable: {exc}. "
+            f"Set CLEW_BN_API, or use --backend {BACKEND_GHIDRA}."
+        ) from exc
+
+
+def _run_ghidra_stage(sample, sha, floss_index, include_unresolved):
+    """Channel 2 via Ghidra: one analysis, shared by enumeration and the bridge.
+
+    The decompiler is created once and handed to both stages so its
+    HighFunction cache is shared. That matters more here than on the Binary
+    Ninja side: BN materialises MLIL for the whole binary during analysis,
+    whereas Ghidra decompiles lazily per function, and a caller usually holds
+    several call sites.
+    """
+    from clew.channels.binaryninja.dataflow import BNDataflow
+    from clew.channels.ghidra import _api
+    from clew.channels.ghidra.callsites import enumerate_with_program, open_program
+    from clew.channels.ghidra.dataflow import bridge_with_program
+
+    with open_program(sample) as program:
+        with _api.Decompiler(program) as decompiler:
+            call_sites = enumerate_with_program(
+                program,
+                sample_path=str(sample),
+                sample_sha256=sha,
+                decompiler=decompiler,
+            )
+            bridged = bridge_with_program(
+                program, call_sites, floss_index, decompiler=decompiler
+            )
+            dataflow = BNDataflow(
+                sample_path=str(sample),
+                sample_sha256=sha,
+                bn_core_version=call_sites.bn_core_version,
+                bridged=bridged,
+            )
+            return dataflow.to_partial_candidates(include_unresolved=include_unresolved)
 
 
 def _run_bn_stage(sample, sha, floss_index, include_unresolved, run_license_checkout):

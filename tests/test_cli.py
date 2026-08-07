@@ -1111,3 +1111,138 @@ def test_display_string_neutralises_terminal_escapes():
     out = cli._display_string("safe\x1b[31mred\x07")
     assert "\x1b" not in out and "\x07" not in out
     assert "\\x1b" in out and "\\x07" in out
+
+
+# --- clew show ---------------------------------------------------------------
+
+
+def _record_with_values():
+    return {
+        "sample_sha256": "a" * 64,
+        "candidates": [
+            {
+                "api_name": "GetModuleHandleW",
+                "parameter_index": 0,
+                "api_resolution": "import",
+                "candidate_values": [
+                    {"value": "kernel32.dll", "confidence": 0.9, "source_channels": ["bn_xref"]}
+                ],
+            },
+            {
+                "api_name": "GetModuleFileNameW",
+                "parameter_index": 1,
+                "api_resolution": "runtime",
+                "candidate_values": [
+                    {"value": "C:\\Temp\\x.exe", "confidence": 0.95, "source_channels": ["drio"]}
+                ],
+            },
+            {
+                # Located but unresolved: no value, so it must not appear.
+                "api_name": "CreateFileW",
+                "parameter_index": -1,
+                "api_resolution": "import",
+                "candidate_values": [{"value": None, "confidence": 0.0, "source_channels": []}],
+            },
+        ],
+    }
+
+
+def _write_record(tmp_path, record):
+    path = tmp_path / "r.clew.json"
+    path.write_text(json.dumps(record))
+    return path
+
+
+def test_show_lists_only_candidates_that_carry_a_value(tmp_path, capsys):
+    path = _write_record(tmp_path, _record_with_values())
+
+    rc = cli.main(["show", str(path)])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "GetModuleHandleW" in out
+    assert "GetModuleFileNameW" in out
+    assert "CreateFileW" not in out  # unresolved: no value to show
+    assert "2 value(s)" in out
+
+
+def test_show_runtime_narrows_to_channel_three_values(tmp_path, capsys):
+    path = _write_record(tmp_path, _record_with_values())
+
+    rc = cli.main(["show", str(path), "--runtime"])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "GetModuleFileNameW" in out
+    assert "GetModuleHandleW" not in out
+    assert "1 runtime-resolved value(s)" in out
+
+
+def test_show_api_filter_is_case_insensitive_substring(tmp_path, capsys):
+    path = _write_record(tmp_path, _record_with_values())
+
+    rc = cli.main(["show", str(path), "--api", "modulehandle"])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "GetModuleHandleW" in out
+    assert "GetModuleFileNameW" not in out
+
+
+def test_show_limit_reports_the_full_total(tmp_path, capsys):
+    path = _write_record(tmp_path, _record_with_values())
+
+    rc = cli.main(["show", str(path), "--limit", "1"])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "1 of 2 value(s)" in out
+
+
+def test_show_reports_an_empty_result_without_failing(tmp_path, capsys):
+    # A static-only record legitimately has no runtime values; that is an
+    # answer, not an error, so the demo does not end on a non-zero exit.
+    record = _record_with_values()
+    for c in record["candidates"]:
+        c["api_resolution"] = "import"
+    path = _write_record(tmp_path, record)
+
+    rc = cli.main(["show", str(path), "--runtime"])
+
+    assert rc == 0
+    assert "no runtime-resolved values" in capsys.readouterr().out
+
+
+def test_show_missing_record_exits_one(tmp_path, capsys):
+    # Asserted on stderr, not caplog: _configure_logging calls basicConfig with
+    # force=True, which removes caplog's handler.
+    rc = cli.main(["show", str(tmp_path / "nope.json")])
+    assert rc == 1
+    assert "record not found" in capsys.readouterr().err
+
+
+def test_show_truncates_a_pathologically_long_value(tmp_path, capsys):
+    record = _record_with_values()
+    record["candidates"][0]["candidate_values"][0]["value"] = "A" * 5000
+    path = _write_record(tmp_path, record)
+
+    cli.main(["show", str(path)])
+
+    out = capsys.readouterr().out
+    assert "..." in out
+    # Every line stays a sane terminal width, not 5000 columns.
+    assert max(len(line) for line in out.splitlines()) < 200
+
+
+def test_show_escapes_control_characters_in_a_value(tmp_path, capsys):
+    # Values come from memory the sample controls; a raw ANSI escape must not
+    # reach the terminal.
+    record = _record_with_values()
+    record["candidates"][0]["candidate_values"][0]["value"] = "evil\x1b[31mred"
+    path = _write_record(tmp_path, record)
+
+    cli.main(["show", str(path)])
+
+    out = capsys.readouterr().out
+    assert "\x1b" not in out
+    assert "\\x1b" in out
