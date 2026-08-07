@@ -1083,3 +1083,16 @@ def test_run_checkpoint_does_not_clobber_a_correlated_record(monkeypatch, tmp_pa
     assert cli.main(["run", "x.exe", "--no-license-checkout"]) == 1
     # Untouched: the guard fires before the checkpoint write.
     assert cli._has_runtime_data(json.loads(target.read_text()))
+
+
+def test_display_string_keeps_windows_paths_readable():
+    """repr() would double every backslash and make a path unreadable on screen."""
+    assert cli._display_string(r"C:\Users\cape\Temp\s.exe") == r"'C:\Users\cape\Temp\s.exe'"
+
+
+def test_display_string_neutralises_terminal_escapes():
+    """Logged strings come from memory the sample controls, so a crafted one
+    must not be able to drive the terminal of whoever reads the trace."""
+    out = cli._display_string("safe\x1b[31mred\x07")
+    assert "\x1b" not in out and "\x07" not in out
+    assert "\\x1b" in out and "\\x07" in out

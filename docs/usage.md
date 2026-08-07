@@ -157,6 +157,7 @@ clew tasks [--watch] [--json]
 | `--interval SECS` | refresh interval with `--watch` (default 2.0) |
 | `--cape-url URL` | CAPE base URL |
 | `--storage-root DIR` | CAPE analyses storage root (read for the RECORDS column) |
+| `--show-drtrace TASK` | decode and print that task's drtrace output instead of the table |
 
 The RECORDS column shows how many comparison records each terminal task produced,
 so a sample that defeats instrumentation reads 0 at a glance.

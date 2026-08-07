@@ -305,6 +305,13 @@ def _add_tasks_subparser(sub, parent) -> None:
         help="emit the rows as JSON instead of a table (for piping)",
     )
     s.add_argument(
+        "--show-drtrace",
+        type=int,
+        metavar="TASK",
+        default=None,
+        help="decode and print one task's drtrace output instead of the table",
+    )
+    s.add_argument(
         "--watch",
         action="store_true",
         help="refresh continuously until interrupted (Ctrl-C to exit)",
@@ -905,12 +912,80 @@ def _requests_exc():
         return ()
 
 
+def _display_string(text: str) -> str:
+    """Quote a logged string for display without mangling it.
+
+    repr() would double every backslash, which makes a Windows path unreadable.
+    But these bytes came from memory the sample controls, so printing them raw
+    would let a crafted string emit terminal escapes. Escape the control
+    characters, leave everything else alone.
+    """
+    safe = "".join(ch if ch.isprintable() else f"\\x{ord(ch):02x}" for ch in text)
+    return f"'{safe}'"
+
+
+def _print_trace(task_id: int, storage_root) -> int:
+    """Decode one task's logs to stdout.
+
+    The RECORDS column answers "did anything come back". This answers "what",
+    which otherwise means reading hex out of a log file by hand: the client
+    encodes logged strings because they come from memory the sample controls.
+    """
+    from clew.channels.cape.client import CapeClient, CapeError
+
+    log = logging.getLogger("clew.cli")
+    try:
+        logs, kind = CapeClient("").fetch_trace_logs(task_id, storage_root)
+    except CapeError as exc:
+        log.error("%s", exc)
+        return 2
+    if not logs:
+        log.error("task %s has no Channel 3 logs", task_id)
+        return 1
+
+    if kind == "cmplog":
+        from clew.channels.cape.cmplog_parse import parse_cmplog_files
+
+        records = parse_cmplog_files(logs)
+        print(f"task {task_id}: cmplog, {len(records)} comparisons (no API tracing)")
+        return 0
+
+    from clew.channels.cape.drtrace_parse import parse_drtrace_files
+
+    trace = parse_drtrace_files(logs)
+    main = trace.main_module()
+    print(f"task {task_id}: drtrace, {len(trace.modules)} modules, "
+          f"{len(trace.calls)} calls, {len(trace.comparisons)} comparisons")
+    if main is not None:
+        print(f"  sample module: {main.name} @ 0x{main.base:08x}-0x{main.end:08x}")
+
+    if trace.calls:
+        print("\n  observed API calls")
+        for call in trace.calls:
+            rv = f"-> 0x{call.retval:x}" if call.retval is not None else "(no return)"
+            strings = " ".join(
+                [f"arg{i}={_display_string(v)}" for i, v in sorted(call.arg_strings.items())]
+                + [f"out{i}={_display_string(v)}" for i, v in sorted(call.out_strings.items())]
+            )
+            print(f"    seq={call.seq:<7} {call.api:<28} site=0x{call.site:08x} "
+                  f"{rv} {strings}".rstrip())
+
+    resolved = [r for r in trace.comparisons if r.jcc]
+    print(f"\n  comparisons: {len(trace.comparisons)} "
+          f"({len(resolved)} carry the branch that resolves the operator)")
+    for notice in trace.capped:
+        print(f"  capped: {notice.api} at 0x{notice.site:08x} after {notice.after} calls")
+    return 0
+
+
 def _cmd_tasks(args) -> int:
     # Lazy import: keep the CAPE client (which pulls requests) out of `clew
     # static` and the offline suite.
     from clew.channels.cape.client import CapeClient, CapeError
 
     log = logging.getLogger("clew.cli")
+    if args.show_drtrace is not None:
+        return _print_trace(args.show_drtrace, args.storage_root)
     c = CapeClient(args.cape_url)
 
     def render() -> None:
