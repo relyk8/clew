@@ -26,6 +26,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from clew.channels.cape.statuses import TERMINAL_STATUSES
 from clew.config import default_capa_bin, load_config, loaded_files
 from clew.pipeline import (
     CLEW_VERSION,
@@ -59,6 +60,10 @@ def _capa_timeout(value: str):
             f"put --capa after it (clew static SAMPLE --capa) or attach the value "
             f"with '=' (--capa=600)."
         ) from None
+
+
+DEFAULT_TASKS_LIMIT = 10
+"""How many tasks `clew tasks` shows before you ask for more."""
 
 
 def _add_static_flags(parser) -> None:
@@ -172,7 +177,7 @@ def _add_correlate_subparser(sub, parent) -> None:
         "out-parameters and return values.",
     )
     s.add_argument(
-        "--record",
+        "-r", "--record",
         required=True,
         help="path to the intermediate record JSON to enrich",
     )
@@ -188,12 +193,12 @@ def _add_correlate_subparser(sub, parent) -> None:
         help="dir of drtrace.*.log or cmplog.*.log files (offline; no CAPE needed)",
     )
     source.add_argument(
-        "--task",
+        "-t", "--task",
         type=int,
         help="CAPE task id; reads the trace logs from CAPE storage",
     )
     s.add_argument(
-        "--module-base",
+        "-m", "--module-base",
         type=lambda v: int(v, 0),
         default=None,
         help="runtime load base to rebase PCs into static VA space (0x... accepted)",
@@ -235,7 +240,7 @@ def _add_detonate_subparser(sub, parent) -> None:
     )
     s.add_argument("sample", help="path to the PE32 sample")
     s.add_argument(
-        "--package",
+        "-p", "--package",
         default="exe_drtrace",
         help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
     )
@@ -247,26 +252,30 @@ def _add_detonate_subparser(sub, parent) -> None:
         "option string is comma-separated",
     )
     s.add_argument(
-        "--timeout",
+        "-T", "--timeout",
         type=int,
         default=120,
         help="guest analysis timeout in seconds (default: 120)",
     )
     s.add_argument(
-        "--wait",
+        "-w", "--wait",
         action="store_true",
         help="block until the task reaches a terminal state and report the status",
     )
-    # enforce_timeout defaults True: sleepy anti-analysis samples otherwise hang
-    # the guest. BooleanOptionalAction gives the --enforce-timeout/--no-* pair.
+    # CAPE reads enforce_timeout as "disable the process monitor and run the full
+    # window" (analyzer.py: `if self.config.enforce_timeout: self.pid_check =
+    # False`). --timeout is the ceiling either way; this only decides whether the
+    # analysis may end early. Defaults True so a sample that exits promptly does
+    # not cut the instrumented window short. BooleanOptionalAction gives the pair.
     s.add_argument(
         "--enforce-timeout",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+        help="run the full --timeout window instead of ending when the sample exits "
+        "(default: on)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
@@ -289,18 +298,27 @@ def _add_tasks_subparser(sub, parent) -> None:
         "record count for terminal tasks. With --watch, refresh in place.",
     )
     s.add_argument(
-        "--status",
+        "-s", "--status",
         default=None,
         help="only show tasks with this status (e.g. reported, failed_analysis)",
     )
-    s.add_argument(
-        "--limit",
+    # The dashboard is a "what happened lately" view, so it defaults to a window
+    # rather than the whole history: every terminal row costs a filesystem read
+    # for its RECORDS count, and that history only grows. --all opts back in.
+    view = s.add_mutually_exclusive_group()
+    view.add_argument(
+        "-l", "--limit",
         type=int,
-        default=None,
-        help="show at most this many tasks (newest first)",
+        default=DEFAULT_TASKS_LIMIT,
+        help=f"show at most this many tasks, newest first (default: {DEFAULT_TASKS_LIMIT})",
+    )
+    view.add_argument(
+        "-a", "--all",
+        action="store_true",
+        help="show every task, not just the newest --limit",
     )
     s.add_argument(
-        "--json",
+        "-j", "--json",
         action="store_true",
         help="emit the rows as JSON instead of a table (for piping)",
     )
@@ -312,18 +330,18 @@ def _add_tasks_subparser(sub, parent) -> None:
         help="decode and print one task's drtrace output instead of the table",
     )
     s.add_argument(
-        "--watch",
+        "-w", "--watch",
         action="store_true",
         help="refresh continuously until interrupted (Ctrl-C to exit)",
     )
     s.add_argument(
-        "--interval",
+        "-i", "--interval",
         type=float,
         default=2.0,
         help="seconds between refreshes when --watch is set (default: 2.0)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
@@ -348,7 +366,7 @@ def _add_run_subparser(sub, parent) -> None:
     _add_static_flags(s)
     # Detonate stage.
     s.add_argument(
-        "--package",
+        "-p", "--package",
         default="exe_drtrace",
         help="CAPE analysis package (default: exe_drtrace, the drtrace DR client)",
     )
@@ -360,7 +378,7 @@ def _add_run_subparser(sub, parent) -> None:
         "option string is comma-separated",
     )
     s.add_argument(
-        "--timeout",
+        "-T", "--timeout",
         type=int,
         default=120,
         help="guest analysis timeout in seconds (default: 120)",
@@ -369,16 +387,17 @@ def _add_run_subparser(sub, parent) -> None:
         "--enforce-timeout",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="kill the guest at --timeout instead of waiting for self-exit (default: on)",
+        help="run the full --timeout window instead of ending when the sample exits "
+        "(default: on)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
     # Correlate stage.
     s.add_argument(
-        "--module-base",
+        "-m", "--module-base",
         type=lambda v: int(v, 0),
         default=None,
         help="runtime load base to rebase PCs into static VA space (0x... accepted)",
@@ -424,7 +443,7 @@ def _add_doctor_subparser(sub, parent) -> None:
         help="also load Binary Ninja and take a license seat (slower; consumes a seat)",
     )
     s.add_argument(
-        "--cape-url",
+        "-u", "--cape-url",
         default=os.environ.get("CAPE_BASE_URL", "http://127.0.0.1:8000"),
         help="CAPE base URL to probe (default $CAPE_BASE_URL or http://127.0.0.1:8000)",
     )
@@ -434,7 +453,7 @@ def _add_doctor_subparser(sub, parent) -> None:
         help="CAPE analyses storage root to check for readability",
     )
     s.add_argument(
-        "--timeout",
+        "-T", "--timeout",
         type=int,
         default=5,
         help="seconds to wait on the CAPE probe (default: 5)",
@@ -837,9 +856,8 @@ def _humanize_age(added_on: str | None) -> str:
     return f"{seconds // 86400}d"
 
 
-# Terminal CAPE task states (mirrors CapeClient.poll). A task is "done" in any of
-# these; RECORDS is meaningful for all of them, not just 'reported'.
-_TERMINAL_STATUSES = frozenset({"reported", "failed_analysis", "failed_processing"})
+# RECORDS is meaningful for any state where the analysis is over, not just
+# 'reported'. Shared with CapeClient.poll so the two cannot drift.
 
 
 def _build_display_rows(tasks, client, storage_root) -> list[dict]:
@@ -860,7 +878,7 @@ def _build_display_rows(tasks, client, storage_root) -> list[dict]:
         # RECORDS only makes sense once the task is terminal and its logs are
         # written; for anything else, or an unreadable/missing log, show "-".
         records = "-"
-        if status in _TERMINAL_STATUSES and task_id is not None:
+        if status in TERMINAL_STATUSES and task_id is not None:
             n = client.count_cmplog_lines(task_id, storage_root)
             if n is not None:
                 records = str(n)
@@ -902,6 +920,47 @@ def _format_tasks_table(display_rows: list[dict]) -> str:
     for r in display_rows:
         lines.append(render([r.get(key, "") for _, key in columns]))
     return "\n".join(lines)
+
+
+# Home + clear-to-end redraws a frame over the last one; the cursor is parked
+# out of sight while it does. Only ever written to a real terminal -- redirected
+# output and --json stay plain so they remain consumable.
+_ANSI_HOME_CLEAR = "\033[H\033[J"
+_ANSI_CURSOR_HIDE = "\033[?25l"
+_ANSI_CURSOR_SHOW = "\033[?25h"
+
+
+def _watch(render, interval: float, as_json: bool) -> int:
+    # `render` is the same callable the one-shot path uses, so a frame is just
+    # its output with framing around it -- there is no second table renderer.
+    live = sys.stdout.isatty() and not as_json
+    if live:
+        sys.stdout.write(_ANSI_CURSOR_HIDE)
+    try:
+        while True:
+            body = render()
+            stamp = f"{datetime.now():%H:%M:%S}"
+            if live:
+                frame = (
+                    f"{_ANSI_HOME_CLEAR}clew tasks @ {stamp}  (every {interval:g}s)\n\n"
+                    f"{body}\n\nCtrl-C to exit\n"
+                )
+            elif as_json:
+                frame = f"{body}\n"
+            else:
+                # Redirected text: keep the commented timestamp so consecutive
+                # frames stay separable in a log file.
+                frame = f"# clew tasks @ {stamp}\n{body}\n"
+            # One write per frame: partial flushes are what make a redraw tear.
+            sys.stdout.write(frame)
+            sys.stdout.flush()
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        if live:
+            sys.stdout.write(_ANSI_CURSOR_SHOW)
+            sys.stdout.flush()
 
 
 def _requests_exc():
@@ -992,27 +1051,23 @@ def _cmd_tasks(args) -> int:
         return _print_trace(args.show_drtrace, args.storage_root)
     c = CapeClient(args.cape_url)
 
-    def render() -> None:
-        tasks = c.list_tasks(limit=args.limit, status=args.status)
+    # --all is the escape hatch from the default window; list_tasks treats None
+    # as unlimited.
+    limit = None if args.all else args.limit
+
+    def render() -> str:
+        # The single source of rendered output: the one-shot path prints this,
+        # and every watch frame redraws exactly this.
+        tasks = c.list_tasks(limit=limit, status=args.status)
         rows = _build_display_rows(tasks, c, args.storage_root)
         if args.json:
-            print(json.dumps(rows, indent=2))
-        else:
-            print(_format_tasks_table(rows))
+            return json.dumps(rows, indent=2)
+        return _format_tasks_table(rows)
 
     try:
         if args.watch:
-            try:
-                while True:
-                    # A timestamp header each redraw marks the refresh without
-                    # aggressively clearing the screen (progress lands on stderr).
-                    print(f"# clew tasks @ {datetime.now():%H:%M:%S} (Ctrl-C to exit)")
-                    render()
-                    time.sleep(args.interval)
-            except KeyboardInterrupt:
-                return 0
-        else:
-            render()
+            return _watch(render, args.interval, args.json)
+        print(render())
     except (CapeError, _requests_exc()) as e:
         log.error("cannot reach CAPE at %s: %s", args.cape_url, e)
         return 2

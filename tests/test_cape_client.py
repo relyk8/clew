@@ -216,17 +216,43 @@ def test_submit_missing_file_raises(client):
         client.submit("/nonexistent/s.exe")
 
 
-def test_delete_falls_back_to_post_on_404(client, monkeypatch):
-    calls = []
+class _DeleteResponse:
+    def __init__(self, body, code=200):
+        self._body = body
+        self.status_code = code
 
-    class R:
-        def __init__(self, code):
-            self.status_code = code
+    def raise_for_status(self):
+        return None
 
-    monkeypatch.setattr(client.session, "get", lambda *a, **k: (calls.append("get"), R(404))[1])
-    monkeypatch.setattr(client.session, "post", lambda *a, **k: (calls.append("post"), R(200))[1])
+    def json(self):
+        return self._body
+
+
+def test_delete_raises_when_cape_refuses(client, monkeypatch):
+    # The endpoint ships disabled and answers 200 with an error body, so a
+    # status-code-only check reported a deletion that never happened.
+    body = {"error": True, "error_value": "Task Deletion API is Disabled"}
+    monkeypatch.setattr(client.session, "get", lambda *a, **k: _DeleteResponse(body))
+    with pytest.raises(CapeError, match="Disabled"):
+        client.delete(9)
+
+
+def test_delete_returns_true_on_success(client, monkeypatch):
+    monkeypatch.setattr(
+        client.session, "get", lambda *a, **k: _DeleteResponse({"error": False, "data": "ok"})
+    )
     assert client.delete(9) is True
-    assert calls == ["get", "post"]
+
+
+def test_delete_wraps_transport_errors(client, monkeypatch):
+    import requests
+
+    def boom(*a, **k):
+        raise requests.ConnectionError("cape is down")
+
+    monkeypatch.setattr(client.session, "get", boom)
+    with pytest.raises(CapeError):
+        client.delete(9)
 
 
 def test_status_returns_data_and_raises_on_error(client, monkeypatch):

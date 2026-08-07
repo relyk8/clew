@@ -93,18 +93,53 @@ def test_correlate_rejects_cape_url(monkeypatch):
 def test_records_computed_for_all_terminal_states(tmp_path):
     # M2: RECORDS reflects any terminal task, not only 'reported'.
     class FakeClient:
+        # Logs exist for every task whose analysis actually ran.
         def count_cmplog_lines(self, tid, root):
-            return 7 if tid in (1, 2) else None
+            return 7 if tid in (1, 2, 4) else None
 
     tasks = [
         {"id": 1, "status": "reported", "target": "a.exe"},
         {"id": 2, "status": "failed_processing", "target": "b.exe"},
         {"id": 3, "status": "running", "target": "c.exe"},
+        {"id": 4, "status": "failed_reporting", "target": "d.exe"},
+        {"id": 5, "status": "completed", "target": "e.exe"},
     ]
-    by_id = {r["task"]: r["records"] for r in cli._build_display_rows(tasks, FakeClient(), str(tmp_path))}
+    rows = cli._build_display_rows(tasks, FakeClient(), str(tmp_path))
+    by_id = {r["task"]: r["records"] for r in rows}
     assert by_id["1"] == "7"  # reported
     assert by_id["2"] == "7"  # terminal failure now also counted
     assert by_id["3"] == "-"  # non-terminal: not counted
+    # The analysis ran, so its logs exist even though no report landed.
+    assert by_id["4"] == "7"
+    # 'completed' is mid-flight -- still headed for processing/reporting.
+    assert by_id["5"] == "-"
+
+
+def test_terminal_statuses_match_capes_vocabulary():
+    # CAPE groups its failures as these three (lib/cuckoo/common/web_utils.py);
+    # omitting one made poll() spin to its max_wait on a task already finished.
+    from clew.channels.cape.statuses import TERMINAL_FAILURE_STATUSES, TERMINAL_STATUSES
+
+    assert TERMINAL_FAILURE_STATUSES == {
+        "failed_analysis",
+        "failed_processing",
+        "failed_reporting",
+    }
+    assert TERMINAL_STATUSES == {"reported", *TERMINAL_FAILURE_STATUSES}
+    assert "completed" not in TERMINAL_STATUSES
+
+
+def test_statuses_module_stays_dependency_free():
+    # cli.py imports this at module top, so it must not drag in requests the way
+    # client.py does -- that would break `clew static` on a bare checkout.
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; import clew.channels.cape.statuses; "
+        "sys.exit(1 if 'requests' in sys.modules else 0)"
+    )
+    assert subprocess.run([sys.executable, "-c", code]).returncode == 0
 
 
 def test_humanize_age_reads_naive_timestamps_as_utc():
@@ -205,6 +240,51 @@ def test_output_flag_writes_file_and_summarizes(monkeypatch, capsys, tmp_path):
     assert out.exists() and '"derivation_status"' in out.read_text()
     # With -o <path>, stdout stays clean; the summary is logged to stderr.
     assert capsys.readouterr().out == ""
+
+
+# (argv, dest, expected) for every short flag. Shorts are what gets typed from
+# memory, so a rename that silently drops one is a quiet break -- pin the map.
+_SHORT_FLAGS = [
+    (["tasks", "-s", "reported"], "status", "reported"),
+    (["tasks", "-l", "3"], "limit", 3),
+    (["tasks", "-a"], "all", True),
+    (["tasks", "-j"], "json", True),
+    (["tasks", "-w"], "watch", True),
+    (["tasks", "-i", "5"], "interval", 5.0),
+    (["tasks", "-u", "http://x"], "cape_url", "http://x"),
+    (["correlate", "-r", "r.json", "--task", "1"], "record", "r.json"),
+    (["correlate", "--record", "r.json", "-t", "16"], "task", 16),
+    (["correlate", "--record", "r.json", "-t", "1", "-m", "0xc00000"], "module_base", 0xC00000),
+    (["detonate", "s.exe", "-p", "exe_drcov"], "package", "exe_drcov"),
+    (["detonate", "s.exe", "-T", "300"], "timeout", 300),
+    (["detonate", "s.exe", "-w"], "wait", True),
+    (["detonate", "s.exe", "-u", "http://x"], "cape_url", "http://x"),
+    (["detonate", "s.exe", "-o", "out.json"], "output", Path("out.json")),
+    (["static", "x.exe", "-o", "-"], "output", Path("-")),
+    (["run", "s.exe", "-T", "60"], "timeout", 60),
+    (["run", "s.exe", "-p", "exe_drcov"], "package", "exe_drcov"),
+    (["run", "s.exe", "-m", "0x400000"], "module_base", 0x400000),
+    (["run", "s.exe", "-u", "http://x"], "cape_url", "http://x"),
+    (["doctor", "-u", "http://x"], "cape_url", "http://x"),
+    (["doctor", "-T", "30"], "timeout", 30),
+]
+
+
+@pytest.mark.parametrize("argv,dest,expected", _SHORT_FLAGS)
+def test_short_flag_maps_to_its_long_option(argv, dest, expected):
+    assert getattr(cli.build_parser().parse_args(argv), dest) == expected
+
+
+def test_short_flag_meaning_is_stable_across_verbs():
+    # The letter policy: one letter, one meaning everywhere. -t is always
+    # --task, which is why --timeout had to take -T.
+    p = cli.build_parser()
+    assert p.parse_args(["correlate", "--record", "r", "-t", "9"]).task == 9
+    assert p.parse_args(["detonate", "s.exe", "-T", "9"]).timeout == 9
+    assert p.parse_args(["run", "s.exe", "-T", "9"]).timeout == 9
+    # -t must NOT be a timeout alias on the verbs that lack --task.
+    with pytest.raises(SystemExit):
+        p.parse_args(["detonate", "s.exe", "-t", "9"])
 
 
 def test_parser_defaults():
@@ -671,6 +751,48 @@ def test_tasks_json_includes_records(monkeypatch, capsys):
     assert rows[1]["records"] == "24429"
 
 
+def _capture_limit(monkeypatch):
+    # list_tasks does the windowing, so assert on the limit it is handed.
+    from clew.channels.cape import client as cape_client
+
+    seen = {}
+
+    def fake_list(self, limit=None, status=None):
+        seen["limit"] = limit
+        return []
+
+    monkeypatch.setattr(cape_client.CapeClient, "list_tasks", fake_list)
+    return seen
+
+
+def test_tasks_defaults_to_a_window(monkeypatch, capsys):
+    # The dashboard is a recent-activity view: unbounded history costs a
+    # filesystem read per terminal row and only grows.
+    seen = _capture_limit(monkeypatch)
+    assert cli.main(["tasks"]) == 0
+    assert seen["limit"] == cli.DEFAULT_TASKS_LIMIT
+
+
+def test_tasks_all_shows_full_history(monkeypatch, capsys):
+    # --all opts back into everything; list_tasks reads None as unlimited.
+    seen = _capture_limit(monkeypatch)
+    assert cli.main(["tasks", "--all"]) == 0
+    assert seen["limit"] is None
+
+
+def test_tasks_explicit_limit_still_wins(monkeypatch, capsys):
+    seen = _capture_limit(monkeypatch)
+    assert cli.main(["tasks", "--limit", "3"]) == 0
+    assert seen["limit"] == 3
+
+
+def test_tasks_limit_and_all_are_mutually_exclusive():
+    # Asking for both a window and everything is a contradiction, so argparse
+    # rejects it rather than silently picking one.
+    with pytest.raises(SystemExit):
+        cli.main(["tasks", "--limit", "3", "--all"])
+
+
 def test_tasks_cape_error_returns_2(monkeypatch):
     from clew.channels.cape import client as cape_client
 
@@ -679,6 +801,87 @@ def test_tasks_cape_error_returns_2(monkeypatch):
 
     monkeypatch.setattr(cape_client.CapeClient, "list_tasks", boom)
     assert cli.main(["tasks"]) == 2
+
+
+def _bounded_watch(monkeypatch, frames: int):
+    # Bound the otherwise-infinite loop the way a user does: interrupt it.
+    calls = {"n": 0}
+
+    def fake_sleep(_interval):
+        calls["n"] += 1
+        if calls["n"] >= frames:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(cli.time, "sleep", fake_sleep)
+    return calls
+
+
+def test_watch_redraws_in_place_on_a_tty(monkeypatch, capsys):
+    # A tty gets the clear-and-home escape per frame, so frames overwrite each
+    # other instead of scrolling, and the cursor is hidden then restored.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: True, raising=False)
+    _bounded_watch(monkeypatch, frames=3)
+    assert cli._watch(lambda: "BODY", 0.0, as_json=False) == 0
+    out = capsys.readouterr().out
+    assert out.count(cli._ANSI_HOME_CLEAR) == 3
+    assert out.startswith(cli._ANSI_CURSOR_HIDE)
+    assert out.endswith(cli._ANSI_CURSOR_SHOW)
+    assert "Ctrl-C to exit" in out
+
+
+def test_watch_restores_cursor_when_render_raises(monkeypatch, capsys):
+    # The cursor must come back even when the loop dies on a CAPE error, or the
+    # user is left with an invisible cursor in their shell.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: True, raising=False)
+
+    def boom():
+        raise RuntimeError("cape exploded")
+
+    with pytest.raises(RuntimeError):
+        cli._watch(boom, 0.0, as_json=False)
+    assert capsys.readouterr().out.endswith(cli._ANSI_CURSOR_SHOW)
+
+
+def test_watch_emits_no_ansi_when_redirected(monkeypatch, capsys):
+    # Redirected output must stay a clean log: no escapes, and the commented
+    # timestamp keeps consecutive frames separable.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: False, raising=False)
+    _bounded_watch(monkeypatch, frames=2)
+    assert cli._watch(lambda: "BODY", 0.0, as_json=False) == 0
+    out = capsys.readouterr().out
+    assert "\033[" not in out
+    assert out.count("# clew tasks @") == 2
+
+
+def test_watch_json_stays_machine_readable(monkeypatch, capsys):
+    # --json is a data stream even on a tty: no escapes, no header, so each
+    # frame parses on its own.
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: True, raising=False)
+    _bounded_watch(monkeypatch, frames=2)
+    assert cli._watch(lambda: '[{"task": "1"}]', 0.0, as_json=True) == 0
+    out = capsys.readouterr().out
+    assert "\033[" not in out
+    assert "clew tasks @" not in out
+    assert json.loads(out.strip().splitlines()[0]) == [{"task": "1"}]
+
+
+def test_watch_reuses_the_one_shot_body(monkeypatch, capsys):
+    # The guard against a second table renderer: whatever the one-shot path
+    # prints is exactly what a frame redraws.
+    from clew.channels.cape import client as cape_client
+
+    tasks = [{"id": 1, "target": "/tmp/s.exe", "package": "exe_cmplog", "status": "reported"}]
+    monkeypatch.setattr(cape_client.CapeClient, "list_tasks", lambda self, **k: tasks)
+    monkeypatch.setattr(cape_client.CapeClient, "count_cmplog_lines", lambda self, *a: 7)
+    monkeypatch.setattr(cli.sys.stdout, "isatty", lambda: False, raising=False)
+
+    assert cli.main(["tasks"]) == 0
+    one_shot = capsys.readouterr().out.strip()
+
+    _bounded_watch(monkeypatch, frames=1)
+    assert cli.main(["tasks", "--watch"]) == 0
+    framed = capsys.readouterr().out
+    assert one_shot in framed
 
 
 # ---------- run (static -> detonate --wait -> correlate) ----------

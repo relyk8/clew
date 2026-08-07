@@ -63,6 +63,11 @@ is never blocked. The `results/` directory is gitignored.
 `clew <sample>` is a shorthand for `clew static <sample>`. Every command accepts
 `-v` (debug logging), `-q` (warnings only), and `-h`.
 
+The options typed at a prompt carry a single-letter form; the rarely-typed
+configuration flags stay long-only, so `--help` remains scannable. A letter means
+the same thing on every verb -- `-t` is always `--task`, which is why `--timeout`
+takes `-T`.
+
 ### static — run the static pipeline (Channels 1-2, and 0 on request)
 
 ```bash
@@ -113,11 +118,11 @@ clew detonate SAMPLE [--wait]
 
 | Option | Meaning |
 |---|---|
-| `--package PKG` | CAPE analysis package (default `exe_drtrace`) |
-| `--timeout SECS` | guest analysis timeout (default 120) |
-| `--wait` | block until the task reaches a terminal state, then report status |
-| `--enforce-timeout` / `--no-enforce-timeout` | kill the guest at the timeout vs wait for self-exit (default on) |
-| `--cape-url URL` | CAPE base URL (default `$CAPE_BASE_URL` or `http://127.0.0.1:8000`) |
+| `-p, --package PKG` | CAPE analysis package (default `exe_drtrace`) |
+| `-T, --timeout SECS` | guest analysis timeout (default 120) |
+| `-w, --wait` | block until the task reaches a terminal state, then report status |
+| `--enforce-timeout` / `--no-enforce-timeout` | run the full `--timeout` window vs let the analysis end when the sample exits (default on) |
+| `-u, --cape-url URL` | CAPE base URL (default `$CAPE_BASE_URL` or `http://127.0.0.1:8000`) |
 | `-o, --output PATH` | write the task-id JSON to a file (omit or `-` for stdout) |
 
 ### correlate — join runtime operands onto a record (Channel 3)
@@ -128,10 +133,10 @@ clew correlate --record RECORD (--log-dir DIR | --task N)
 
 | Option | Meaning |
 |---|---|
-| `--record PATH` | the static record to enrich (required) |
+| `-r, --record PATH` | the static record to enrich (required) |
 | `--log-dir DIR` | a local dir of `drtrace.*.log` or `cmplog.*.log` files (offline, no CAPE). `--cmplog-dir` is accepted as an alias |
-| `--task N` | a CAPE task id; reads the logs from CAPE storage |
-| `--module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
+| `-t, --task N` | a CAPE task id; reads the logs from CAPE storage |
+| `-m, --module-base ADDR` | runtime load base to rebase PCs into the record's address space (`0x...`) |
 | `--storage-root DIR` | CAPE analyses storage root (with `--task`) |
 | `--max-cmp-records N` | cap comparison records loaded from the logs (`0` = unlimited; default 5,000,000) — guards host memory/CPU on an oversized log |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
@@ -150,17 +155,29 @@ clew tasks [--watch] [--json]
 
 | Option | Meaning |
 |---|---|
-| `--status STATUS` | only tasks with this status (e.g. `reported`) |
-| `--limit N` | show at most N tasks (newest first) |
-| `--json` | emit rows as JSON instead of a table |
-| `--watch` | refresh continuously until Ctrl-C |
-| `--interval SECS` | refresh interval with `--watch` (default 2.0) |
-| `--cape-url URL` | CAPE base URL |
+| `-s, --status STATUS` | only tasks with this status (e.g. `reported`) |
+| `-l, --limit N` | show at most N tasks, newest first (default: 10) |
+| `-a, --all` | show every task instead of the newest N |
+| `-j, --json` | emit rows as JSON instead of a table |
+| `-w, --watch` | redraw in place until Ctrl-C |
+| `-i, --interval SECS` | refresh interval with `--watch` (default 2.0) |
+| `-u, --cape-url URL` | CAPE base URL |
 | `--storage-root DIR` | CAPE analyses storage root (read for the RECORDS column) |
 | `--show-drtrace TASK` | decode and print that task's drtrace output instead of the table |
 
 The RECORDS column shows how many comparison records each terminal task produced,
 so a sample that defeats instrumentation reads 0 at a glance.
+
+The dashboard is a recent-activity view, so it shows the newest 10 tasks by
+default; `--all` gives the full history. The window is not only cosmetic — each
+terminal row costs a filesystem read to count its trace records, and that
+history only grows.
+
+`--watch` repaints the same table over itself each interval rather than scrolling,
+and leaves the last frame on screen when you Ctrl-C out. That only applies to a
+terminal: redirect it (`clew tasks --watch > log`) and the frames append as plain
+text with a `# clew tasks @ HH:MM:SS` header, and `--json --watch` emits nothing
+but the JSON documents, so both stay consumable.
 
 ### run — static, detonate, and correlate end to end
 
@@ -168,9 +185,9 @@ so a sample that defeats instrumentation reads 0 at a glance.
 clew run SAMPLE
 ```
 
-Takes the `static` options plus `--package`, `--timeout`, `--enforce-timeout`,
-`--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, `-o` and
-`--force`. It runs the static pipeline,
+Takes the `static` options plus `-p/--package`, `-T/--timeout`,
+`--enforce-timeout`, `-u/--cape-url`, `-m/--module-base`, `--storage-root`,
+`--max-cmp-records`, `-o` and `--force`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
 
@@ -183,9 +200,9 @@ clew doctor [--license]
 | Option | Meaning |
 |---|---|
 | `--license` | also load Binary Ninja and take a license seat |
-| `--cape-url URL` | CAPE base URL to probe |
+| `-u, --cape-url URL` | CAPE base URL to probe |
 | `--storage-root DIR` | CAPE analyses storage root to check for readability |
-| `--timeout SECS` | seconds to wait on the CAPE probe (default 5) |
+| `-T, --timeout SECS` | seconds to wait on the CAPE probe (default 5) |
 
 Reports each prerequisite, and for anything missing, the line that fixes it. The
 severity follows the pipeline's degradation policy: only Binary Ninja, the core
