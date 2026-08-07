@@ -154,6 +154,11 @@ def _add_static_subparser(sub, parent) -> None:
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
     )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
+    )
     s.set_defaults(func=_cmd_static)
 
 
@@ -211,6 +216,11 @@ def _add_correlate_subparser(sub, parent) -> None:
         type=Path,
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
+    )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
     )
     s.set_defaults(func=_cmd_correlate)
 
@@ -293,6 +303,13 @@ def _add_tasks_subparser(sub, parent) -> None:
         "--json",
         action="store_true",
         help="emit the rows as JSON instead of a table (for piping)",
+    )
+    s.add_argument(
+        "--show-drtrace",
+        type=int,
+        metavar="TASK",
+        default=None,
+        help="decode and print one task's drtrace output instead of the table",
     )
     s.add_argument(
         "--watch",
@@ -384,6 +401,11 @@ def _add_run_subparser(sub, parent) -> None:
         type=Path,
         default=None,
         help="write the record here; default results/<sha256>.clew.json, '-' for stdout",
+    )
+    s.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite an existing record even if it carries Channel 3 runtime data",
     )
     s.set_defaults(func=_cmd_run)
 
@@ -505,7 +527,49 @@ def _default_record_path(record) -> Path:
     return Path("results") / f"{record['sample_sha256']}.clew.json"
 
 
-def _emit_record(record, output, summary: str) -> None:
+class RecordRegression(Exception):
+    """Writing this record would replace observed runtime data with less."""
+
+
+def _has_runtime_data(record) -> bool:
+    """Whether a record carries Channel 3 observations.
+
+    Any of the three shapes correlation produces: comparisons joined onto a
+    candidate, a candidate Channel 3 produced itself, or a value it contributed
+    to a static candidate.
+    """
+    for candidate in record.get("candidates") or []:
+        if candidate.get("comparison_candidates"):
+            return True
+        if candidate.get("api_resolution") == "runtime":
+            return True
+        for value in candidate.get("candidate_values") or []:
+            if "drio" in (value.get("source_channels") or []):
+                return True
+    return False
+
+
+def _would_regress(record, path: Path) -> bool:
+    """True if `path` holds runtime data that `record` does not.
+
+    `static` and `correlate` share a default output path keyed on the sample
+    hash, so re-running `static` on an already-correlated sample silently
+    replaced a detonation's worth of observation with a record that never had
+    any. The check is deliberately asymmetric: re-running `static` over a
+    `static` record, or re-correlating, replaces like with like and is allowed.
+    """
+    if _has_runtime_data(record) or not path.exists():
+        return False
+    try:
+        existing = json.loads(path.read_text())
+    except (OSError, ValueError):
+        # Unreadable or not JSON: nothing to protect, and refusing here would
+        # strand the user behind a file they cannot inspect.
+        return False
+    return _has_runtime_data(existing)
+
+
+def _emit_record(record, output, summary: str, force: bool = False) -> None:
     # Resolve where a record-producing verb writes its output. The record is
     # MB-scale, so a bare stdout dump is a footgun: default to a durable file and
     # log the summary to stderr. `-o -` is the escape hatch for piping.
@@ -518,6 +582,11 @@ def _emit_record(record, output, summary: str) -> None:
         path = _default_record_path(record)
     else:
         path = output
+    if not force and _would_regress(record, path):
+        raise RecordRegression(
+            f"{path} already holds Channel 3 runtime data and this record has none. "
+            f"Re-run with --force to overwrite it, or -o <path> to write elsewhere."
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     logging.getLogger("clew.cli").info("wrote %s: %s", path, summary)
@@ -564,7 +633,7 @@ def _cmd_static(args) -> int:
             f"{len(record['capa_techniques'])} capa techniques"
         )
     summary = f"{len(record['candidates'])} candidates ({resolved} with values), {capa_part}"
-    _emit_record(record, args.output, summary)
+    _emit_record(record, args.output, summary, force=args.force)
     log.info("done")
     return 0
 
@@ -656,7 +725,7 @@ def _cmd_correlate(args) -> int:
             log.warning("task %s has no Channel 3 logs (nothing to correlate)", args.task)
 
     enriched = _apply_correlation(record, logs, kind, args, log)
-    _emit_record(enriched, args.output, _correlation_summary(enriched))
+    _emit_record(enriched, args.output, _correlation_summary(enriched), force=args.force)
     log.info("done")
     return 0
 
@@ -843,12 +912,80 @@ def _requests_exc():
         return ()
 
 
+def _display_string(text: str) -> str:
+    """Quote a logged string for display without mangling it.
+
+    repr() would double every backslash, which makes a Windows path unreadable.
+    But these bytes came from memory the sample controls, so printing them raw
+    would let a crafted string emit terminal escapes. Escape the control
+    characters, leave everything else alone.
+    """
+    safe = "".join(ch if ch.isprintable() else f"\\x{ord(ch):02x}" for ch in text)
+    return f"'{safe}'"
+
+
+def _print_trace(task_id: int, storage_root) -> int:
+    """Decode one task's logs to stdout.
+
+    The RECORDS column answers "did anything come back". This answers "what",
+    which otherwise means reading hex out of a log file by hand: the client
+    encodes logged strings because they come from memory the sample controls.
+    """
+    from clew.channels.cape.client import CapeClient, CapeError
+
+    log = logging.getLogger("clew.cli")
+    try:
+        logs, kind = CapeClient("").fetch_trace_logs(task_id, storage_root)
+    except CapeError as exc:
+        log.error("%s", exc)
+        return 2
+    if not logs:
+        log.error("task %s has no Channel 3 logs", task_id)
+        return 1
+
+    if kind == "cmplog":
+        from clew.channels.cape.cmplog_parse import parse_cmplog_files
+
+        records = parse_cmplog_files(logs)
+        print(f"task {task_id}: cmplog, {len(records)} comparisons (no API tracing)")
+        return 0
+
+    from clew.channels.cape.drtrace_parse import parse_drtrace_files
+
+    trace = parse_drtrace_files(logs)
+    main = trace.main_module()
+    print(f"task {task_id}: drtrace, {len(trace.modules)} modules, "
+          f"{len(trace.calls)} calls, {len(trace.comparisons)} comparisons")
+    if main is not None:
+        print(f"  sample module: {main.name} @ 0x{main.base:08x}-0x{main.end:08x}")
+
+    if trace.calls:
+        print("\n  observed API calls")
+        for call in trace.calls:
+            rv = f"-> 0x{call.retval:x}" if call.retval is not None else "(no return)"
+            strings = " ".join(
+                [f"arg{i}={_display_string(v)}" for i, v in sorted(call.arg_strings.items())]
+                + [f"out{i}={_display_string(v)}" for i, v in sorted(call.out_strings.items())]
+            )
+            print(f"    seq={call.seq:<7} {call.api:<28} site=0x{call.site:08x} "
+                  f"{rv} {strings}".rstrip())
+
+    resolved = [r for r in trace.comparisons if r.jcc]
+    print(f"\n  comparisons: {len(trace.comparisons)} "
+          f"({len(resolved)} carry the branch that resolves the operator)")
+    for notice in trace.capped:
+        print(f"  capped: {notice.api} at 0x{notice.site:08x} after {notice.after} calls")
+    return 0
+
+
 def _cmd_tasks(args) -> int:
     # Lazy import: keep the CAPE client (which pulls requests) out of `clew
     # static` and the offline suite.
     from clew.channels.cape.client import CapeClient, CapeError
 
     log = logging.getLogger("clew.cli")
+    if args.show_drtrace is not None:
+        return _print_trace(args.show_drtrace, args.storage_root)
     c = CapeClient(args.cape_url)
 
     def render() -> None:
@@ -939,6 +1076,17 @@ def _cmd_run(args) -> int:
     # reaches terminal), and without this the static analysis is discarded on
     # every one of those paths. The final _emit_record overwrites this file.
     checkpoint = _run_checkpoint_path(args, record)
+    # The checkpoint is a *static* record, and it lands on the default path, so
+    # it can regress an existing correlated one exactly as `clew static` can --
+    # and it does so before the detonation that would replace the runtime data.
+    # Same guard, checked here because this write does not go through
+    # _emit_record.
+    if not args.force and _would_regress(record, checkpoint):
+        raise RecordRegression(
+            f"{checkpoint} already holds Channel 3 runtime data, and `run` would "
+            f"overwrite it with the static record before detonating. Re-run with "
+            f"--force to replace it, or -o <path> to write elsewhere."
+        )
     checkpoint.parent.mkdir(parents=True, exist_ok=True)
     checkpoint.write_text(json.dumps(record, indent=2))
     log.info("checkpointed static record to %s", checkpoint)
@@ -990,7 +1138,7 @@ def _cmd_run(args) -> int:
     enriched = _apply_correlation(record, logs, kind, args, log)
     summary = _correlation_summary(enriched)
     log.info("stage 3/3 correlate: %s", summary)
-    _emit_record(enriched, args.output, summary)
+    _emit_record(enriched, args.output, summary, force=args.force)
     if args.output == Path("-"):
         # Pipe mode: _emit_record only streamed to stdout, so refresh the
         # checkpoint rather than leaving a stale static-only record on disk.
@@ -1039,7 +1187,11 @@ def main(argv=None) -> int:
         # Bare `clew` -> show the verb menu.
         parser.print_help(sys.stderr)
         return 2
-    return args.func(args)
+    try:
+        return args.func(args)
+    except RecordRegression as exc:
+        logging.getLogger("clew.cli").error("%s", exc)
+        return 1
 
 
 if __name__ == "__main__":

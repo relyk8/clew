@@ -50,8 +50,13 @@ by default and log the path to stderr. Pass `-o <path>` to choose a file, or
 `{"task_id": N}` object, and `tasks` prints a table. Progress and errors always go
 to stderr, so stdout stays clean.
 
-Records are keyed by sample SHA-256, so re-running a sample overwrites its record.
-The `results/` directory is gitignored.
+Records are keyed by sample SHA-256, so re-running a sample overwrites its
+record — with one exception. If the existing record carries Channel 3 runtime
+data and the new one does not, the write is refused, because re-running `static`
+over a correlated record would otherwise discard a detonation's worth of
+observation with nothing to show for it. `--force` overrides, and `-o` writes
+elsewhere. Replacing like with like — `static` over `static`, or re-correlating —
+is never blocked. The `results/` directory is gitignored.
 
 ## Commands
 
@@ -98,6 +103,7 @@ clew static --capa=900 sample.exe      # explicit, before the sample
 | `--no-cache` | disable the FLOSS cache |
 | `--refresh-floss-cache` | force a FLOSS re-run and overwrite the cache |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
+| `--force` | overwrite an existing record even if it carries Channel 3 runtime data |
 
 ### detonate — submit to CAPE for comparison logging (Channel 3)
 
@@ -129,6 +135,7 @@ clew correlate --record RECORD (--log-dir DIR | --task N)
 | `--storage-root DIR` | CAPE analyses storage root (with `--task`) |
 | `--max-cmp-records N` | cap comparison records loaded from the logs (`0` = unlimited; default 5,000,000) — guards host memory/CPU on an oversized log |
 | `-o, --output PATH` | default `results/<sha256>.clew.json`, `-` for stdout |
+| `--force` | overwrite an existing record even if it carries Channel 3 runtime data |
 
 `--log-dir` and `--task` are mutually exclusive, and one is required. When a
 directory or task holds both log families, the drtrace logs are used: they are a
@@ -150,6 +157,7 @@ clew tasks [--watch] [--json]
 | `--interval SECS` | refresh interval with `--watch` (default 2.0) |
 | `--cape-url URL` | CAPE base URL |
 | `--storage-root DIR` | CAPE analyses storage root (read for the RECORDS column) |
+| `--show-drtrace TASK` | decode and print that task's drtrace output instead of the table |
 
 The RECORDS column shows how many comparison records each terminal task produced,
 so a sample that defeats instrumentation reads 0 at a glance.
@@ -161,7 +169,8 @@ clew run SAMPLE
 ```
 
 Takes the `static` options plus `--package`, `--timeout`, `--enforce-timeout`,
-`--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, and `-o`. It runs the static pipeline,
+`--cape-url`, `--module-base`, `--storage-root`, `--max-cmp-records`, `-o` and
+`--force`. It runs the static pipeline,
 detonates and waits for the terminal status, then correlates the logs onto the
 record.
 
