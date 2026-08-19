@@ -25,6 +25,7 @@ from clew.channels.capa import (  # noqa: E402  (import follows sys.path shim ab
     CapaNotFoundError,
     CapaParseError,
     CapaRunError,
+    CapaTimeoutError,
     filter_evasion_techniques,
     run_capa,
 )
@@ -125,6 +126,9 @@ def process_one(
     except CapaNotFoundError as e:
         rec["status"] = "capa_not_found"
         rec["error"] = str(e)
+    except CapaTimeoutError as e:
+        rec["status"] = "timeout"
+        rec["error"] = str(e)[:500]
     except CapaRunError as e:
         rec["status"] = "capa_error"
         rec["error"] = str(e)[:500]
@@ -135,13 +139,11 @@ def process_one(
         rec["status"] = "capa_error"
         rec["error"] = str(e)[:500]
     except Exception as e:
-        # subprocess.TimeoutExpired surfaces here in some capa wrappers
-        msg = str(e)
-        if "timeout" in msg.lower() or "TimeoutExpired" in type(e).__name__:
-            rec["status"] = "timeout"
-        else:
-            rec["status"] = "unexpected_error"
-        rec["error"] = f"{type(e).__name__}: {msg[:500]}"
+        # Non-CapaError exceptions that capa wrappers might surface. Capa
+        # timeouts arrive as CapaTimeoutError above; a raw subprocess
+        # TimeoutExpired reaching here would indicate a wrapper regression.
+        rec["status"] = "unexpected_error"
+        rec["error"] = f"{type(e).__name__}: {str(e)[:500]}"
     finally:
         ended = time.time()
         rec["ended_at"] = ended

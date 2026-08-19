@@ -242,7 +242,8 @@ def test_capa_timeout_is_converted_not_propagated(monkeypatch):
         capa_mod.run_capa(
             pathlib.Path("s.exe"), rules_path=pathlib.Path("r"), sigs_path=pathlib.Path("s")
         )
-    # batch_channel0.py sniffs the message for these words.
+    # batch_channel0.py catches CapaTimeoutError by type; the message keeps
+    # these words for operator-facing logs and any external consumers.
     assert "timed out" in str(excinfo.value)
 
 
