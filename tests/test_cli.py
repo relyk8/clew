@@ -10,6 +10,7 @@ import argparse
 import copy
 import json
 import logging
+import os
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -188,6 +189,35 @@ def test_run_enforce_timeout_threads_to_submit(monkeypatch, tmp_path):
 def test_missing_sample_returns_1():
     # run_static_pipeline raises SampleNotFoundError before any heavy import.
     assert cli.main(["/nonexistent/nope.exe", "--no-license-checkout"]) == 1
+
+
+# The next two tests are a pair and must stay adjacent and in this order.
+# Together they pin the _restore_process_environment fixture in conftest: the
+# first deliberately triggers the leak, the second asserts the fixture cleaned
+# it up before the following test ran. A single test cannot check this, because
+# the contract is about what survives *between* tests.
+
+
+def test_main_leaks_config_into_environ(tmp_path, monkeypatch):
+    cfg = tmp_path / "clew" / "config.env"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_text("CLEW_LEAK_PROBE=leaked-by-load_config\n")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.delenv("CLEW_LEAK_PROBE", raising=False)
+    monkeypatch.chdir(tmp_path)
+    try:
+        cli.main(["tasks"])
+    except Exception:
+        # CAPE may be unreachable. load_config() has already run by then, which
+        # is the leak site under test.
+        pass
+    assert os.environ.get("CLEW_LEAK_PROBE") == "leaked-by-load_config"
+
+
+def test_config_leak_does_not_survive_into_next_test():
+    # Fails without the conftest fixture: the sentinel planted by the previous
+    # test would still be in os.environ.
+    assert "CLEW_LEAK_PROBE" not in os.environ
 
 
 def test_floss_cache_stale_returns_2(monkeypatch):
