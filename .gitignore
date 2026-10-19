@@ -227,3 +227,6 @@ docs/superpowers/
 
 # Local working notes
 docs/notes/
+
+# DynamoRIO 11.91.20651 Windows SDK for building cape_packages (local, not tracked)
+dr-sdk/
