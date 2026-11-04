@@ -21,6 +21,15 @@ Provenance log for everything in `tests/fixtures/`. Hand-built oracle records re
 - **Rationale for Debug over Release**: Debug guarantees per-function symbols are retained (no LTCG inlining). Channel 2 evaluation can additionally test against a Release build to exercise optimization-resilience.
 - **Notes**: al-khaser is a public anti-evasion testing harness, not malware. The single binary is referenced by both `1fe91674eb8d_01.expected.json` (IsDebuggerPresentAPI) and `1fe91674eb8d_02.expected.json` (loaded_dlls 12-DLL loop). Each fixture is keyed off the same binary; the `_01`/`_02` suffix disambiguates which candidate within the binary the fixture targets.
 
+### `al-khaser_x86_release.exe`
+
+- **SHA-256**: `a9240e97d66d40315bb4b8e561a1607e8efff21a5014f6e88633044812aa608d`
+- **Source**: github.com/LordNoteworthy/al-khaser, release `v1.1.0` (2026-01-27), asset `al-khaser_x86.7z`
+- **Build**: upstream GitHub Actions, `msbuild /m /p:Platform=x86 /p:Configuration=Release al-khaser.sln` on `windows-2022`
+- **Local copy**: not committed. To re-acquire: download the release asset and extract with the password in upstream `.github/workflows/release.yml`.
+- **Why it was added (2026-11-04)**: the Debug build above imports `VCRUNTIME140D.dll`, `MSVCP140D.dll` and `ucrtbased.dll`, which the CAPE win10 guest lacks, so it never starts there. CAPE task 77 died in about 3 s with zero calls. The Release build imports only the release CRT and runs. Task 80 logged 23,606 calls, and task 81 under DynamoRIO logged 52,726 comparison records. The August "al-khaser defeats DynamoRIO" reading was this load failure.
+- **Status**: detonation fixture now. The `1fe91674eb8d_*` records and the `al-khaser_x86.*.json` fixtures still pin the Debug build until they are regenerated against this one, which needs the Binary Ninja license server back (its TLS certificate expired 2026-10-21). The Release build also drops the 122 Debug-CRT candidates (`_CrtDbgReport`, `_invalid_parameter`, `_wassert`) seen in the Debug static record.
+
 ## Rejected and deferred samples
 
 Samples evaluated as candidates and not used. Logged here as audit trail and to avoid re-evaluating them later. See git log for the iteration history.
